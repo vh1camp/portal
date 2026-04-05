@@ -390,8 +390,9 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <div class="stitle" style="margin:0">CAMPER <span>ROSTER</span></div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
 <div class="swrap"><span class="sicon">🔍</span><input class="sinput" type="text" id="acSearch" placeholder="Search..." oninput="renderAdminCampers(this.value)"></div>
-<button class="btn bor bsm" onclick="openModal('mCamper')" type="button">➕ Add</button>
+<button class="btn bor bsm" onclick="openAddCamper()" type="button">➕ Add</button>
 <button class="btn bsec bsm" onclick="openModal('mImport')" type="button">📥 CSV</button>
+          <button class="btn bgrn bsm" id="syncBtn" onclick="syncFromSheet()" type="button">🔄 Sync JotForm</button>
 </div>
 </div>
 <div class="twrap"><table><thead><tr><th>#</th><th>Name</th><th>City/State</th><th>Email</th><th>PIN</th><th>Type</th><th>Evals</th><th>Avg</th><th></th></tr></thead><tbody id="acbody"></tbody></table></div>
@@ -462,11 +463,14 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 </div>
 
 <!-- MODALS -->
-<div class="overlay" id="mCamper"><div class="modal"><div class="mhd"><div class="mtitle">ADD CAMPER</div><button class="mclose" onclick="closeModal('mCamper')" type="button">✕</button></div><div class="mbody">
+<div class="overlay" id="mCamper"><div class="modal"><div class="mhd"><div class="mtitle" id="mCamperTitle">ADD CAMPER</div><button class="mclose" onclick="closeModal('mCamper')" type="button">✕</button></div><div class="mbody">
 <div class="frow"><div><label class="flabel">First Name *</label><input class="finput" id="cfFirst" placeholder="John" style="margin-bottom:0"></div><div><label class="flabel">Last Name *</label><input class="finput" id="cfLast" placeholder="Smith" style="margin-bottom:0"></div></div>
 <div class="frow" style="margin-top:10px"><div><label class="flabel">City</label><input class="finput" id="cfCity" placeholder="Denver" style="margin-bottom:0"></div><div><label class="flabel">State</label><input class="finput" id="cfState" placeholder="CO" maxlength="2" style="margin-bottom:0"></div></div>
 <label class="flabel" style="margin-top:10px">Email *</label><input class="finput" id="cfEmail" placeholder="john@example.com">
 <div class="frow"><div><label class="flabel">Type</label><select class="finput" id="cfType" style="margin-bottom:0"><option>Non-Staff</option><option>Staff</option><option>Mens College</option><option>Womens College</option><option>High School</option></select></div><div><label class="flabel">PIN</label><input class="finput" id="cfPin" placeholder="Auto" maxlength="6" inputmode="numeric" style="margin-bottom:0"></div></div>
+<label class="flabel" style="margin-top:10px">Photo URL</label><input class="finput" id="cfPhoto" placeholder="https://...">
+<label class="flabel">Bio / Resume</label><textarea class="ftarea" id="cfBio" placeholder="Background, experience..." style="min-height:60px"></textarea>
+<label class="flabel" style="margin-top:10px">Conference(s)</label><input class="finput" id="cfConf" placeholder="RMAC, Big Sky, etc.">
 <div class="ferr" id="cfErr"></div>
 <div style="display:flex;gap:8px;margin-top:14px"><button class="btn bsec" style="flex:1" onclick="closeModal('mCamper')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveCamper()" type="button">Save</button></div>
 </div></div></div>
@@ -852,15 +856,49 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Bebas Neue,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td><button class="btn bred bsm" onclick="delCamper('${c.id}')">🗑</button></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Bebas Neue,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px"><button class="btn bsec bsm" onclick="editCamper('${c.id}')">✏️</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">🗑</button></td>`;
     tbody.appendChild(tr);
   });
 }
+let editCId=null;
 async function saveCamper(){
   const f=document.getElementById('cfFirst').value.trim(),l=document.getElementById('cfLast').value.trim(),e=document.getElementById('cfEmail').value.trim();
   if(!f||!l){document.getElementById('cfErr').textContent='Name required';document.getElementById('cfErr').style.display='block';return;}
   const pin=document.getElementById('cfPin').value.trim()||String(Math.floor(1000+Math.random()*9000));
-  try{await supa('campers','POST',{first_name:f,last_name:l,email:e||null,city:document.getElementById('cfCity').value.trim(),state:document.getElementById('cfState').value.trim().toUpperCase(),type:document.getElementById('cfType').value,pin});closeModal('mCamper');toast('Camper added!');await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();}catch(er){toast('Error',true);}
+  const data={first_name:f,last_name:l,email:e||null,city:document.getElementById('cfCity').value.trim(),state:document.getElementById('cfState').value.trim().toUpperCase(),type:document.getElementById('cfType').value,pin,photo:document.getElementById('cfPhoto').value.trim()||null,bio:document.getElementById('cfBio').value.trim()||null,conference:document.getElementById('cfConf').value.trim()||null};
+  try{
+    if(editCId){await supa('campers','PATCH',data,`?id=eq.${editCId}`);editCId=null;}
+    else{await supa('campers','POST',data);}
+    closeModal('mCamper');toast(editCId?'Camper updated!':'Camper added!');await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();
+  }catch(er){toast('Error',true);}
+}
+function editCamper(id){
+  const c=campers.find(x=>x.id===id);if(!c)return;
+  editCId=id;
+  document.getElementById('mCamperTitle').textContent='EDIT CAMPER';
+  document.getElementById('cfFirst').value=c.first_name||'';
+  document.getElementById('cfLast').value=c.last_name||'';
+  document.getElementById('cfCity').value=c.city||'';
+  document.getElementById('cfState').value=c.state||'';
+  document.getElementById('cfEmail').value=c.email||'';
+  document.getElementById('cfType').value=c.type||'Non-Staff';
+  document.getElementById('cfPin').value=c.pin||'';
+  document.getElementById('cfPhoto').value=c.photo||'';
+  document.getElementById('cfBio').value=c.bio||'';
+  document.getElementById('cfConf').value=c.conference||'';
+  document.getElementById('cfErr').style.display='none';
+  openModal('mCamper');
+}
+function openAddCamper(){
+  editCId=null;
+  document.getElementById('mCamperTitle').textContent='ADD CAMPER';
+  document.getElementById('cfFirst').value='';document.getElementById('cfLast').value='';
+  document.getElementById('cfCity').value='';document.getElementById('cfState').value='';
+  document.getElementById('cfEmail').value='';document.getElementById('cfType').value='Non-Staff';
+  document.getElementById('cfPin').value='';document.getElementById('cfPhoto').value='';
+  document.getElementById('cfBio').value='';document.getElementById('cfConf').value='';
+  document.getElementById('cfErr').style.display='none';
+  openModal('mCamper');
 }
 async function delCamper(id){
   const ok=await cf('Remove this camper and their evaluations?','Remove','Cancel');if(!ok)return;
@@ -925,6 +963,74 @@ async function clearAllEvals(){const ok=await cf('Clear ALL evaluations? This ca
 // ═══ CSV IMPORT ═══
 function handleCSV(file){if(!file)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());csvParsed=[];const fl=lines[0].toLowerCase();const si=(fl.includes('first')||fl.includes('name')||fl.includes('email'))?1:0;for(let i=si;i<lines.length;i++){const p=lines[i].split(',').map(s=>s.trim().replace(/^["']|["']$/g,''));if(p.length>=2)csvParsed.push({first_name:p[0],last_name:p[1],email:p[2]||null,city:p[3]||null,state:p[4]||null,type:p[5]||'Non-Staff'});}if(csvParsed.length){document.getElementById('csvCount').textContent=csvParsed.length;document.getElementById('csvList').innerHTML=csvParsed.map(c=>`<div style="font-size:12px;color:var(--tx2);padding:3px 0;border-bottom:1px solid var(--b1)">${c.first_name} ${c.last_name}${c.email?' — '+c.email:''}</div>`).join('');document.getElementById('csvPreview').style.display='block';document.getElementById('csvUploadBtn').style.display='block';}else toast('No valid data',true);};r.readAsText(file);}
 async function uploadCSV(){const btn=document.getElementById('csvUploadBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';let s=0;const toUpload=csvParsed.map(c=>({...c,pin:String(Math.floor(1000+Math.random()*9000))}));try{await supa('campers','POST',toUpload);s=toUpload.length;}catch(e){for(const c of toUpload){try{await supa('campers','POST',c);s++;}catch(er){}}}btn.disabled=false;btn.textContent='Upload All';closeModal('mImport');toast(`${s} campers uploaded!`);await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();}
+// ═══ GOOGLE SHEETS SYNC (JotForm) ═══
+const SHEET_ID='1iWz9UiknCSy0WZcEgYO50nmD3IBs-puNxRNoIFXdNYk';
+function titleCase(s){if(!s)return'';return s.trim().replace(/\w\S*/g,t=>t.charAt(0).toUpperCase()+t.substr(1).toLowerCase());}
+function syncFromSheet(){
+  const btn=document.getElementById('syncBtn');
+  if(btn){btn.textContent='⏳ Syncing...';btn.disabled=true;}
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet=Form+Responses+1&t='+Date.now();
+  fetch(url)
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+    .then(txt=>{
+      const m=txt.match(/setResponse\(([\s\S]+?)\)\s*;?\s*$/);
+      if(!m)throw new Error('Unexpected response format');
+      const data=JSON.parse(m[1]);
+      if(!data.table)throw new Error('No table in response');
+      processGvizData(data.table);
+    })
+    .catch(e=>{toast('Sync failed: '+e.message,true);resetSyncBtn();});
+}
+async function processGvizData(t){
+  const cols=t.cols.map(c=>(c.label||c.id||'').toLowerCase().trim());
+  function ci(n){return cols.indexOf(n.toLowerCase());}
+  function cell(row,i){if(i<0||!row.c||i>=row.c.length||!row.c[i])return'';const v=row.c[i];return(v.v!=null?String(v.v):v.f||'').trim();}
+  const iPhoto=ci('profile picture (head shot)');
+  const iFirst=ci('full name - first name');
+  const iLast=ci('full name - last name');
+  const iLoc=ci('city, state');
+  const iPhone=ci('phone number');
+  const iEmail=ci('e-mail');
+  const iLvl=ci('officiating level of experience (check all that apply)');
+  const iRmac=ci("current rmac men's staff");
+  const iRet=ci('returning camper?');
+  const iBio=ci('bio');
+  const iConf=ci('conference');
+  const emails=new Set(campers.map(c=>(c.email||'').toLowerCase()));
+  let added=0,skipped=0;
+  const newCampers=[];
+  t.rows.forEach(row=>{
+    const first=titleCase(cell(row,iFirst));
+    const last=titleCase(cell(row,iLast));
+    const email=cell(row,iEmail).toLowerCase();
+    if(!first||!last||!email||!email.includes('@'))return;
+    if(emails.has(email)){skipped++;return;}
+    const loc=cell(row,iLoc);
+    let city='',state='';
+    if(loc.includes(',')){const p=loc.split(',');city=p[0].trim();state=p[1].trim();}else{city=loc;}
+    const rmac=cell(row,iRmac).toUpperCase()==='YES';
+    newCampers.push({
+      first_name:first,last_name:last,city,state,email,
+      phone:cell(row,iPhone),
+      photo:cell(row,iPhoto).replace(/\s+/g,''),
+      levels:cell(row,iLvl),rmac,
+      is_returning:cell(row,iRet).toUpperCase()==='YES',
+      bio:cell(row,iBio),conference:cell(row,iConf),
+      type:rmac?'Staff':'Non-Staff',
+      pin:String(Math.floor(1000+Math.random()*9000))
+    });
+    emails.add(email);added++;
+  });
+  if(newCampers.length){
+    try{await supa('campers','POST',newCampers);}catch(e){
+      for(const c of newCampers){try{await supa('campers','POST',c);}catch(er){}}
+    }
+  }
+  await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();resetSyncBtn();
+  if(added>0){toast('✅ '+added+' new camper'+(added!==1?'s':'')+' synced!'+(skipped?' ('+skipped+' already existed)':''));}
+  else{toast('✅ All '+skipped+' campers already imported — roster up to date');}
+}
+function resetSyncBtn(){const btn=document.getElementById('syncBtn');if(btn){btn.textContent='🔄 Sync JotForm';btn.disabled=false;}}
 </script>
 </body>
 </html>
