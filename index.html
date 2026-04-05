@@ -969,7 +969,7 @@ function titleCase(s){if(!s)return'';return s.trim().replace(/\w\S*/g,t=>t.charA
 function syncFromSheet(){
   const btn=document.getElementById('syncBtn');
   if(btn){btn.textContent='⏳ Syncing...';btn.disabled=true;}
-  const url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet=Form+Responses+1&t='+Date.now();
+  const url='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet=Form+responses&t='+Date.now();
   fetch(url)
     .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
     .then(txt=>{
