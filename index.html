@@ -983,7 +983,7 @@ function syncFromSheet(){
 }
 async function processGvizData(t){
   const cols=t.cols.map(c=>(c.label||c.id||'').toLowerCase().trim());
-  function ci(n){return cols.indexOf(n.toLowerCase());}
+  function ci(n){return cols.findIndex(c=>c.includes(n.toLowerCase()));}
   function cell(row,i){if(i<0||!row.c||i>=row.c.length||!row.c[i])return'';const v=row.c[i];return(v.v!=null?String(v.v):v.f||'').trim();}
   const iPhoto=ci('profile picture (head shot)');
   const iFirst=ci('full name - first name');
