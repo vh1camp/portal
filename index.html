@@ -428,6 +428,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <div class="swrap"><span class="sicon">🔍</span><input class="sinput" type="text" id="acSearch" placeholder="Search..." oninput="renderAdminCampers(this.value)"></div>
 <button class="btn bor bsm" onclick="openAddCamper()" type="button">➕ Add</button>
 <button class="btn bsec bsm" onclick="openModal('mImport')" type="button">📥 CSV</button>
+<button class="btn bsec bsm" onclick="openModal('mXLSX')" type="button">📊 Excel</button>
           <button class="btn bgrn bsm" id="syncBtn" onclick="syncFromSheet()" type="button">🔄 Sync JotForm</button>
 <button class="btn bsec bsm" id="sendAllPinsBtn" onclick="sendAllPins()" type="button">📧 Send All PINs</button>
 </div>
@@ -524,6 +525,26 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
   <div class="pmod-body" id="pmBody"></div>
 </div></div>
 
+
+<!-- EXCEL IMPORT MODAL -->
+<div class="overlay" id="mXLSX"><div class="modal" style="max-width:560px"><div class="mhd"><div class="mtitle">📊 IMPORT FROM EXCEL</div><button class="mclose" onclick="closeModal('mXLSX')" type="button">✕</button></div><div class="mbody">
+<div style="font-size:12px;color:var(--tx2);margin-bottom:12px;line-height:1.6">Upload the <strong style="color:var(--tx)">VH1 JotForm Excel report</strong>. All camper profiles — including photos, bios, RMAC status, and contact info — will be created automatically.</div>
+<div class="upload-zone" id="xlsxDrop" onclick="document.getElementById('xlsxFile').click()" style="border-color:var(--or)">
+  <div style="font-size:28px;margin-bottom:8px">📊</div>
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.06em;color:var(--tx2)">Click or drag Excel file here</div>
+  <div style="font-size:11px;color:var(--tx3);margin-top:4px">.xlsx — VH1 Basketball Officials Camp report</div>
+</div>
+<input type="file" id="xlsxFile" accept=".xlsx,.xls" style="display:none" onchange="handleXLSX(this.files[0])">
+<div id="xlsxPreview" style="display:none">
+  <div style="font-size:12px;color:var(--tx2);margin-bottom:6px"><span id="xlsxCount">0</span> campers found · <span id="xlsxSkipCount">0</span> already in system</div>
+  <div style="max-height:180px;overflow-y:auto;background:var(--gray2);border-radius:var(--rs);padding:8px;border:1px solid var(--b2)" id="xlsxList"></div>
+</div>
+<div id="xlsxProgress" style="display:none;margin-top:10px">
+  <div style="font-size:12px;color:var(--tx2);margin-bottom:6px" id="xlsxProgressTxt">Uploading...</div>
+  <div style="height:6px;background:var(--gray3);border-radius:3px;overflow:hidden"><div id="xlsxProgressBar" style="height:100%;background:var(--or);border-radius:3px;width:0%;transition:width .3s"></div></div>
+</div>
+<div style="display:flex;gap:8px;margin-top:14px"><button class="btn bsec" style="flex:1" onclick="closeModal('mXLSX')" type="button">Cancel</button><button class="btn bor" style="flex:1;display:none" id="xlsxUploadBtn" onclick="uploadXLSX()" type="button">Import All</button></div>
+</div></div></div>
 <!-- MODALS -->
 <div class="overlay" id="mCamper"><div class="modal"><div class="mhd"><div class="mtitle" id="mCamperTitle">ADD CAMPER</div><button class="mclose" onclick="closeModal('mCamper')" type="button">✕</button></div><div class="mbody">
 <div class="frow"><div><label class="flabel">First Name *</label><input class="finput" id="cfFirst" placeholder="John" style="margin-bottom:0"></div><div><label class="flabel">Last Name *</label><input class="finput" id="cfLast" placeholder="Smith" style="margin-bottom:0"></div></div>
@@ -1252,6 +1273,148 @@ async function sendAllPins(){
   btn.disabled=false;btn.textContent='📧 Send All PINs';
   toast(`✅ ${sent} sent${failed?', '+failed+' failed':''}`);
 }
+
+// ═══ EXCEL (XLSX) IMPORT ═══
+let xlsxParsed=[];
+
+function handleXLSX(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      // Dynamically load SheetJS
+      if(!window.XLSX){
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          s.onload=res;s.onerror=rej;
+          document.head.appendChild(s);
+        });
+      }
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      parseXLSXRows(rows);
+    }catch(err){toast('Failed to read Excel file: '+err.message,true);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseXLSXRows(rows){
+  const existingEmails=new Set(campers.map(c=>(c.email||'').toLowerCase()));
+  xlsxParsed=[];
+  let skipped=0;
+  rows.forEach(row=>{
+    // Column mapping for VH1 JotForm Excel export
+    const first=titleCase((row['First Name']||'').trim());
+    const last=titleCase((row['Last Name']||'').trim());
+    const email=(row['E-mail']||row['Email']||'').trim().toLowerCase();
+    if(!first||!last)return;
+    if(email&&existingEmails.has(email)){skipped++;return;}
+    // Parse city/state
+    const cityState=(row['City, State']||'').trim();
+    let city='',state='';
+    if(cityState.includes(',')){
+      const parts=cityState.split(',');
+      city=parts[0].trim();
+      // Handle full state names → abbreviate common ones
+      const rawState=parts[1].trim();
+      const stateMap={'Colorado':'CO','Utah':'UT','Wyoming':'WY','California':'CA','Nebraska':'NE','Montana':'MT','Kansas':'KS','New Mexico':'NM','Arizona':'AZ','Nevada':'NV','Idaho':'ID','Oregon':'OR','Washington':'WA','Texas':'TX','Florida':'FL','Minnesota':'MN','Missouri':'MO','Iowa':'IA','Illinois':'IL','Indiana':'IN','Ohio':'OH','Michigan':'MI','Wisconsin':'WI','Pennsylvania':'PA','New York':'NY','North Carolina':'NC','South Carolina':'SC','Georgia':'GA','Virginia':'VA','Maryland':'MD','Massachusetts':'MA','Connecticut':'CT','New Jersey':'NJ'};
+      state=stateMap[rawState]||rawState.substring(0,2).toUpperCase();
+    }else{city=cityState;}
+    // RMAC
+    const rmacVal=(row["Current RMAC Men's Staff"]||'').toString().toUpperCase();
+    const rmac=rmacVal==='YES'||rmacVal==='TRUE'||rmacVal==='1';
+    // Returning
+    const retVal=(row['Returning Camper?']||'').toString().toUpperCase();
+    const is_returning=retVal==='YES'||retVal==='TRUE'||retVal==='1';
+    // Type — derive from officiating level
+    const levels=(row['Officiating Level of Experience (Check all that apply)']||row['Officiating Level']||'').toString();
+    let type='Non-Staff';
+    if(rmac)type='Staff';
+    else if(levels.toLowerCase().includes('womens college'))type='Womens College';
+    else if(levels.toLowerCase().includes('mens college'))type='Mens College';
+    else if(levels.toLowerCase().includes('high school'))type='High School';
+    // Photo URL — clean spaces
+    const photoRaw=(row['Profile picture (head shot)']||row['Profile Picture']||row['Photo']||'').toString().trim();
+    const photo=photoRaw.replace(/\s+/g,'%20')||null;
+    xlsxParsed.push({
+      first_name:first,last_name:last,email:email||null,
+      city,state,phone:(row['Phone Number']||'').toString().trim()||null,
+      bio:(row['Bio']||'').toString().trim()||null,
+      conference:(row['Conference']||'').toString().trim()||null,
+      levels:levels.trim()||null,
+      photo:photo&&photo.startsWith('http')?photo:null,
+      rmac,is_returning,type,
+      pin:String(Math.floor(1000+Math.random()*9000))
+    });
+    if(email)existingEmails.add(email);
+  });
+  // Show preview
+  document.getElementById('xlsxCount').textContent=xlsxParsed.length;
+  document.getElementById('xlsxSkipCount').textContent=skipped;
+  document.getElementById('xlsxList').innerHTML=xlsxParsed.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1)">
+      ${c.photo?`<img src="${c.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:top;flex-shrink:0" onerror="this.style.display='none'">`:'<div style="width:32px;height:32px;border-radius:50%;background:var(--gray3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3)">'+(c.first_name[0]||'')+(c.last_name[0]||'')+'</div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${c.first_name} ${c.last_name}</div>
+        <div style="font-size:11px;color:var(--tx2)">${[c.city&&c.state?c.city+', '+c.state:'',c.type,c.rmac?'RMAC':''].filter(Boolean).join(' · ')}</div>
+      </div>
+      ${c.photo?'<span style="font-size:10px;color:var(--grn)">📷</span>':'<span style="font-size:10px;color:var(--tx3)">No photo</span>'}
+    </div>
+  `).join('')||'<div style="font-size:12px;color:var(--tx3);padding:8px 0">No new campers to import</div>';
+  document.getElementById('xlsxPreview').style.display='block';
+  document.getElementById('xlsxUploadBtn').style.display=xlsxParsed.length?'block':'none';
+}
+
+async function uploadXLSX(){
+  if(!xlsxParsed.length)return;
+  const btn=document.getElementById('xlsxUploadBtn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';
+  document.getElementById('xlsxProgress').style.display='block';
+  const bar=document.getElementById('xlsxProgressBar');
+  const txt=document.getElementById('xlsxProgressTxt');
+  let done=0;const total=xlsxParsed.length;
+  // Upload in chunks of 5
+  const chunks=[];
+  for(let i=0;i<xlsxParsed.length;i+=5)chunks.push(xlsxParsed.slice(i,i+5));
+  let success=0;
+  for(const chunk of chunks){
+    try{
+      await supa('campers','POST',chunk);
+      success+=chunk.length;
+    }catch(e){
+      // Fall back to one-by-one
+      for(const c of chunk){
+        try{await supa('campers','POST',c);success++;}catch(er){}
+      }
+    }
+    done+=chunk.length;
+    const pct=Math.round((done/total)*100);
+    bar.style.width=pct+'%';
+    txt.textContent=`Uploading... ${done}/${total} campers`;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  btn.disabled=false;btn.textContent='Import All';
+  document.getElementById('xlsxProgress').style.display='none';
+  closeModal('mXLSX');
+  document.getElementById('xlsxFile').value='';
+  document.getElementById('xlsxPreview').style.display='none';
+  document.getElementById('xlsxUploadBtn').style.display='none';
+  xlsxParsed=[];
+  await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();
+  toast('✅ '+success+' camper'+(success!==1?'s':'')+' imported with profiles!');
+}
+
+// XLSX drag and drop
+(function(){
+  const dz=document.getElementById('xlsxDrop');
+  if(!dz)return;
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.borderColor='var(--or2)';});
+  dz.addEventListener('dragleave',()=>{dz.style.borderColor='var(--or)';});
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='var(--or)';if(e.dataTransfer.files.length)handleXLSX(e.dataTransfer.files[0]);});
+})();
 
 </script>
 </body>
