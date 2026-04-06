@@ -561,6 +561,7 @@ if('serviceWorker' in navigator){
 <button class="btn bor bsm" onclick="openAddCamper()" type="button">➕ Add</button>
 <button class="btn bsec bsm" onclick="openModal('mXLSX')" type="button">📊 Excel</button>
 <button class="btn bsec bsm" id="sendAllPinsBtn" onclick="sendAllPins()" type="button">📧 Send All PINs</button>
+<button class="btn bred bsm" onclick="deleteAllCampers()" type="button">🗑 Delete All</button>
 </div>
 </div>
 <div class="twrap"><table><thead><tr><th>#</th><th class="sortable-th" onclick="sortCampers('name')" id="th-name">Name <span class="sort-arrow" id="sa-name">↑</span></th><th class="sortable-th" onclick="sortCampers('city')" id="th-city">City/State <span class="sort-arrow" id="sa-city"></span></th><th>Email</th><th class="sortable-th" onclick="sortCampers('pin')" id="th-pin">PIN <span class="sort-arrow" id="sa-pin"></span></th><th class="sortable-th" onclick="sortCampers('type')" id="th-type">Type <span class="sort-arrow" id="sa-type"></span></th><th class="sortable-th" onclick="sortCampers('evals')" id="th-evals">Evals <span class="sort-arrow" id="sa-evals"></span></th><th class="sortable-th" onclick="sortCampers('avg')" id="th-avg">Avg <span class="sort-arrow" id="sa-avg"></span></th><th></th></tr></thead><tbody id="acbody"></tbody></table></div>
@@ -571,6 +572,8 @@ if('serviceWorker' in navigator){
 <div style="display:flex;gap:6px">
 <button class="btn bor bsm" onclick="openModal('mStaff')" type="button">➕ Staff</button>
 <button class="btn bsec bsm" onclick="openModal('mClinician')" type="button">➕ Clinician</button>
+<button class="btn bred bsm" onclick="deleteAllStaff()" type="button">🗑 Del All Staff</button>
+<button class="btn bred bsm" onclick="deleteAllClinicians()" type="button">🗑 Del All Clinicians</button>
 </div>
 </div>
 <div class="stitle" style="font-size:16px">STAFF <span>ACCOUNTS</span></div>
@@ -1985,6 +1988,41 @@ async function saveMyProfile(role){
     console.error(e);
     status.textContent='Error saving — try again.';status.style.color='var(--red2)';
   }
+}
+
+// ═══ DELETE ALL ═══
+async function deleteAllCampers(){
+  if(!campers.length){toast('No campers to delete',true);return;}
+  const ok=await cf(`Delete ALL ${campers.length} campers and their evaluations? This cannot be undone.`,'Delete All','Cancel');
+  if(!ok)return;
+  try{
+    await supa('evaluations','DELETE',null,'?id=not.is.null');
+    await supa('campers','DELETE',null,'?id=not.is.null');
+    toast('All campers deleted');
+    await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();
+  }catch(e){toast('Error',true);}
+}
+
+async function deleteAllStaff(){
+  if(!staffList.length){toast('No staff to delete',true);return;}
+  const ok=await cf(`Delete ALL ${staffList.length} staff accounts?`,'Delete All','Cancel');
+  if(!ok)return;
+  try{
+    await supa('staff','DELETE',null,'?id=not.is.null');
+    toast('All staff deleted');
+    await loadAll();renderAdminStaff();updateAdminStats();
+  }catch(e){toast('Error',true);}
+}
+
+async function deleteAllClinicians(){
+  if(!clinicians.length){toast('No clinicians to delete',true);return;}
+  const ok=await cf(`Delete ALL ${clinicians.length} clinicians?`,'Delete All','Cancel');
+  if(!ok)return;
+  try{
+    await supa('clinicians','DELETE',null,'?id=not.is.null');
+    toast('All clinicians deleted');
+    await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
+  }catch(e){toast('Error',true);}
 }
 
 </script>
