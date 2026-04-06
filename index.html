@@ -245,6 +245,41 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.sg4{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
+
+/* PROFILES GRID */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:4px}
+.pcard{background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s}
+.pcard:hover{border-color:var(--or);transform:translateY(-2px)}
+.pcard-img{position:relative;width:100%;aspect-ratio:1;overflow:hidden;background:var(--gray2)}
+.pcard-img img{width:100%;height:100%;object-fit:cover;object-position:top}
+.pcard-initials{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--tx3)}
+.pcard-tags{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap}
+.pcard-tags2{position:absolute;top:8px;right:8px;display:flex;gap:4px;flex-wrap:wrap}
+.ptag{font-size:9px;font-weight:800;letter-spacing:.1em;padding:3px 7px;border-radius:4px}
+.ptag-rmac{background:var(--grnd);border:1px solid var(--grnb);color:var(--grn)}
+.ptag-ret{background:var(--ord);border:1px solid var(--orb);color:var(--or)}
+.pcard-body{padding:10px 12px 12px}
+.pcard-name{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.04em;color:var(--white);line-height:1.1;margin-bottom:2px}
+.pcard-loc{font-size:11px;color:var(--tx2);margin-bottom:7px}
+.pcard-type{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:4px;background:var(--ord);border:1px solid var(--orb);color:var(--or);margin-bottom:6px}
+.pcard-eval{font-size:11px;color:var(--tx3)}
+/* PROFILE MODAL */
+.pmod-img{width:100%;max-height:280px;object-fit:cover;object-position:top;display:block}
+.pmod-initials{width:100%;height:160px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:72px;color:var(--tx3);background:var(--gray2)}
+.pmod-body{padding:16px}
+.pmod-name{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;line-height:1}
+.pmod-meta{font-size:12px;color:var(--tx2);margin-top:4px;margin-bottom:10px}
+.pmod-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.pmod-bio{font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:12px}
+.pmod-sec{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.08em;color:var(--or);margin-bottom:6px;margin-top:12px}
+.pmod-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.pmod-bar-lbl{font-size:10px;color:var(--tx2);width:88px;text-align:right;flex-shrink:0}
+.pmod-bar-bg{flex:1;height:7px;background:var(--gray3);border-radius:4px;overflow:hidden}
+.pmod-bar-fill{height:100%;background:var(--or);border-radius:4px}
+.pmod-bar-val{font-size:11px;color:var(--tx);width:28px;flex-shrink:0}
+.pmod-overall{text-align:center;padding:14px;background:linear-gradient(135deg,#d45518,var(--or));border-radius:var(--rs);margin-bottom:12px}
+.pmod-overall-val{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#fff;line-height:1}
+.pmod-overall-lbl{font-size:10px;letter-spacing:.12em;color:rgba(255,255,255,.7);text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -366,6 +401,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <button class="atab" onclick="aTab('staff',this)" type="button">🎯 Staff</button>
 <button class="atab" onclick="aTab('evaluate',this)" type="button">📝 Evaluate</button>
 <button class="atab" onclick="aTab('rankings',this)" type="button">🏆 Rankings</button>
+<button class="atab" onclick="aTab('profiles',this)" type="button">🪪 Profiles</button>
 <button class="atab" onclick="aTab('settings',this)" type="button">⚙️ Settings</button>
 </div>
 <div class="tc on" id="at-overview">
@@ -439,6 +475,22 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <div class="fchips" id="rankFilter"></div>
 <div id="arankcon"></div>
 </div>
+<div class="tc" id="at-profiles">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+  <div class="stitle" style="margin:0">CAMPER <span>PROFILES</span></div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <div class="swrap"><span class="sicon">🔍</span><input class="sinput" type="text" id="apSearch" placeholder="Search..." oninput="renderProfiles(this.value)"></div>
+    <select class="finput" id="apFilter" style="width:auto;margin-bottom:0;padding:8px 11px;font-size:12px" onchange="renderProfiles(document.getElementById('apSearch').value)">
+      <option value="">All</option>
+      <option value="rmac">RMAC</option>
+      <option value="returning">Returning</option>
+      <option value="evaluated">Evaluated</option>
+      <option value="not-evaluated">Not Evaluated</option>
+    </select>
+  </div>
+</div>
+<div class="pgrid" id="apGrid"></div>
+</div>
 <div class="tc" id="at-settings">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 <div>
@@ -461,6 +513,15 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 </div>
 </div>
 </div>
+
+<!-- PROFILE MODAL -->
+<div class="overlay" id="mProfile"><div class="modal" style="max-width:480px;padding:0;overflow:hidden">
+  <div style="position:relative">
+    <div id="pmImgWrap"></div>
+    <button class="mclose" onclick="closeModal('mProfile')" type="button" style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);z-index:10">✕</button>
+  </div>
+  <div class="pmod-body" id="pmBody"></div>
+</div></div>
 
 <!-- MODALS -->
 <div class="overlay" id="mCamper"><div class="modal"><div class="mhd"><div class="mtitle" id="mCamperTitle">ADD CAMPER</div><button class="mclose" onclick="closeModal('mCamper')" type="button">✕</button></div><div class="mbody">
@@ -826,6 +887,7 @@ function aTab(name,btn){
   if(name==='staff'){renderAdminStaff();renderAdminClinicians();}
   if(name==='evaluate'){populateAdminForms();}
   if(name==='rankings')renderAdminRankings();
+  if(name==='profiles')renderProfiles('');
 }
 function updateAdminStats(){
   document.getElementById('asc').textContent=campers.length;
@@ -1031,6 +1093,94 @@ async function processGvizData(t){
   else{toast('✅ All '+skipped+' campers already imported — roster up to date');}
 }
 function resetSyncBtn(){const btn=document.getElementById('syncBtn');if(btn){btn.textContent='🔄 Sync JotForm';btn.disabled=false;}}
+// ═══ PROFILES ═══
+function renderProfiles(search){
+  search=(search||'').toLowerCase().trim();
+  const filter=document.getElementById('apFilter')?.value||'';
+  const cs=buildCamperScores();
+  let list=[...campers].sort((a,b)=>(a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase()));
+  if(search)list=list.filter(c=>(c.first_name+' '+c.last_name+' '+(c.city||'')+' '+(c.state||'')).toLowerCase().includes(search));
+  if(filter==='rmac')list=list.filter(c=>c.rmac);
+  if(filter==='returning')list=list.filter(c=>c.is_returning);
+  if(filter==='evaluated')list=list.filter(c=>cs[c.id]);
+  if(filter==='not-evaluated')list=list.filter(c=>!cs[c.id]);
+  const grid=document.getElementById('apGrid');
+  if(!list.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><span class="ei">👤</span><div class="et">No campers found</div></div>';return;}
+  grid.innerHTML=list.map(c=>{
+    const sc=cs[c.id];
+    const evals=sc?sc.evalCount:0;
+    const avg=sc?sc.overall.toFixed(1):'—';
+    const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
+    const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
+    const rmacTag=c.rmac?'<span class="ptag ptag-rmac">RMAC</span>':'';
+    const retTag=c.is_returning?'<span class="ptag ptag-ret">↩ Returning</span>':'';
+    const loc=(c.city||'')+(c.state?', '+c.state:'');
+    const typeLabel=c.type||'Non-Staff';
+    const evalStatus=evals?`${evals} eval${evals!==1?'s':''} · Avg <strong style="color:var(--or)">${avg}</strong>`:'<span style="color:var(--tx3)">Not yet evaluated</span>';
+    return`<div class="pcard" onclick="openProfile('${c.id}')">
+      <div class="pcard-img">
+        ${imgHtml}
+        <div class="pcard-tags">${rmacTag}</div>
+        <div class="pcard-tags2">${retTag}</div>
+      </div>
+      <div class="pcard-body">
+        <div class="pcard-name">${c.first_name} ${c.last_name}</div>
+        ${loc?`<div class="pcard-loc">${loc}</div>`:''}
+        <div class="pcard-type">${typeLabel}</div>
+        <div class="pcard-eval">${evalStatus}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openProfile(id){
+  const c=campers.find(x=>x.id===id);if(!c)return;
+  const cs=buildCamperScores();
+  const sc=cs[id];
+  const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
+  // Image
+  const imgWrap=document.getElementById('pmImgWrap');
+  imgWrap.innerHTML=c.photo?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`:`<div class="pmod-initials">${initials}</div>`;
+  // Body
+  const loc=(c.city||'')+(c.state?', '+c.state:'');
+  let tags='';
+  if(c.rmac)tags+='<span class="ptag ptag-rmac">RMAC</span>';
+  if(c.is_returning)tags+='<span class="ptag ptag-ret">↩ Returning</span>';
+  if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
+  let body=`<div class="pmod-name">${c.first_name} ${c.last_name}</div>`;
+  if(loc||c.conference)body+=`<div class="pmod-meta">${[loc,c.conference].filter(Boolean).join(' · ')}</div>`;
+  if(tags)body+=`<div class="pmod-tags">${tags}</div>`;
+  if(c.bio)body+=`<div class="pmod-bio">${c.bio}</div>`;
+  // Scores
+  if(sc){
+    body+=`<div class="pmod-overall"><div class="pmod-overall-val">${sc.overall.toFixed(1)}</div><div class="pmod-overall-lbl">Overall Average · ${sc.evalCount} Eval${sc.evalCount!==1?'s':''}</div></div>`;
+    body+='<div class="pmod-sec">Category Scores</div>';
+    CFG.CATS.forEach(cat=>{
+      const v=sc.catAverages[cat]||0;
+      const pct=(v/10*100).toFixed(0);
+      const col=v>=8?'var(--grn)':v>=5?'var(--or)':'var(--red2)';
+      body+=`<div class="pmod-bar-row"><span class="pmod-bar-lbl">${cat}</span><div class="pmod-bar-bg"><div class="pmod-bar-fill" style="width:${pct}%"></div></div><span class="pmod-bar-val" style="color:${col}">${v.toFixed(1)}</span></div>`;
+    });
+    let scoreTagsHtml='';
+    if(sc.rmac)scoreTagsHtml+='<span class="ptag ptag-rmac">RMAC Ready</span>';
+    if(sc.conference)scoreTagsHtml+='<span class="ptag ptag-ret">Conference Ready</span>';
+    if(sc.top10)scoreTagsHtml+='<span class="ptag" style="background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.4);color:var(--gold)">Top 10</span>';
+    if(scoreTagsHtml)body+=`<div class="pmod-tags" style="margin-top:10px">${scoreTagsHtml}</div>`;
+  }else{
+    body+='<div style="text-align:center;padding:20px 0;color:var(--tx3);font-size:13px">No evaluations yet</div>';
+  }
+  // Contact
+  if(c.email||c.phone){
+    body+='<div class="pmod-sec">Contact</div>';
+    if(c.email)body+=`<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">✉️ ${c.email}</div>`;
+    if(c.phone)body+=`<div style="font-size:12px;color:var(--tx2)">📞 ${c.phone}</div>`;
+  }
+  // Edit button
+  body+=`<div style="margin-top:16px;display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div>`;
+  document.getElementById('pmBody').innerHTML=body;
+  openModal('mProfile');
+}
+
 </script>
 </body>
 </html>
