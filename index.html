@@ -728,8 +728,13 @@ if('serviceWorker' in navigator){
 </div></div></div>
 
 <div class="overlay" id="mClinician"><div class="modal"><div class="mhd"><div class="mtitle">ADD CLINICIAN</div><button class="mclose" onclick="closeModal('mClinician')" type="button">✕</button></div><div class="mbody">
-<label class="flabel">Name *</label><input class="finput" id="clName" placeholder="Coach Smith">
-<div style="display:flex;gap:8px;margin-top:6px"><button class="btn bsec" style="flex:1" onclick="closeModal('mClinician')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveClinician()" type="button">Save</button></div>
+<div class="frow"><div><label class="flabel">First Name *</label><input class="finput" id="clFirst" placeholder="Tommy" style="margin-bottom:0"></div><div><label class="flabel">Last Name *</label><input class="finput" id="clLast" placeholder="Nunez" style="margin-bottom:0"></div></div>
+<label class="flabel" style="margin-top:10px">Email *</label><input class="finput" id="clEmail" placeholder="tommy@example.com" type="email">
+<div class="frow" style="margin-top:0"><div><label class="flabel">Username *</label><input class="finput" id="clUser" placeholder="tnunez" style="margin-bottom:0" autocomplete="off"></div><div><label class="flabel">Password *</label><input class="finput" id="clPass" placeholder="••••••" type="password" style="margin-bottom:0" autocomplete="new-password"></div></div>
+<label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="clRole"><option>Evaluator</option><option>Lead Clinician</option><option>Camp Director</option></select>
+<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="clSendEmail" checked style="accent-color:var(--or)"> Send login credentials email</label>
+<div class="ferr" id="clErr" style="display:none;color:var(--red2);font-size:12px;margin-bottom:8px"></div>
+<div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mClinician')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveClinician()" type="button">Save & Invite</button></div>
 </div></div></div>
 
 <div class="overlay" id="mImport"><div class="modal"><div class="mhd"><div class="mtitle">IMPORT CAMPERS</div><button class="mclose" onclick="closeModal('mImport')" type="button">✕</button></div><div class="mbody">
@@ -1212,8 +1217,68 @@ function renderAdminClinicians(){
   clinicians.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm">${c.name}</td><td><button class="btn bred bsm" onclick="delClinician('${c.id}')">🗑</button></td>`;tbody.appendChild(tr);});
 }
 async function saveClinician(){
-  const n=document.getElementById('clName').value.trim();if(!n){toast('Name required',true);return;}
-  try{await supa('clinicians','POST',{name:n});closeModal('mClinician');toast('Clinician added!');await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();}catch(e){toast('Error',true);}
+  const first=document.getElementById('clFirst').value.trim();
+  const last=document.getElementById('clLast').value.trim();
+  const email=document.getElementById('clEmail').value.trim().toLowerCase();
+  const user=document.getElementById('clUser').value.trim().toLowerCase();
+  const pass=document.getElementById('clPass').value;
+  const role=document.getElementById('clRole').value;
+  const errEl=document.getElementById('clErr');
+  errEl.style.display='none';
+  if(!first||!last){errEl.textContent='First and last name required.';errEl.style.display='block';return;}
+  if(!email||!email.includes('@')){errEl.textContent='Valid email required.';errEl.style.display='block';return;}
+  if(!user){errEl.textContent='Username required.';errEl.style.display='block';return;}
+  if(!pass||pass.length<4){errEl.textContent='Password must be at least 4 characters.';errEl.style.display='block';return;}
+  const fullName=first+' '+last;
+  try{
+    // Create staff login account
+    await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,title:'Clinician',role,email:email||null});
+    // Also add to clinicians list for eval dropdown
+    await supa('clinicians','POST',{name:fullName});
+    // Send welcome email if checked
+    if(document.getElementById('clSendEmail').checked&&email){
+      try{
+        await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          to:email,from:CFG.FROM_EMAIL,
+          subject:'VH1 Officials Camp — Your Clinician Login',
+          html:buildClinicianEmailHTML(first,last,user,pass)
+        })});
+      }catch(e){console.warn('Email failed',e);}
+    }
+    closeModal('mClinician');
+    toast('Clinician added & invited!');
+    // Reset form
+    ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('clSendEmail').checked=true;
+    await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
+  }catch(e){errEl.textContent='Error — username may already be taken.';errEl.style.display='block';}
+}
+
+function buildClinicianEmailHTML(first,last,username,password){
+  return `<div style="max-width:560px;margin:0 auto;background:#111;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;">
+    <div style="background:#F47B20;padding:20px 24px;"><h2 style="color:#fff;margin:0;font-size:22px;letter-spacing:2px;">VH1 BASKETBALL OFFICIALS CAMP</h2><p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:12px;letter-spacing:.1em">JUNE 18–20, 2026 · CLINICIAN ACCESS</p></div>
+    <div style="padding:28px;">
+      <p style="color:#f0f0eb;font-size:16px;margin:0 0 8px">Hey ${first},</p>
+      <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 24px">You've been added as a clinician for the VH1 Basketball Officials Camp. Use the credentials below to log in to the staff portal and submit evaluations.</p>
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;margin-bottom:24px;text-align:center">
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#888;margin-bottom:14px">YOUR LOGIN CREDENTIALS</div>
+        <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+          <div style="background:#111;border-radius:8px;padding:14px 20px;min-width:120px">
+            <div style="font-size:10px;color:#888;letter-spacing:.1em;margin-bottom:6px">USERNAME</div>
+            <div style="font-size:22px;font-weight:700;color:#f0f0eb;letter-spacing:.04em">${username}</div>
+          </div>
+          <div style="background:#F47B20;border-radius:8px;padding:14px 20px;min-width:120px">
+            <div style="font-size:10px;color:rgba(0,0,0,.6);letter-spacing:.1em;margin-bottom:6px">PASSWORD</div>
+            <div style="font-size:24px;font-weight:900;color:#000;letter-spacing:.08em">${password}</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:24px">
+        <a href="https://vh1camp.github.io/portal/" style="display:inline-block;background:#F47B20;color:#000;font-weight:800;font-size:15px;letter-spacing:.06em;padding:14px 32px;border-radius:8px;text-decoration:none">ACCESS STAFF PORTAL →</a>
+      </div>
+      <p style="color:#555;font-size:12px;text-align:center;margin:0">Log in using the <strong style="color:#aaa">Staff</strong> tab on the login screen.<br>${CFG.CAMP_NAME} · June 18–20, 2026</p>
+    </div>
+  </div>`;
 }
 async function delClinician(id){const ok=await cf('Remove this clinician?','Remove','Cancel');if(!ok)return;try{await supa('clinicians','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminClinicians();updateAdminStats();}catch(e){toast('Error',true);}}
 
