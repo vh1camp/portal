@@ -429,6 +429,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <button class="btn bor bsm" onclick="openAddCamper()" type="button">➕ Add</button>
 <button class="btn bsec bsm" onclick="openModal('mImport')" type="button">📥 CSV</button>
           <button class="btn bgrn bsm" id="syncBtn" onclick="syncFromSheet()" type="button">🔄 Sync JotForm</button>
+<button class="btn bsec bsm" id="sendAllPinsBtn" onclick="sendAllPins()" type="button">📧 Send All PINs</button>
 </div>
 </div>
 <div class="twrap"><table><thead><tr><th>#</th><th>Name</th><th>City/State</th><th>Email</th><th>PIN</th><th>Type</th><th>Evals</th><th>Avg</th><th></th></tr></thead><tbody id="acbody"></tbody></table></div>
@@ -1179,6 +1180,77 @@ function openProfile(id){
   body+=`<div style="margin-top:16px;display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div>`;
   document.getElementById('pmBody').innerHTML=body;
   openModal('mProfile');
+}
+
+// ═══ PIN EMAIL ═══
+function buildPinEmailHTML(camper){
+  return `<div style="max-width:560px;margin:0 auto;background:#111;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;">
+    <div style="background:#F47B20;padding:24px;text-align:center;">
+      <h1 style="color:#fff;margin:0;font-size:26px;letter-spacing:2px;">VH1 BASKETBALL OFFICIALS CAMP</h1>
+      <p style="color:rgba(255,255,255,.8);margin:6px 0 0;font-size:13px;letter-spacing:.1em">JUNE 18–20, 2026</p>
+    </div>
+    <div style="padding:28px;">
+      <p style="color:#f0f0eb;font-size:16px;margin:0 0 8px">Hey ${camper.first_name},</p>
+      <p style="color:#aaa;font-size:14px;line-height:1.7;margin:0 0 24px">You're registered for the VH1 Basketball Officials Camp! Use the credentials below to log in to the camp portal and track your evaluations.</p>
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:20px;margin-bottom:24px;text-align:center">
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#888;margin-bottom:14px">YOUR LOGIN CREDENTIALS</div>
+        <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+          <div style="background:#111;border-radius:8px;padding:14px 20px;min-width:120px">
+            <div style="font-size:10px;color:#888;letter-spacing:.1em;margin-bottom:6px">LAST NAME</div>
+            <div style="font-size:22px;font-weight:700;color:#f0f0eb;letter-spacing:.04em">${camper.last_name}</div>
+          </div>
+          <div style="background:#F47B20;border-radius:8px;padding:14px 20px;min-width:120px">
+            <div style="font-size:10px;color:rgba(0,0,0,.6);letter-spacing:.1em;margin-bottom:6px">PIN</div>
+            <div style="font-size:32px;font-weight:900;color:#000;letter-spacing:.12em">${camper.pin}</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:24px">
+        <a href="https://vh1camp.github.io" style="display:inline-block;background:#F47B20;color:#000;font-weight:800;font-size:15px;letter-spacing:.06em;padding:14px 32px;border-radius:8px;text-decoration:none">ACCESS CAMP PORTAL →</a>
+      </div>
+      <p style="color:#555;font-size:12px;text-align:center;margin:0">Questions? Reply to this email or contact camp staff.<br>${CFG.CAMP_NAME} · June 18–20, 2026</p>
+    </div>
+  </div>`;
+}
+
+async function sendPinEmail(id){
+  const c=campers.find(x=>x.id===id);
+  if(!c||!c.email){toast('No email on file',true);return;}
+  const btn=document.getElementById('pinbtn-'+id);
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  try{
+    const res=await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      to:c.email,from:CFG.FROM_EMAIL,
+      subject:`VH1 Officials Camp — Your Login PIN`,
+      html:buildPinEmailHTML(c)
+    })});
+    if(res.ok){toast('PIN sent to '+c.first_name+' '+c.last_name);if(btn){btn.textContent='✅';setTimeout(()=>{if(btn)btn.textContent='📧';btn.disabled=false;},3000);}}
+    else{toast('Email failed',true);if(btn){btn.textContent='📧';btn.disabled=false;}}
+  }catch(e){toast('Email error',true);if(btn){btn.textContent='📧';btn.disabled=false;}}
+}
+
+async function sendAllPins(){
+  const withEmail=campers.filter(c=>c.email);
+  if(!withEmail.length){toast('No campers have emails',true);return;}
+  const ok=await cf(`Send PIN emails to all ${withEmail.length} campers with email addresses?`,'Send All','Cancel');
+  if(!ok)return;
+  const btn=document.getElementById('sendAllPinsBtn');
+  btn.disabled=true;btn.textContent='⏳ Sending...';
+  let sent=0,failed=0;
+  for(const c of withEmail){
+    try{
+      const res=await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        to:c.email,from:CFG.FROM_EMAIL,
+        subject:`VH1 Officials Camp — Your Login PIN`,
+        html:buildPinEmailHTML(c)
+      })});
+      if(res.ok)sent++;else failed++;
+    }catch(e){failed++;}
+    // small delay to avoid rate limiting
+    await new Promise(r=>setTimeout(r,200));
+  }
+  btn.disabled=false;btn.textContent='📧 Send All PINs';
+  toast(`✅ ${sent} sent${failed?', '+failed+' failed':''}`);
 }
 
 </script>
