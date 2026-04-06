@@ -251,7 +251,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .pcard{background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:border-color .2s,transform .15s}
 .pcard:hover{border-color:var(--or);transform:translateY(-2px)}
 .pcard-img{position:relative;width:100%;aspect-ratio:1;overflow:hidden;background:var(--gray2)}
-.pcard-img img{width:100%;height:100%;object-fit:cover;object-position:top}
+.pcard-img img{width:100%;height:100%;object-fit:cover;object-position:center 20%}
 .pcard-initials{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--tx3)}
 .pcard-tags{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap}
 .pcard-tags2{position:absolute;top:8px;right:8px;display:flex;gap:4px;flex-wrap:wrap}
@@ -264,7 +264,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .pcard-type{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:4px;background:var(--ord);border:1px solid var(--orb);color:var(--or);margin-bottom:6px}
 .pcard-eval{font-size:11px;color:var(--tx3)}
 /* PROFILE MODAL */
-.pmod-img{width:100%;max-height:280px;object-fit:cover;object-position:top;display:block}
+.pmod-img{width:100%;max-height:320px;object-fit:cover;object-position:center 15%;display:block}
 .pmod-initials{width:100%;height:160px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:72px;color:var(--tx3);background:var(--gray2)}
 .pmod-body{padding:16px}
 .pmod-name{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;line-height:1}
@@ -556,7 +556,16 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <div class="frow" style="margin-top:10px"><div><label class="flabel">City</label><input class="finput" id="cfCity" placeholder="Denver" style="margin-bottom:0"></div><div><label class="flabel">State</label><input class="finput" id="cfState" placeholder="CO" maxlength="2" style="margin-bottom:0"></div></div>
 <label class="flabel" style="margin-top:10px">Email *</label><input class="finput" id="cfEmail" placeholder="john@example.com">
 <div class="frow"><div><label class="flabel">Type</label><select class="finput" id="cfType" style="margin-bottom:0"><option>Non-Staff</option><option>Staff</option><option>Mens College</option><option>Womens College</option><option>High School</option></select></div><div><label class="flabel">PIN</label><input class="finput" id="cfPin" placeholder="Auto" maxlength="6" inputmode="numeric" style="margin-bottom:0"></div></div>
-<label class="flabel" style="margin-top:10px">Photo URL</label><input class="finput" id="cfPhoto" placeholder="https://...">
+<label class="flabel" style="margin-top:10px">Photo</label>
+<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px">
+  <div id="cfPhotoPreview" style="width:60px;height:60px;border-radius:50%;background:var(--gray3);border:2px solid var(--b3);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--tx3)">👤</div>
+  <div style="flex:1">
+    <input class="finput" id="cfPhoto" placeholder="https://... paste URL or upload below" style="margin-bottom:6px" oninput="updatePhotoPreview()">
+    <label style="display:inline-flex;align-items:center;gap:6px;background:var(--gray2);border:1px solid var(--b3);border-radius:var(--rs);padding:7px 12px;font-size:12px;color:var(--tx2);cursor:pointer;font-family:Barlow,sans-serif">
+      📷 Upload Photo<input type="file" accept="image/*" id="cfPhotoUpload" style="display:none" onchange="handlePhotoUpload(this)">
+    </label>
+  </div>
+</div>
 <label class="flabel">Bio / Resume</label><textarea class="ftarea" id="cfBio" placeholder="Background, experience..." style="min-height:60px"></textarea>
 <label class="flabel" style="margin-top:10px">Conference(s)</label><input class="finput" id="cfConf" placeholder="RMAC, Big Sky, etc.">
 <div class="ferr" id="cfErr"></div>
@@ -1002,7 +1011,7 @@ function editCamper(id){
   document.getElementById('cfEmail').value=c.email||'';
   document.getElementById('cfType').value=c.type||'Non-Staff';
   document.getElementById('cfPin').value=c.pin||'';
-  document.getElementById('cfPhoto').value=c.photo||'';
+  document.getElementById('cfPhoto').value=c.photo||'';updatePhotoPreview(c.first_name,c.last_name);
   document.getElementById('cfBio').value=c.bio||'';
   document.getElementById('cfConf').value=c.conference||'';
   document.getElementById('cfErr').style.display='none';
@@ -1014,7 +1023,7 @@ function openAddCamper(){
   document.getElementById('cfFirst').value='';document.getElementById('cfLast').value='';
   document.getElementById('cfCity').value='';document.getElementById('cfState').value='';
   document.getElementById('cfEmail').value='';document.getElementById('cfType').value='Non-Staff';
-  document.getElementById('cfPin').value='';document.getElementById('cfPhoto').value='';
+  document.getElementById('cfPin').value='';document.getElementById('cfPhoto').value='';updatePhotoPreview();
   document.getElementById('cfBio').value='';document.getElementById('cfConf').value='';
   document.getElementById('cfErr').style.display='none';
   openModal('mCamper');
@@ -1391,7 +1400,7 @@ function parseXLSXRows(rows){
   document.getElementById('xlsxSkipCount').textContent=skipped;
   document.getElementById('xlsxList').innerHTML=xlsxParsed.map(c=>`
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1)">
-      ${c.photo?`<img src="${c.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:top;flex-shrink:0" onerror="this.style.display='none'">`:'<div style="width:32px;height:32px;border-radius:50%;background:var(--gray3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3)">'+(c.first_name[0]||'')+(c.last_name[0]||'')+'</div>'}
+      ${c.photo?`<img src="${c.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;object-position:center 15%;flex-shrink:0" onerror="this.style.display='none'">`:'<div style="width:32px;height:32px;border-radius:50%;background:var(--gray3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--tx3)">'+(c.first_name[0]||'')+(c.last_name[0]||'')+'</div>'}
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600">${c.first_name} ${c.last_name}</div>
         <div style="font-size:11px;color:var(--tx2)">${[c.city&&c.state?c.city+', '+c.state:'',c.type,c.rmac?'RMAC':''].filter(Boolean).join(' · ')}</div>
@@ -1450,6 +1459,51 @@ async function uploadXLSX(){
   dz.addEventListener('dragleave',()=>{dz.style.borderColor='var(--or)';});
   dz.addEventListener('drop',e=>{e.preventDefault();dz.style.borderColor='var(--or)';if(e.dataTransfer.files.length)handleXLSX(e.dataTransfer.files[0]);});
 })();
+
+// ═══ PHOTO UPLOAD ═══
+function updatePhotoPreview(first,last){
+  const url=document.getElementById('cfPhoto')?.value?.trim();
+  const preview=document.getElementById('cfPhotoPreview');
+  if(!preview)return;
+  if(url&&url.startsWith('http')){
+    preview.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;object-position:center 15%" onerror="this.parentElement.innerHTML='👤'">`;
+  }else{
+    const f=first||document.getElementById('cfFirst')?.value||'';
+    const l=last||document.getElementById('cfLast')?.value||'';
+    const initials=(f[0]||'')+(l[0]||'');
+    preview.innerHTML=initials?`<span style="font-family:Bebas Neue,sans-serif;font-size:22px;color:var(--tx2)">${initials}</span>`:'👤';
+  }
+}
+
+function handlePhotoUpload(input){
+  const file=input.files[0];
+  if(!file)return;
+  // Check size — warn if over 2MB
+  if(file.size>2*1024*1024){
+    toast('Photo is large — compressing...'); 
+  }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const base64=e.target.result;
+    // Compress via canvas
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const MAX=600;
+      let w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+      else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.82);
+      document.getElementById('cfPhoto').value=compressed;
+      updatePhotoPreview();
+      toast('Photo ready ✓');
+    };
+    img.src=base64;
+  };
+  reader.readAsDataURL(file);
+}
 
 </script>
 </body>
