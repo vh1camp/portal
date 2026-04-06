@@ -280,6 +280,13 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .pmod-overall{text-align:center;padding:14px;background:linear-gradient(135deg,#d45518,var(--or));border-radius:var(--rs);margin-bottom:12px}
 .pmod-overall-val{font-family:'Bebas Neue',sans-serif;font-size:52px;color:#fff;line-height:1}
 .pmod-overall-lbl{font-size:10px;letter-spacing:.12em;color:rgba(255,255,255,.7);text-transform:uppercase}
+
+/* SORTABLE TABLE HEADERS */
+.sortable-th{cursor:pointer;user-select:none;white-space:nowrap}
+.sortable-th:hover{color:var(--or)}
+.sort-arrow{font-size:10px;color:var(--or);margin-left:2px;opacity:0}
+.sortable-th:hover .sort-arrow{opacity:.5}
+.sort-arrow.active{opacity:1}
 </style>
 </head>
 <body>
@@ -427,13 +434,11 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
 <div class="swrap"><span class="sicon">🔍</span><input class="sinput" type="text" id="acSearch" placeholder="Search..." oninput="renderAdminCampers(this.value)"></div>
 <button class="btn bor bsm" onclick="openAddCamper()" type="button">➕ Add</button>
-<button class="btn bsec bsm" onclick="openModal('mImport')" type="button">📥 CSV</button>
 <button class="btn bsec bsm" onclick="openModal('mXLSX')" type="button">📊 Excel</button>
-          <button class="btn bgrn bsm" id="syncBtn" onclick="syncFromSheet()" type="button">🔄 Sync JotForm</button>
 <button class="btn bsec bsm" id="sendAllPinsBtn" onclick="sendAllPins()" type="button">📧 Send All PINs</button>
 </div>
 </div>
-<div class="twrap"><table><thead><tr><th>#</th><th>Name</th><th>City/State</th><th>Email</th><th>PIN</th><th>Type</th><th>Evals</th><th>Avg</th><th></th></tr></thead><tbody id="acbody"></tbody></table></div>
+<div class="twrap"><table><thead><tr><th>#</th><th class="sortable-th" onclick="sortCampers('name')" id="th-name">Name <span class="sort-arrow" id="sa-name">↑</span></th><th class="sortable-th" onclick="sortCampers('city')" id="th-city">City/State <span class="sort-arrow" id="sa-city"></span></th><th>Email</th><th class="sortable-th" onclick="sortCampers('pin')" id="th-pin">PIN <span class="sort-arrow" id="sa-pin"></span></th><th class="sortable-th" onclick="sortCampers('type')" id="th-type">Type <span class="sort-arrow" id="sa-type"></span></th><th class="sortable-th" onclick="sortCampers('evals')" id="th-evals">Evals <span class="sort-arrow" id="sa-evals"></span></th><th class="sortable-th" onclick="sortCampers('avg')" id="th-avg">Avg <span class="sort-arrow" id="sa-avg"></span></th><th></th></tr></thead><tbody id="acbody"></tbody></table></div>
 </div>
 <div class="tc" id="at-staff">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
@@ -905,7 +910,7 @@ function aTab(name,btn){
   document.getElementById('at-'+name).classList.add('on');
   if(btn)btn.classList.add('on');
   if(name==='overview'){updateAdminStats();renderRecentEvals();}
-  if(name==='campers')renderAdminCampers();
+  if(name==='campers'){camperSortCol='name';camperSortDir=1;document.querySelectorAll('.sort-arrow').forEach(a=>{a.classList.remove('active');a.textContent='';});const sa=document.getElementById('sa-name');if(sa){sa.textContent='↑';sa.classList.add('active');}renderAdminCampers();}
   if(name==='staff'){renderAdminStaff();renderAdminClinicians();}
   if(name==='evaluate'){populateAdminForms();}
   if(name==='rankings')renderAdminRankings();
@@ -931,8 +936,35 @@ function renderRecentEvals(){
 }
 
 // ═══ ADMIN CAMPERS ═══
+let camperSortCol='name',camperSortDir=1;
+function sortCampers(col){
+  if(camperSortCol===col){camperSortDir*=-1;}else{camperSortCol=col;camperSortDir=1;}
+  // Update arrows
+  document.querySelectorAll('.sort-arrow').forEach(a=>{a.classList.remove('active');a.textContent='';});
+  const sa=document.getElementById('sa-'+col);
+  if(sa){sa.textContent=camperSortDir===1?'↑':'↓';sa.classList.add('active');}
+  renderAdminCampers(document.getElementById('acSearch').value);
+}
 function renderAdminCampers(filter){
-  const list=filter?campers.filter(c=>(c.first_name+' '+c.last_name).toLowerCase().includes(filter.toLowerCase())):campers;
+  let list=filter?campers.filter(c=>(c.first_name+' '+c.last_name).toLowerCase().includes(filter.toLowerCase())):[...campers];
+  // Sort
+  list.sort((a,b)=>{
+    const ae=evaluations.filter(e=>e.camper_id===a.id);
+    const be=evaluations.filter(e=>e.camper_id===b.id);
+    const aAvg=ae.length?ae.reduce((s,e)=>s+(e.overall_score||0),0)/ae.length:-1;
+    const bAvg=be.length?be.reduce((s,e)=>s+(e.overall_score||0),0)/be.length:-1;
+    let av,bv;
+    if(camperSortCol==='name'){av=(a.last_name+a.first_name).toLowerCase();bv=(b.last_name+b.first_name).toLowerCase();}
+    else if(camperSortCol==='city'){av=(a.city||'').toLowerCase();bv=(b.city||'').toLowerCase();}
+    else if(camperSortCol==='pin'){av=a.pin||'';bv=b.pin||'';}
+    else if(camperSortCol==='type'){av=(a.type||'').toLowerCase();bv=(b.type||'').toLowerCase();}
+    else if(camperSortCol==='evals'){av=ae.length;bv=be.length;}
+    else if(camperSortCol==='avg'){av=aAvg;bv=bAvg;}
+    else{av=(a.last_name+a.first_name).toLowerCase();bv=(b.last_name+b.first_name).toLowerCase();}
+    if(av<bv)return -1*camperSortDir;
+    if(av>bv)return 1*camperSortDir;
+    return 0;
+  });
   const tbody=document.getElementById('acbody');
   if(!list.length){tbody.innerHTML='<tr><td colspan="9"><div class="empty"><span class="ei">👥</span><div class="et">No Campers Yet</div></div></td></tr>';return;}
   tbody.innerHTML='';
@@ -940,9 +972,12 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Bebas Neue,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px"><button class="btn bsec bsm" onclick="editCamper('${c.id}')">✏️</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">🗑</button></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Bebas Neue,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">📧</button>`:''}<button class="btn bsec bsm" onclick="editCamper('${c.id}')">✏️</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">🗑</button></td>`;
     tbody.appendChild(tr);
   });
+  // Keep arrow in sync
+  const sa=document.getElementById('sa-'+camperSortCol);
+  if(sa){sa.textContent=camperSortDir===1?'↑':'↓';sa.classList.add('active');}
 }
 let editCId=null;
 async function saveCamper(){
