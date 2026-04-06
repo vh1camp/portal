@@ -799,8 +799,25 @@ document.getElementById('cfdlgyes').onclick=()=>{document.getElementById('cfdlg'
 document.getElementById('cfdlgno').onclick=()=>{document.getElementById('cfdlg').className='';if(_cfR){_cfR(false);_cfR=null;}};
 
 // ═══ MODALS ═══
-function openModal(id){const el=document.getElementById(id);if(id==='mProfile'){el.style.display='block';}else{el.classList.add('on');}}
-function closeModal(id){const el=document.getElementById(id);if(id==='mProfile'){el.style.display='none';}else{el.classList.remove('on');}}
+function openModal(id){
+  const el=document.getElementById(id);
+  if(id==='mProfile'){
+    el.style.display='block';
+    // Hide bottom navs so they don't overlap
+    document.querySelectorAll('.bnav').forEach(n=>n.style.display='none');
+  }else{el.classList.add('on');}
+}
+function closeModal(id){
+  const el=document.getElementById(id);
+  if(id==='mProfile'){
+    el.style.display='none';
+    // Restore correct bottom nav
+    const navC=document.getElementById('navC');
+    const navS=document.getElementById('navS');
+    if(CR==='camper'&&navC)navC.style.display='flex';
+    else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
+  }else{el.classList.remove('on');}
+}
 
 // ═══ LOGIN ═══
 function switchLoginTab(tab){
@@ -1862,19 +1879,23 @@ function renderCamperProfiles(search){
 function openCamperProfile(id){
   const c=campers.find(x=>x.id===id);if(!c)return;
   const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
-  const imgWrap=document.getElementById('pmImgWrap');
-  imgWrap.innerHTML=c.photo?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`:`<div class="pmod-initials">${initials}</div>`;
+  const imgHtml=c.photo
+    ?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
+    :`<div class="pmod-initials">${initials}</div>`;
   const loc=(c.city||'')+(c.state?', '+c.state:'');
   let tags='';
   if(c.rmac)tags+='<span class="ptag ptag-rmac">RMAC</span>';
   if(c.is_returning)tags+='<span class="ptag ptag-ret">↩ Returning</span>';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
-  let body=`<div class="pmod-name">${c.first_name} ${c.last_name}</div>`;
+  let body=imgHtml;
+  body+=`<div class="pmod-body" style="padding:16px 16px 40px">`;
+  body+=`<div class="pmod-name">${c.first_name} ${c.last_name}</div>`;
   if(loc||c.conference)body+=`<div class="pmod-meta">${[loc,c.conference].filter(Boolean).join(' · ')}</div>`;
   if(tags)body+=`<div class="pmod-tags">${tags}</div>`;
   if(c.bio)body+=`<div class="pmod-bio">${c.bio}</div>`;
   else body+='<div style="font-size:13px;color:var(--tx3);padding:10px 0">No bio yet.</div>';
-  body+=`<div style="margin-top:16px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
+  body+=`</div>`;
+  body+=`<div style="padding:0 16px 40px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
   document.getElementById('pmBody').innerHTML=body;
   openModal('mProfile');
 }
@@ -2004,14 +2025,14 @@ function handleMyPhotoUpload(input,role){
       canvas.width=w;canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
       const compressed=canvas.toDataURL('image/jpeg',0.82);
-      CU.photo=compressed;
+      CU._pendingPhoto=compressed;
       // Update preview circle
       const circle=document.querySelector('.profile-photo-circle');
       if(circle)circle.innerHTML=`<img src="${compressed}" style="width:100%;height:100%;object-fit:cover;object-position:center 15%"><div class="profile-photo-overlay">📷</div>`;
       // Clear URL field since we're using upload
       const urlField=document.getElementById('mpPhotoUrl');
       if(urlField)urlField.value='';
-      toast('Photo ready ✓');
+      toast('Photo ready — tap Save Profile ✓');
     };
     img.src=e.target.result;
   };
@@ -2025,7 +2046,8 @@ async function saveMyProfile(role){
   const last=document.getElementById('mpLast')?.value.trim();
   if(!first||!last){status.textContent='Name is required.';status.style.color='var(--red2)';return;}
   const photoUrl=document.getElementById('mpPhotoUrl')?.value.trim();
-  const photo=CU.photo&&!CU.photo.startsWith('http')&&CU.photo.startsWith('data:')?CU.photo:(photoUrl||CU.photo||null);
+  // Use uploaded base64 if available, then URL field, then existing photo
+  const photo=CU._pendingPhoto||(photoUrl&&photoUrl.startsWith('http')?photoUrl:(CU.photo||null));
   const data={
     first_name:first,last_name:last,
     city:document.getElementById('mpCity')?.value.trim()||null,
@@ -2037,9 +2059,22 @@ async function saveMyProfile(role){
   };
   try{
     const table=role==='staff'?'staff':'campers';
-    await supa(table,'PATCH',data,`?id=eq.${CU.id}`);
+    // Save non-photo fields first
+    const dataNoPhoto={...data};delete dataNoPhoto.photo;
+    await supa(table,'PATCH',dataNoPhoto,`?id=eq.${CU.id}`);
+    // Save photo separately (may be large base64)
+    if(data.photo){
+      try{
+        await supa(table,'PATCH',{photo:data.photo},`?id=eq.${CU.id}`);
+      }catch(photoErr){
+        console.warn('Photo save failed:',photoErr);
+        toast('Profile saved but photo failed — try a smaller image',true);
+        data.photo=CU.photo||null;
+      }
+    }
     // Update local CU
     Object.assign(CU,data);
+    CU._pendingPhoto=null;
     // Refresh display name in header
     document.getElementById('uName').textContent=CU.first_name+' '+(CU.last_name||'');
     await loadAll();
