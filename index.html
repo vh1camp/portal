@@ -568,16 +568,12 @@ if('serviceWorker' in navigator){
 </div>
 <div class="tc" id="at-staff">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
-<div class="stitle" style="margin:0">STAFF & <span>CLINICIANS</span></div>
+<div class="stitle" style="margin:0">CLINICIAN <span>LIST</span></div>
 <div style="display:flex;gap:6px">
-<button class="btn bor bsm" onclick="openModal('mStaff')" type="button">➕ Staff</button>
-<button class="btn bsec bsm" onclick="openModal('mClinician')" type="button">➕ Clinician</button>
-<button class="btn bred bsm" onclick="deleteAllClinicians()" type="button">🗑 Del All Clinicians</button>
+<button class="btn bor bsm" onclick="openModal('mClinician')" type="button">➕ Add Clinician</button>
+<button class="btn bred bsm" onclick="deleteAllClinicians()" type="button">🗑 Del All</button>
 </div>
 </div>
-<div class="stitle" style="font-size:16px">STAFF <span>ACCOUNTS</span></div>
-<div class="twrap"><table><thead><tr><th>#</th><th>Name</th><th>Title</th><th>Username</th><th>Role</th><th>Evals</th><th></th></tr></thead><tbody id="asbody"></tbody></table></div>
-<div class="stitle" style="font-size:16px;margin-top:14px">CLINICIAN <span>LIST</span></div>
 <div class="twrap"><table><thead><tr><th>#</th><th>Name</th><th></th></tr></thead><tbody id="aclbody"></tbody></table></div>
 </div>
 <div class="tc" id="at-evaluate">
@@ -1075,7 +1071,7 @@ function aTab(name,btn){
   if(btn)btn.classList.add('on');
   if(name==='overview'){updateAdminStats();renderRecentEvals();}
   if(name==='campers'){camperSortCol='name';camperSortDir=1;document.querySelectorAll('.sort-arrow').forEach(a=>{a.classList.remove('active');a.textContent='';});const sa=document.getElementById('sa-name');if(sa){sa.textContent='↑';sa.classList.add('active');}renderAdminCampers();}
-  if(name==='staff'){renderAdminStaff();renderAdminClinicians();}
+  if(name==='staff'){renderAdminClinicians();}
   if(name==='evaluate'){populateAdminForms();}
   if(name==='rankings')renderAdminRankings();
   if(name==='profiles')renderProfiles('');
