@@ -253,8 +253,19 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .pcard-img{position:relative;width:100%;aspect-ratio:1;overflow:hidden;background:var(--gray2)}
 .pcard-img img{width:100%;height:100%;object-fit:cover;object-position:center 20%}
 .pcard-initials{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--tx3)}
-.pcard-tags{position:absolute;top:8px;left:8px;display:flex;gap:4px;flex-wrap:wrap}
-.pcard-tags2{position:absolute;top:8px;right:8px;display:flex;gap:4px;flex-wrap:wrap}
+.pcard-tags{position:absolute;top:6px;left:6px;display:flex;gap:3px;flex-wrap:wrap}
+.pcard-tags2{position:absolute;top:6px;right:6px;display:flex;gap:3px;flex-wrap:wrap}
+@media(max-width:640px){
+  .pgrid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .pcard-img{aspect-ratio:1}
+  .pcard-initials{font-size:28px}
+  .pcard-body{padding:6px 7px 8px}
+  .pcard-name{font-size:11px;letter-spacing:.01em;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pcard-loc{font-size:9px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pcard-type{font-size:8px;padding:2px 5px;margin-bottom:3px}
+  .pcard-eval{font-size:9px}
+  .ptag{font-size:7px;padding:2px 4px}
+}
 .ptag{font-size:9px;font-weight:800;letter-spacing:.1em;padding:3px 7px;border-radius:4px}
 .ptag-rmac{background:var(--grnd);border:1px solid var(--grnb);color:var(--grn)}
 .ptag-ret{background:var(--ord);border:1px solid var(--orb);color:var(--or)}
