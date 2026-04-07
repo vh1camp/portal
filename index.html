@@ -410,6 +410,7 @@ if('serviceWorker' in navigator){
 <button class="bb" id="cb-profiles" onclick="cView('profiles')" type="button"><span class="bi">🪪</span><span class="bl">Roster</span></button>
 <button class="bb" id="cb-schedule" onclick="cView('schedule')" type="button"><span class="bi">📅</span><span class="bl">Schedule</span></button>
 <button class="bb" id="cb-myprofile" onclick="cView('myprofile')" type="button"><span class="bi">👤</span><span class="bl">My Profile</span></button>
+<button class="bb" id="cb-campinfo" onclick="cView('campinfo')" type="button"><span class="bi">📄</span><span class="bl">Camp Info</span></button>
 <button class="bb" id="cb-chat" onclick="cView('chat')" type="button"><span class="bi">💬</span><span class="bl">Chat</span><span class="badge-dot" id="chatDotC"></span></button>
 </nav>
 <div class="view on" id="cv-home">
@@ -446,6 +447,11 @@ if('serviceWorker' in navigator){
 <div class="schedule-empty-sub">The camp schedule will appear here once published by the director.</div>
 </div>
 </div>
+<div class="view" id="cv-campinfo">
+<div class="stitle">CAMP <span>INFO</span></div>
+<div id="cvCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
+<div id="cvCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
+</div>
 <div class="view" id="cv-myprofile">
 <div class="stitle">MY <span>PROFILE</span></div>
 <div id="cMyProfileCon"></div>
@@ -469,6 +475,7 @@ if('serviceWorker' in navigator){
 <button class="bb" id="sb-roster" onclick="sView('roster')" type="button"><span class="bi">🪪</span><span class="bl">Roster</span></button>
 <button class="bb" id="sb-schedule" onclick="sView('schedule')" type="button"><span class="bi">📅</span><span class="bl">Schedule</span></button>
 <button class="bb" id="sb-myprofile" onclick="sView('myprofile')" type="button"><span class="bi">👤</span><span class="bl">My Profile</span></button>
+<button class="bb" id="sb-campinfo" onclick="sView('campinfo')" type="button"><span class="bi">📄</span><span class="bl">Camp Info</span></button>
 <button class="bb" id="sb-chat" onclick="sView('chat')" type="button"><span class="bi">💬</span><span class="bl">Chat</span><span class="badge-dot" id="chatDotS"></span></button>
 </nav>
 <div class="view on" id="sv-evaluate">
@@ -507,6 +514,11 @@ if('serviceWorker' in navigator){
 <div class="schedule-empty-txt">Schedule Coming Soon</div>
 <div class="schedule-empty-sub">The camp schedule will appear here once published.</div>
 </div>
+</div>
+<div class="view" id="sv-campinfo">
+<div class="stitle">CAMP <span>INFO</span></div>
+<div id="svCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
+<div id="svCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
 </div>
 <div class="view" id="sv-myprofile">
 <div class="stitle">MY <span>PROFILE</span></div>
@@ -645,7 +657,6 @@ if('serviceWorker' in navigator){
 </div>
 </div>
 </div>
-
 <div class="tc" id="at-campinfo">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
   <div class="stitle" style="margin:0">CAMP <span>INFO</span></div>
@@ -909,6 +920,7 @@ function cView(v){
   if(v==='profiles'){renderCamperProfiles('');}
   if(v==='myprofile')renderMyProfile('camper');
   if(v==='chat'){markChatRead('C');renderChat('Camper');}
+  if(v==='campinfo')renderCampInfoViewer('cv');
 }
 function renderCamperHome(){
   document.getElementById('cwname').textContent=CU.first_name+' '+CU.last_name;
@@ -950,6 +962,7 @@ function sView(v){
   if(v==='history')renderStaffHistory();
   if(v==='roster')renderStaffRoster('');
   if(v==='chat'){markChatRead('S');renderChat('Staff');}
+  if(v==='campinfo')renderCampInfoViewer('sv');
   if(v==='myprofile')renderMyProfile('staff');
 }
 function populateStaffEvalForm(){
@@ -984,12 +997,12 @@ function renderStaffRoster(filter){
   const con=document.getElementById('srGrid');
   let list=[...campers].sort((a,b)=>(a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase()));
   if(filter)list=list.filter(c=>(c.first_name+' '+c.last_name+' '+(c.city||'')).toLowerCase().includes(filter));
-  if(!list.length){con.innerHTML='<div class="empty" style="grid-column:1/-1"><span class="ei">🪪</span><div class="et">No Campers Found</div></div>';return;}
+  if(!list.length){con.innerHTML='<div class="empty" style="grid-column:1/-1"><span class="ei">🦪</span><div class="et">No Campers Found</div></div>';return;}
   con.innerHTML=list.map(c=>{
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const rmacTag=c.rmac?'<span class="ptag ptag-rmac">RMAC</span>':''
-    const retTag=c.is_returning?'<span class="ptag ptag-ret">↩</span>':''
+    const rmacTag=c.rmac?'<span class="ptag ptag-rmac">RMAC</span>':'';
+    const retTag=c.is_returning?'<span class="ptag ptag-ret">↩</span>':'';
     const loc=(c.city||'')+(c.state?', '+c.state:'');
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}<div class="pcard-tags">${rmacTag}</div><div class="pcard-tags2">${retTag}</div></div>
@@ -1802,15 +1815,6 @@ function markChatRead(role){
   checkChatBadge();
 }
 
-// Global background chat poll — runs every 10s regardless of active tab
-let globalChatPollTimer=null;
-function startGlobalChatPoll(){
-  if(globalChatPollTimer)return;
-  globalChatPollTimer=setInterval(async()=>{
-    await loadChat();
-  },10000);
-}
-
 function renderChat(role){
   const suffix=role==='Camper'?'Camper':role==='Staff'?'Staff':'Admin';
   const con=document.getElementById('chatMsgs'+suffix);
@@ -2134,90 +2138,97 @@ async function saveMyProfile(role){
 
 
 // ═══ CAMP INFO DOCS ═══
-let campDocs = JSON.parse(localStorage.getItem('campDocs') || '[]');
+let campDocs=JSON.parse(localStorage.getItem('campDocs')||'[]');
 
-function renderCampInfoDocs() {
-  const list = document.getElementById('campInfoList');
-  const empty = document.getElementById('campInfoEmpty');
-  const emailBar = document.getElementById('campInfoEmailBar');
-  const emailDocs = document.getElementById('campInfoEmailDocs');
-  if (!campDocs.length) {
-    list.innerHTML = '';
-    empty.style.display = 'block';
-    emailBar.style.display = 'none';
-    return;
-  }
-  empty.style.display = 'none';
-  emailBar.style.display = 'block';
-  list.innerHTML = campDocs.map((doc, i) => `
+function renderCampInfoDocs(){
+  const list=document.getElementById('campInfoList');
+  const empty=document.getElementById('campInfoEmpty');
+  const emailBar=document.getElementById('campInfoEmailBar');
+  const emailDocs=document.getElementById('campInfoEmailDocs');
+  if(!campDocs.length){list.innerHTML='';empty.style.display='block';emailBar.style.display='none';return;}
+  empty.style.display='none';emailBar.style.display='block';
+  list.innerHTML=campDocs.map((doc,i)=>`
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px 14px">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:20px">📄</span>
-        <div>
-          <div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div>
-          <div style="font-size:11px;color:var(--tx3)">${new Date(doc.uploaded).toLocaleDateString()}</div>
-        </div>
+        <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">${new Date(doc.uploaded).toLocaleDateString()}</div></div>
       </div>
       <div style="display:flex;gap:6px">
         <a href="${doc.dataUrl}" download="${escapeHtml(doc.name)}" class="btn bsec bsm">⬇ View</a>
         <button class="btn bred bsm" onclick="deleteCampDoc(${i})" type="button">🗑</button>
       </div>
     </div>`).join('');
-  emailDocs.innerHTML = campDocs.map((doc, i) => `
+  emailDocs.innerHTML=campDocs.map((doc,i)=>`
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx);margin-bottom:4px;cursor:pointer">
       <input type="checkbox" id="ciCheck_${i}" checked style="accent-color:var(--or)">
       ${escapeHtml(doc.name)}
     </label>`).join('');
 }
 
-function handlePDFUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    campDocs.push({ name: file.name, dataUrl: ev.target.result, uploaded: Date.now() });
-    try { localStorage.setItem('campDocs', JSON.stringify(campDocs)); } catch(err) { toast('Storage full — PDF too large', true); campDocs.pop(); return; }
+function renderCampInfoViewer(prefix){
+  const list=document.getElementById(prefix+'CampInfoList');
+  const empty=document.getElementById(prefix+'CampInfoEmpty');
+  if(!list)return;
+  if(!campDocs.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=campDocs.map(doc=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">📄</span>
+        <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">Posted ${new Date(doc.uploaded).toLocaleDateString()}</div></div>
+      </div>
+      <a href="${doc.dataUrl}" download="${escapeHtml(doc.name)}" class="btn bor bsm">⬇ Download</a>
+    </div>`).join('');
+}
+
+function handlePDFUpload(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    campDocs.push({name:file.name,dataUrl:ev.target.result,uploaded:Date.now()});
+    try{localStorage.setItem('campDocs',JSON.stringify(campDocs));}catch(err){toast('Storage full — PDF too large',true);campDocs.pop();return;}
     toast('Document uploaded!');
     renderCampInfoDocs();
   };
   reader.readAsDataURL(file);
-  e.target.value = '';
+  e.target.value='';
 }
 
-function deleteCampDoc(idx) {
-  campDocs.splice(idx, 1);
-  localStorage.setItem('campDocs', JSON.stringify(campDocs));
+function deleteCampDoc(idx){
+  campDocs.splice(idx,1);
+  localStorage.setItem('campDocs',JSON.stringify(campDocs));
   renderCampInfoDocs();
   toast('Removed');
 }
 
-async function emailCampDocs() {
-  const selected = campDocs.filter((_, i) => document.getElementById('ciCheck_' + i)?.checked);
-  if (!selected.length) { toast('Select at least one document', true); return; }
-  if (!campers.length) { toast('No campers to email', true); return; }
-  const emails = campers.map(c => c.email).filter(Boolean);
-  if (!emails.length) { toast('No camper emails found', true); return; }
-  const statusEl = document.getElementById('campInfoEmailStatus');
-  statusEl.textContent = 'Sending...';
-  const docLinks = selected.map(d => `<p>📄 <strong>${d.name}</strong> — attached as download link below<br><a href="${d.dataUrl}" download="${d.name}" style="color:#F47B20">Download ${d.name}</a></p>`).join('');
-  let sent = 0;
-  for (const email of emails) {
-    try {
-      await fetch(CFG.SENDGRID_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        to: email, from: CFG.FROM_EMAIL,
-        subject: 'VH1 Basketball Officials Camp — Camp Documents',
-        html: `<div style="max-width:560px;margin:0 auto;background:#111;border-radius:12px;padding:24px;font-family:Arial,sans-serif;color:#eee">
-          <h2 style="color:#F47B20;font-family:sans-serif;margin:0 0 12px">📄 Camp Documents</h2>
-          <p style="color:#aaa;margin:0 0 16px">The following documents have been shared with you for the VH1 Basketball Officials Camp:</p>
-          ${docLinks}
-          <p style="color:#666;font-size:11px;margin-top:20px">VH1 Basketball Officials Camp</p>
-        </div>`
+async function emailCampDocs(){
+  const selected=campDocs.filter((_,i)=>document.getElementById('ciCheck_'+i)?.checked);
+  if(!selected.length){toast('Select at least one document',true);return;}
+  const emails=campers.map(c=>c.email).filter(Boolean);
+  if(!emails.length){toast('No camper emails found',true);return;}
+  const statusEl=document.getElementById('campInfoEmailStatus');
+  statusEl.textContent='Sending...';
+  const docLinks=selected.map(d=>`<p>📄 <strong>${d.name}</strong><br><a href="${d.dataUrl}" download="${d.name}" style="color:#F47B20">Download ${d.name}</a></p>`).join('');
+  let sent=0;
+  for(const email of emails){
+    try{
+      await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        to:email,from:CFG.FROM_EMAIL,
+        subject:'VH1 Basketball Officials Camp — Camp Documents',
+        html:`<div style="max-width:560px;margin:0 auto;background:#111;border-radius:12px;padding:24px;font-family:Arial,sans-serif;color:#eee"><h2 style="color:#F47B20;margin:0 0 12px">📄 Camp Documents</h2><p style="color:#aaa;margin:0 0 16px">Documents shared for the VH1 Basketball Officials Camp:</p>${docLinks}<p style="color:#666;font-size:11px;margin-top:20px">VH1 Basketball Officials Camp</p></div>`
       })});
       sent++;
-    } catch(err) { console.warn('Email failed for', email); }
+    }catch(err){console.warn('Email failed for',email);}
   }
-  statusEl.textContent = `✓ Sent to ${sent} of ${emails.length} campers`;
+  statusEl.textContent=`✓ Sent to ${sent} of ${emails.length} campers`;
   toast(`Sent to ${sent} campers`);
+}
+
+// Global background chat poll
+let globalChatPollTimer=null;
+function startGlobalChatPoll(){
+  if(globalChatPollTimer)return;
+  globalChatPollTimer=setInterval(async()=>{await loadChat();},10000);
 }
 
 // ═══ DELETE ALL ═══
