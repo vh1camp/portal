@@ -322,8 +322,8 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .chat-msg.other{align-self:flex-start;align-items:flex-start}
 .chat-bubble{padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.5;word-break:break-word}
 .chat-msg.mine .chat-bubble{background:var(--or);color:#000;border-bottom-right-radius:4px}
-.chat-msg.other .chat-bubble{background:var(--gray2);color:var(--tx);border-bottom-left-radius:4px}
-.chat-msg.admin-msg .chat-bubble{background:linear-gradient(135deg,#1a0a00,#2a1200);border:1px solid var(--orb);color:var(--tx)}
+.chat-msg.other .chat-bubble{background:#e8e4de;color:#1a1a1a;border-bottom-left-radius:4px}
+.chat-msg.admin-msg .chat-bubble{background:linear-gradient(135deg,#1a0a00,#2a1200);border:1px solid var(--orb);color:#fff}
 .chat-meta{font-size:10px;color:var(--tx3);margin-top:3px;display:flex;align-items:center;gap:5px}
 .chat-sender{font-weight:700;color:var(--tx2)}
 .chat-badge{font-size:8px;font-weight:800;letter-spacing:.08em;padding:1px 5px;border-radius:3px}
@@ -411,7 +411,6 @@ if('serviceWorker' in navigator){
 <button class="bb" id="cb-schedule" onclick="cView('schedule')" type="button"><span class="bi">📅</span><span class="bl">Schedule</span></button>
 <button class="bb" id="cb-myprofile" onclick="cView('myprofile')" type="button"><span class="bi">👤</span><span class="bl">My Profile</span></button>
 <button class="bb" id="cb-campinfo" onclick="cView('campinfo')" type="button"><span class="bi">📄</span><span class="bl">Camp Info</span></button>
-<button class="bb" id="cb-campinfo" onclick="cView('campinfo')" type="button"><span class="bi">📄</span><span class="bl">Camp Info</span></button>
 <button class="bb" id="cb-chat" onclick="cView('chat')" type="button"><span class="bi">💬</span><span class="bl">Chat</span><span class="badge-dot" id="chatDotC"></span></button>
 </nav>
 <div class="view on" id="cv-home">
@@ -481,7 +480,6 @@ if('serviceWorker' in navigator){
 <button class="bb" id="sb-roster" onclick="sView('roster')" type="button"><span class="bi">🪪</span><span class="bl">Roster</span></button>
 <button class="bb" id="sb-schedule" onclick="sView('schedule')" type="button"><span class="bi">📅</span><span class="bl">Schedule</span></button>
 <button class="bb" id="sb-myprofile" onclick="sView('myprofile')" type="button"><span class="bi">👤</span><span class="bl">My Profile</span></button>
-<button class="bb" id="sb-campinfo" onclick="sView('campinfo')" type="button"><span class="bi">📄</span><span class="bl">Camp Info</span></button>
 <button class="bb" id="sb-campinfo" onclick="sView('campinfo')" type="button"><span class="bi">📄</span><span class="bl">Camp Info</span></button>
 <button class="bb" id="sb-chat" onclick="sView('chat')" type="button"><span class="bi">💬</span><span class="bl">Chat</span><span class="badge-dot" id="chatDotS"></span></button>
 </nav>
@@ -557,7 +555,6 @@ if('serviceWorker' in navigator){
 <button class="atab" onclick="aTab('rankings',this)" type="button">🏆 Rankings</button>
 <button class="atab" onclick="aTab('profiles',this)" type="button">🪪 Profiles</button>
 <button class="atab" onclick="aTab('schedule',this)" type="button">📅 Schedule</button>
-<button class="atab" id="campInfoTab" onclick="aTab('campinfo',this)" type="button">📄 Camp Info</button>
 <button class="atab" id="campInfoTab" onclick="aTab('campinfo',this)" type="button">📄 Camp Info</button>
 <button class="atab" id="chatAdminTab" onclick="aTab('chat',this)" type="button">💬 Chat <span class="badge-dot" id="chatDotA" style="position:relative;top:-6px;right:0;display:none"></span></button>
 <button class="atab" onclick="aTab('settings',this)" type="button">⚙️ Settings</button>
@@ -1332,6 +1329,9 @@ async function saveClinician(){
   if(!pass||pass.length<4){errEl.textContent='Password must be at least 4 characters.';errEl.style.display='block';return;}
   const fullName=first+' '+last;
   try{
+    // Check for duplicate username
+    const existing=staffList.find(s=>s.username&&s.username.toLowerCase()===user.toLowerCase());
+    if(existing){errEl.textContent='Username already taken — choose a different one.';errEl.style.display='block';return;}
     // Create staff login account
     await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,role});
     // Also add to clinicians list for eval dropdown
