@@ -814,6 +814,7 @@ async function loadAll(){
       supa('staff','GET',null,'?order=last_name.asc')
     ]);
     campers=campers||[];evaluations=evaluations||[];clinicians=clinicians||[];staffList=staffList||[];
+    await loadCampDocs();
     const sets=await supa('settings','GET',null,'');
     settings={};(sets||[]).forEach(s=>settings[s.key]=s.value);
     await loadChat();
@@ -2137,8 +2138,15 @@ async function saveMyProfile(role){
 }
 
 
-// ═══ CAMP INFO DOCS ═══
-let campDocs=JSON.parse(localStorage.getItem('campDocs')||'[]');
+// ═══ CAMP INFO DOCS (Supabase-backed) ═══
+let campDocs=[];
+
+async function loadCampDocs(){
+  try{
+    const docs=await supa('camp_docs','GET',null,'?order=uploaded_at.asc');
+    campDocs=docs||[];
+  }catch(e){console.warn('Camp docs load error',e);}
+}
 
 function renderCampInfoDocs(){
   const list=document.getElementById('campInfoList');
@@ -2151,11 +2159,11 @@ function renderCampInfoDocs(){
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px 14px">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:20px">📄</span>
-        <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">${new Date(doc.uploaded).toLocaleDateString()}</div></div>
+        <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">${new Date(doc.uploaded_at).toLocaleDateString()}</div></div>
       </div>
       <div style="display:flex;gap:6px">
-        <a href="${doc.dataUrl}" download="${escapeHtml(doc.name)}" class="btn bsec bsm">⬇ View</a>
-        <button class="btn bred bsm" onclick="deleteCampDoc(${i})" type="button">🗑</button>
+        <a href="${doc.data}" download="${escapeHtml(doc.name)}" class="btn bsec bsm">⬇ View</a>
+        <button class="btn bred bsm" onclick="deleteCampDoc('${doc.id}')" type="button">🗑</button>
       </div>
     </div>`).join('');
   emailDocs.innerHTML=campDocs.map((doc,i)=>`
@@ -2175,30 +2183,38 @@ function renderCampInfoViewer(prefix){
     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px 14px">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:22px">📄</span>
-        <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">Posted ${new Date(doc.uploaded).toLocaleDateString()}</div></div>
+        <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">Posted ${new Date(doc.uploaded_at).toLocaleDateString()}</div></div>
       </div>
-      <a href="${doc.dataUrl}" download="${escapeHtml(doc.name)}" class="btn bor bsm">⬇ Download</a>
+      <a href="${doc.data}" download="${escapeHtml(doc.name)}" class="btn bor bsm">⬇ Download</a>
     </div>`).join('');
 }
 
 function handlePDFUpload(e){
   const file=e.target.files[0];if(!file)return;
+  if(file.size>4*1024*1024){toast('PDF too large — keep under 4MB',true);e.target.value='';return;}
+  toast('Uploading...');
   const reader=new FileReader();
-  reader.onload=function(ev){
-    campDocs.push({name:file.name,dataUrl:ev.target.result,uploaded:Date.now()});
-    try{localStorage.setItem('campDocs',JSON.stringify(campDocs));}catch(err){toast('Storage full — PDF too large',true);campDocs.pop();return;}
-    toast('Document uploaded!');
-    renderCampInfoDocs();
+  reader.onload=async function(ev){
+    try{
+      await supa('camp_docs','POST',{name:file.name,data:ev.target.result});
+      await loadCampDocs();
+      renderCampInfoDocs();
+      toast('Document uploaded!');
+    }catch(err){toast('Upload failed: '+(err.message||'error'),true);}
   };
   reader.readAsDataURL(file);
   e.target.value='';
 }
 
-function deleteCampDoc(idx){
-  campDocs.splice(idx,1);
-  localStorage.setItem('campDocs',JSON.stringify(campDocs));
-  renderCampInfoDocs();
-  toast('Removed');
+async function deleteCampDoc(id){
+  const ok=await cf('Remove this document?','Remove','Cancel');
+  if(!ok)return;
+  try{
+    await supa('camp_docs','DELETE',null,`?id=eq.${id}`);
+    await loadCampDocs();
+    renderCampInfoDocs();
+    toast('Removed');
+  }catch(e){toast('Error',true);}
 }
 
 async function emailCampDocs(){
@@ -2208,7 +2224,7 @@ async function emailCampDocs(){
   if(!emails.length){toast('No camper emails found',true);return;}
   const statusEl=document.getElementById('campInfoEmailStatus');
   statusEl.textContent='Sending...';
-  const docLinks=selected.map(d=>`<p>📄 <strong>${d.name}</strong><br><a href="${d.dataUrl}" download="${d.name}" style="color:#F47B20">Download ${d.name}</a></p>`).join('');
+  const docLinks=selected.map(d=>`<p>📄 <strong>${d.name}</strong><br><a href="${d.data}" download="${d.name}" style="color:#F47B20">Download ${d.name}</a></p>`).join('');
   let sent=0;
   for(const email of emails){
     try{
