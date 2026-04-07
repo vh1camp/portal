@@ -1249,7 +1249,7 @@ async function saveClinician(){
   const fullName=first+' '+last;
   try{
     // Create staff login account
-    await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,role,email:email||null});
+    await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,role});
     // Also add to clinicians list for eval dropdown
     await supa('clinicians','POST',{name:fullName});
     // Send welcome email if checked
@@ -1268,11 +1268,7 @@ async function saveClinician(){
     ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('clSendEmail').checked=true;
     await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
-  }catch(e){
-    console.error('saveClinician error:',e);
-    const msg=e.message&&!e.message.includes('400')?'Error: '+e.message:'Error saving clinician — check console for details.';
-    errEl.textContent=msg;errEl.style.display='block';
-  }
+  }catch(e){console.error('saveClinician error:',e);errEl.textContent='Error: '+(e.message||'Unknown error');errEl.style.display='block';}
 }
 
 function buildClinicianEmailHTML(first,last,username,password){
