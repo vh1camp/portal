@@ -1331,7 +1331,20 @@ async function saveClinician(){
   try{
     // Check for duplicate username
     const existing=staffList.find(s=>s.username&&s.username.toLowerCase()===user.toLowerCase());
-    if(existing){errEl.textContent='Username already taken — choose a different one.';errEl.style.display='block';return;}
+    if(existing){
+      // If staff record exists but not in clinicians list, update it and re-add to clinicians
+      const inClinicians=clinicians.find(c=>c.name===(first+' '+last));
+      if(!inClinicians){
+        await supa('staff','PATCH',{first_name:first,last_name:last,password:pass,role},`?id=eq.${existing.id}`);
+        await supa('clinicians','POST',{name:first+' '+last});
+        closeModal('mClinician');toast('Clinician re-added!');
+        ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+        document.getElementById('clSendEmail').checked=true;
+        await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
+        return;
+      }
+      errEl.textContent='Username already taken — choose a different one.';errEl.style.display='block';return;
+    }
     // Create staff login account
     await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,role});
     // Also add to clinicians list for eval dropdown
@@ -2310,6 +2323,11 @@ async function deleteAllClinicians(){
   const ok=await cf(`Delete ALL ${clinicians.length} clinicians?`,'Delete All','Cancel');
   if(!ok)return;
   try{
+    // Delete staff accounts that are clinicians/evaluators
+    const clinicianStaff=staffList.filter(s=>s.role==='Evaluator'||s.role==='Clinician');
+    for(const s of clinicianStaff){
+      await supa('staff','DELETE',null,`?id=eq.${s.id}`).catch(()=>{});
+    }
     await supa('clinicians','DELETE',null,'?id=not.is.null');
     toast('All clinicians deleted');
     await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
