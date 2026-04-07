@@ -771,7 +771,7 @@ async function supa(table,method,body,query){
   const o={method,headers:h};
   if(body)o.body=JSON.stringify(body);
   const r=await fetch(url,o);
-  if(!r.ok)throw new Error(`Supabase ${r.status}`);
+  if(!r.ok){const errBody=await r.text().catch(()=>'');let errMsg=`Supabase ${r.status}`;try{const j=JSON.parse(errBody);errMsg=j.message||j.hint||j.details||errMsg;}catch(e){}throw new Error(errMsg);}
   const t=await r.text();return t?JSON.parse(t):null;
 }
 
@@ -1249,7 +1249,8 @@ async function saveClinician(){
   const fullName=first+' '+last;
   try{
     // Create staff login account
-    await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,title:'Clinician',role,email:email||null});
+    const staffRes=await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,title:'Clinician',role,email:email||null});
+    console.log('Staff insert result:',staffRes);
     // Also add to clinicians list for eval dropdown
     await supa('clinicians','POST',{name:fullName});
     // Send welcome email if checked
@@ -1268,7 +1269,22 @@ async function saveClinician(){
     ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('clSendEmail').checked=true;
     await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
-  }catch(e){errEl.textContent='Error — username may already be taken.';errEl.style.display='block';}
+  }catch(e){
+    console.error('saveClinician error:',e);
+    let msg='Error saving clinician.';
+    const eStr=(e.message||e.toString||'').toLowerCase();
+    if(eStr.includes('duplicate')||eStr.includes('unique')||eStr.includes('23505')){
+      msg='Username or email already exists — try a different one.';
+    } else if(eStr.includes('null value')||eStr.includes('not-null')||eStr.includes('23502')){
+      msg='Missing required field — check all fields are filled in.';
+    } else if(eStr.includes('column')||eStr.includes('42703')){
+      msg='Database error — column mismatch. Contact admin.';
+    } else if(e.message){
+      msg='Error: '+e.message;
+    }
+    errEl.textContent=msg;
+    errEl.style.display='block';
+  }
 }
 
 function buildClinicianEmailHTML(first,last,username,password){
