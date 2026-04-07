@@ -44,7 +44,8 @@ body{font-family:'Barlow',sans-serif;background:var(--black);color:var(--tx);min
 body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 18px,rgba(0,0,0,.018) 18px,rgba(0,0,0,.018) 36px);pointer-events:none;z-index:0}
 
 /* LOGIN */
-#loginScreen{position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,#fff8f3 0%,#f7f1ea 60%,#fde8d8 100%);max-width:420px;position:relative;z-index:1}
+#loginScreen{position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,#fff8f3 0%,#f7f1ea 60%,#fde8d8 100%);display:flex;align-items:center;justify-content:center;padding:24px 20px;overflow-y:auto}
+.lwrap{width:100%;max-width:420px;position:relative;z-index:1}
 .llogo{display:flex;flex-direction:column;align-items:center;margin-bottom:22px}
 .llogo img{width:96px;height:96px;border-radius:50%;border:3px solid var(--or);box-shadow:0 0 0 10px var(--ord),0 16px 48px rgba(0,0,0,.7);object-fit:cover}
 .lcamp{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:.24em;color:var(--or);margin-top:11px;text-align:center}
