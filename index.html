@@ -875,7 +875,7 @@ function closeModal(id){
     const navS=document.getElementById('navS');
     if(CR==='camper'&&navC)navC.style.display='flex';
     else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
-  startGlobalChatPoll();
+  startChatBackgroundPoll();
   }else{el.classList.remove('on');}
 }
 
@@ -937,10 +937,12 @@ function enterApp(){
   if(CR==='camper'){document.getElementById('pCamper').classList.add('on');document.getElementById('navC').classList.add('on');cView('home');}
   else if(CR==='staff'){document.getElementById('pStaff').classList.add('on');document.getElementById('navS').classList.add('on');populateStaffEvalForm();sView('evaluate');}
   else{document.getElementById('pAdmin').classList.add('on');populateAdminForms();aTab('overview',document.querySelector('.atab'));}
+  startChatBackgroundPoll();
 }
 
 // ═══ CAMPER PORTAL ═══
 function cView(v){
+  if(v!=='chat')chatActiveSuffix=null;
   document.querySelectorAll('#pCamper .view').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('#navC .bb').forEach(b=>b.classList.remove('on'));
   document.getElementById('cv-'+v).classList.add('on');
@@ -949,8 +951,7 @@ function cView(v){
   if(v==='results')renderCamperResults();
   if(v==='profiles'){renderCamperProfiles('');}
   if(v==='myprofile')renderMyProfile('camper');
-  if(v==='chat'){markChatRead('C');renderChat('Camper');}
-  if(v==='campinfo')renderCampInfoViewer('cv');
+  if(v==='chat'){markChatRead();renderChat('Camper');}
   if(v==='campinfo')renderCampInfoViewer('cv');
 }
 function renderCamperHome(){
@@ -985,6 +986,7 @@ function renderCamperResults(){
 
 // ═══ STAFF PORTAL ═══
 function sView(v){
+  if(v!=='chat')chatActiveSuffix=null;
   document.querySelectorAll('#pStaff .view').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('#navS .bb').forEach(b=>b.classList.remove('on'));
   document.getElementById('sv-'+v).classList.add('on');
@@ -992,8 +994,7 @@ function sView(v){
   if(v==='evaluate')populateStaffEvalForm();
   if(v==='history')renderStaffHistory();
   if(v==='roster')renderStaffRoster('');
-  if(v==='chat'){markChatRead('S');renderChat('Staff');}
-  if(v==='campinfo')renderCampInfoViewer('sv');
+  if(v==='chat'){markChatRead();renderChat('Staff');}
   if(v==='campinfo')renderCampInfoViewer('sv');
   if(v==='myprofile')renderMyProfile('staff');
 }
@@ -1177,7 +1178,7 @@ function aTab(name,btn){
   if(name==='evaluate'){populateAdminForms();}
   if(name==='rankings')renderAdminRankings();
   if(name==='profiles')renderProfiles('');
-  if(name==='chat'){markChatRead('A');renderChat('Admin');}
+  if(name==='chat'){markChatRead();renderChat('Admin');}
   if(name==='campinfo'){renderCampInfoDocs();}
   if(name==='campinfo'){renderCampInfoDocs();}
 }
@@ -1840,9 +1841,8 @@ function handlePhotoUpload(input){
 // ═══ CHAT ═══
 let chatMessages=[];
 let chatLastRead=parseInt(localStorage.getItem('chatLastRead')||'0');
-let chatPollTimer=null;
-let chatActiveRole=null;
-let chatLastMsgCount=0;
+let chatActiveSuffix=null; // 'Camper','Staff','Admin' — whichever tab is open, or null
+let _chatPollTimer=null;
 
 async function loadChat(){
   try{
@@ -1860,30 +1860,24 @@ function checkChatBadge(){
   });
 }
 
-function markChatRead(role){
+function markChatRead(){
   chatLastRead=Date.now();
-  localStorage.setItem('chatLastRead',chatLastRead);
+  localStorage.setItem('chatLastRead',String(chatLastRead));
   checkChatBadge();
 }
 
-function startChatPoll(role){
-  if(chatPollTimer)clearInterval(chatPollTimer);
-  chatActiveRole=role;
-  chatPollTimer=setInterval(async()=>{
+function startChatBackgroundPoll(){
+  if(_chatPollTimer)return; // already running
+  _chatPollTimer=setInterval(async()=>{
     await loadChat();
-    renderChatMessages(chatActiveRole);
-  },2000);
+    if(chatActiveSuffix)renderChatMessages(chatActiveSuffix);
+  },4000);
 }
 
-function stopChatPoll(){
-  if(chatPollTimer){clearInterval(chatPollTimer);chatPollTimer=null;}
-  chatActiveRole=null;
-}
-
-function renderChatMessages(role){
-  const suffix=role==='Camper'?'Camper':role==='Staff'?'Staff':'Admin';
+function renderChatMessages(suffix){
   const con=document.getElementById('chatMsgs'+suffix);
   if(!con)return;
+  const wasAtBottom=con.scrollHeight-con.scrollTop-con.clientHeight<60;
   if(!chatMessages.length){
     con.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px">No messages yet. Say hello! 👋</div>';
     return;
@@ -1902,12 +1896,15 @@ function renderChatMessages(role){
       ${isMe?`<div class="chat-meta"><span>${time}</span>${delBtn}</div>`:''}
     </div>`;
   }).join('');
-  con.scrollTop=con.scrollHeight;
+  if(wasAtBottom)con.scrollTop=con.scrollHeight;
 }
 
-function renderChat(role){
-  renderChatMessages(role);
-  startChatPoll(role);
+function renderChat(suffix){
+  chatActiveSuffix=suffix;
+  renderChatMessages(suffix);
+  // Scroll to bottom on first open
+  const con=document.getElementById('chatMsgs'+suffix);
+  if(con)con.scrollTop=con.scrollHeight;
 }
 
 async function sendChat(role){
@@ -1928,7 +1925,9 @@ async function sendChat(role){
     const newMsg=Array.isArray(saved)?saved[0]:saved;
     if(newMsg&&!chatMessages.find(m=>m.id===newMsg.id)){
       chatMessages.push(newMsg);
-      renderChatMessages(suffix==='Admin'?'Admin':suffix==='Staff'?'Staff':'Camper');
+      renderChatMessages(suffix);
+      const con=document.getElementById('chatMsgs'+suffix);
+      if(con)con.scrollTop=con.scrollHeight;
     }
     // If admin checked email blast
     if(role==='admin'&&document.getElementById('adminEmailBlast')?.checked){
@@ -1962,12 +1961,10 @@ async function sendChatEmailBlast(msg,from){
 
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// Pause poll when tab hidden, resume when visible
+// Re-render chat if app becomes visible again
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){
-    stopChatPoll();
-  } else if(chatActiveRole){
-    loadChat().then(()=>startChatPoll(chatActiveRole));
+  if(!document.hidden&&chatActiveSuffix){
+    loadChat().then(()=>renderChatMessages(chatActiveSuffix));
   }
 });
 
@@ -2311,15 +2308,6 @@ async function emailCampDocs(){
 }
 
 // Global background chat poll (badge updates + re-render if chat is open)
-let globalChatPollTimer=null;
-function startGlobalChatPoll(){
-  if(globalChatPollTimer)return;
-  globalChatPollTimer=setInterval(async()=>{
-    await loadChat();
-    if(chatActiveRole)renderChatMessages(chatActiveRole);
-  },3000);
-}
-
 // ═══ DELETE ALL ═══
 async function deleteAllCampers(){
   if(!campers.length){toast('No campers to delete',true);return;}
