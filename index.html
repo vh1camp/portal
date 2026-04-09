@@ -556,7 +556,7 @@ if('serviceWorker' in navigator){
 <button class="atab" onclick="aTab('profiles',this)" type="button">🪪 Profiles</button>
 <button class="atab" onclick="aTab('schedule',this)" type="button">📅 Schedule</button>
 <button class="atab" id="campInfoTab" onclick="aTab('campinfo',this)" type="button">📄 Camp Info</button>
-<button class="atab" id="chatAdminTab" onclick="aTab('chat',this)" type="button">💬 Chat <span class="badge-dot" id="chatDotA" style="position:relative;top:-6px;right:0;display:none"></span></button>
+<button class="atab" id="chatAdminTab" onclick="aTab('chat',this)" type="button">💬 Chat <span class="badge-dot" id="chatDotA" style="position:relative;top:-6px;right:0"></span></button>
 <button class="atab" onclick="aTab('settings',this)" type="button">⚙️ Settings</button>
 </div>
 <div class="tc on" id="at-overview">
@@ -1168,6 +1168,7 @@ function populateAdminForms(){
 }
 
 function aTab(name,btn){
+  if(name!=='chat')chatActiveSuffix=null;
   document.querySelectorAll('.tc').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.atab').forEach(t=>t.classList.remove('on'));
   document.getElementById('at-'+name).classList.add('on');
@@ -1934,7 +1935,7 @@ async function sendChat(role){
       sendChatEmailBlast(msg,displayName);
       document.getElementById('adminEmailBlast').checked=false;
     }
-  }catch(e){toast('Error sending message',true);}
+  }catch(e){console.error('sendChat error:',e);toast('Error sending message: '+e.message,true);}
 }
 
 async function sendChatEmailBlast(msg,from){
