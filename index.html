@@ -1869,24 +1869,28 @@ function markChatRead(role){
 }
 
 function startChatRealtime(role){
-  // Unsubscribe from any existing channel first
   if(chatRealtimeChannel){
     supabase.removeChannel(chatRealtimeChannel);
     chatRealtimeChannel=null;
   }
   chatActiveRole=role;
   chatRealtimeChannel=supabase
-    .channel('chat-realtime')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat'},(payload)=>{
-      // Avoid duplicates
-      if(!chatMessages.find(m=>m.id===payload.new.id)){
-        chatMessages.push(payload.new);
+    .channel('chat-broadcast',{config:{broadcast:{self:false}}})
+    .on('broadcast',{event:'new_message'},(payload)=>{
+      const m=payload.payload;
+      if(m&&!chatMessages.find(x=>x.id===m.id)){
+        chatMessages.push(m);
         checkChatBadge();
         renderChatMessages(chatActiveRole);
       }
     })
-    .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat'},(payload)=>{
-      chatMessages=chatMessages.filter(m=>m.id!==payload.old.id);
+    .on('broadcast',{event:'delete_message'},(payload)=>{
+      const {id}=payload.payload;
+      chatMessages=chatMessages.filter(m=>m.id!==id);
+      renderChatMessages(chatActiveRole);
+    })
+    .on('broadcast',{event:'clear_chat'},()=>{
+      chatMessages=[];
       renderChatMessages(chatActiveRole);
     })
     .subscribe();
@@ -1938,13 +1942,22 @@ async function sendChat(role){
   input.value='';
   const displayName=CU.first_name+' '+(CU.last_name||'');
   try{
-    await supa('chat','POST',{
+    const saved=await supa('chat','POST',{
       user_id:CU.id||CU.username||displayName,
       display_name:displayName,
       user_role:CR,
       message:msg
     });
-    // Realtime subscription handles the UI update automatically
+    // Broadcast to all subscribers instantly
+    const newMsg=Array.isArray(saved)?saved[0]:saved;
+    if(newMsg&&chatRealtimeChannel){
+      chatRealtimeChannel.send({type:'broadcast',event:'new_message',payload:newMsg});
+    }
+    // Also update local immediately
+    if(newMsg&&!chatMessages.find(m=>m.id===newMsg.id)){
+      chatMessages.push(newMsg);
+      renderChatMessages(suffix==='Admin'?'Admin':suffix==='Staff'?'Staff':'Camper');
+    }
     // If admin checked email blast
     if(role==='admin'&&document.getElementById('adminEmailBlast')?.checked){
       sendChatEmailBlast(msg,displayName);
@@ -2071,6 +2084,7 @@ async function clearChat(){
     await supa('chat','DELETE',null,'?id=not.is.null');
     chatMessages=[];
     renderChatMessages('Admin');
+    if(chatRealtimeChannel)chatRealtimeChannel.send({type:'broadcast',event:'clear_chat',payload:{}});
     toast('Chat cleared');
   }catch(e){toast('Error clearing chat',true);}
 }
@@ -2079,6 +2093,7 @@ async function deleteChatMsg(id){
   try{
     await supa('chat','DELETE',null,`?id=eq.${id}`);
     chatMessages=chatMessages.filter(m=>m.id!==id);
+    if(chatRealtimeChannel)chatRealtimeChannel.send({type:'broadcast',event:'delete_message',payload:{id}});
     // Re-render whichever chat is visible
     if(document.getElementById('chatMsgsAdmin')?.closest('.tc.on'))renderChatMessages('Admin');
     else if(document.getElementById('chatMsgsStaff')?.closest('.view.on'))renderChatMessages('Staff');
