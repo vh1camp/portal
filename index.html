@@ -339,6 +339,13 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .chat-announce-hd{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--or);margin-bottom:6px}
 .badge-dot{position:absolute;top:4px;right:4px;width:9px;height:9px;background:var(--red2);border-radius:50%;border:2px solid var(--black);display:none}
 .badge-dot.show{display:block}
+#chatNotif{position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a1a1a;border-bottom:2px solid #F47B20;padding:10px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transform:translateY(-100%);transition:transform 0.3s ease;pointer-events:none}
+#chatNotif.show{transform:translateY(0);pointer-events:all}
+#chatNotif-icon{width:32px;height:32px;border-radius:50%;background:#F47B20;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#chatNotif-body{flex:1;min-width:0}
+#chatNotif-label{font-size:11px;font-weight:700;color:#F47B20;letter-spacing:.08em;text-transform:uppercase}
+#chatNotif-msg{font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#chatNotif-hint{font-size:11px;color:#888;flex-shrink:0}
 .bb{position:relative}
 
 /* SCHEDULE placeholder */
@@ -365,6 +372,7 @@ if('serviceWorker' in navigator){
 </head>
 <body>
 <div id="toast"></div>
+<div id="chatNotif" onclick="chatNotifTap()"><div id="chatNotif-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div id="chatNotif-body"><div id="chatNotif-label">New message</div><div id="chatNotif-msg"></div></div><div id="chatNotif-hint">tap to view</div></div>
 <div id="cfdlg"><div id="cfdlgbox"><div id="cfdlgtxt"></div><div id="cfdlgbtns"><button class="btn bsec" id="cfdlgno" type="button">Cancel</button><button class="btn bor" id="cfdlgyes" type="button">OK</button></div></div></div>
 
 <!-- LOGIN -->
@@ -1870,11 +1878,39 @@ function markChatRead(){
   checkChatBadge();
 }
 
+let _notifTimer=null;
+let _lastNotifMsgId=null;
+
+function showChatNotif(msg){
+  const el=document.getElementById("chatNotif");
+  const txt=document.getElementById("chatNotif-msg");
+  if(!el||!txt)return;
+  txt.textContent=(msg.display_name||"Someone")+": "+msg.message;
+  el.classList.add("show");
+  clearTimeout(_notifTimer);
+  _notifTimer=setTimeout(()=>el.classList.remove("show"),5000);
+}
+
+function chatNotifTap(){
+  document.getElementById("chatNotif").classList.remove("show");
+  if(CR==="camper")cView("chat");
+  else if(CR==="staff")sView("chat");
+  else aTab("chat",document.getElementById("chatAdminTab"));
+}
 function startChatBackgroundPoll(){
   if(_chatPollTimer)return; // already running
   _chatPollTimer=setInterval(async()=>{
+    const prevLatestId=chatMessages.length?chatMessages[chatMessages.length-1].id:null;
     await loadChat();
-    if(chatActiveSuffix)renderChatMessages(chatActiveSuffix);
+    if(chatActiveSuffix){
+      renderChatMessages(chatActiveSuffix);
+    } else {
+      const latest=chatMessages.length?chatMessages[chatMessages.length-1]:null;
+      if(latest&&latest.id!==prevLatestId&&latest.id!==_lastNotifMsgId&&latest.user_id!==(CU?.id||CU?.username)){
+        _lastNotifMsgId=latest.id;
+        showChatNotif(latest);
+      }
+    }
   },4000);
 }
 
