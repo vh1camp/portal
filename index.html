@@ -1848,7 +1848,7 @@ let _chatPollTimer=null;
 async function loadChat(){
   try{
     const msgs=await supa('chat','GET',null,'?order=created_at.asc&limit=100');
-    chatMessages=msgs||[];
+    chatMessages=msgs||[];console.log("loadChat fetched",chatMessages.length,"msgs",JSON.stringify(chatMessages.map(m=>({id:m.id,role:m.user_role,name:m.display_name}))));
     checkChatBadge();
   }catch(e){console.warn('Chat load error',e);}
 }
