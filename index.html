@@ -359,7 +359,6 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -812,7 +811,7 @@ const CFG={
 };
 
 // ═══ SUPABASE REALTIME CLIENT ═══
-const supabase=window.supabase.createClient(CFG.SUPA_URL,CFG.SUPA_KEY);
+let supabase=null;try{supabase=window.supabase?.createClient(CFG.SUPA_URL,CFG.SUPA_KEY);}catch(e){console.warn('Supabase Realtime unavailable',e);}
 
 // ═══ STATE ═══
 let campers=[],evaluations=[],clinicians=[],staffList=[],settings={};
@@ -1870,12 +1869,11 @@ function markChatRead(role){
 
 function startChatRealtime(role){
   if(chatRealtimeChannel){
-    supabase.removeChannel(chatRealtimeChannel);
+    supabase?.removeChannel(chatRealtimeChannel);
     chatRealtimeChannel=null;
   }
   chatActiveRole=role;
-  chatRealtimeChannel=supabase
-    .channel('chat-broadcast',{config:{broadcast:{self:false}}})
+  chatRealtimeChannel=supabase?.channel('chat-broadcast',{config:{broadcast:{self:false}}})
     .on('broadcast',{event:'new_message'},(payload)=>{
       const m=payload.payload;
       if(m&&!chatMessages.find(x=>x.id===m.id)){
@@ -1898,7 +1896,7 @@ function startChatRealtime(role){
 
 function stopChatRealtime(){
   if(chatRealtimeChannel){
-    supabase.removeChannel(chatRealtimeChannel);
+    supabase?.removeChannel(chatRealtimeChannel);
     chatRealtimeChannel=null;
   }
   chatActiveRole=null;
@@ -2389,5 +2387,6 @@ async function deleteAllClinicians(){
 }
 
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onload="try{supabase=window.supabase.createClient(CFG.SUPA_URL,CFG.SUPA_KEY);}catch(e){console.warn('Supabase client init failed',e);}"></script>
 </body>
 </html>
