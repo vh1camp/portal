@@ -1870,15 +1870,9 @@ function startChatPoll(role){
   if(chatPollTimer)clearInterval(chatPollTimer);
   chatActiveRole=role;
   chatPollTimer=setInterval(async()=>{
-    const prevCount=chatMessages.length;
-    const prevLast=chatMessages[chatMessages.length-1]?.id;
     await loadChat();
-    const newCount=chatMessages.length;
-    const newLast=chatMessages[chatMessages.length-1]?.id;
-    if(newCount!==prevCount||newLast!==prevLast){
-      renderChatMessages(chatActiveRole);
-    }
-  },1500);
+    renderChatMessages(chatActiveRole);
+  },2000);
 }
 
 function stopChatPoll(){
@@ -2321,15 +2315,8 @@ let globalChatPollTimer=null;
 function startGlobalChatPoll(){
   if(globalChatPollTimer)return;
   globalChatPollTimer=setInterval(async()=>{
-    const prevCount=chatMessages.length;
-    const prevLast=chatMessages[chatMessages.length-1]?.id;
     await loadChat();
-    const newCount=chatMessages.length;
-    const newLast=chatMessages[chatMessages.length-1]?.id;
-    if(newCount!==prevCount||newLast!==prevLast){
-      // If chat tab is currently open, re-render it
-      if(chatActiveRole)renderChatMessages(chatActiveRole);
-    }
+    if(chatActiveRole)renderChatMessages(chatActiveRole);
   },3000);
 }
 
