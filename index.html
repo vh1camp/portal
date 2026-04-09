@@ -1850,7 +1850,7 @@ let _chatPollTimer=null;
 
 async function loadChat(){
   try{
-    const msgs=await supa('chat','GET',null,'?order=created_at.asc&limit=100');
+    const msgs=await supa('chat','GET',null,'?order=created_at.asc&limit=300');
     chatMessages=msgs||[];
     checkChatBadge();
   }catch(e){console.warn('Chat load error',e);}
@@ -1887,7 +1887,7 @@ function renderChatMessages(suffix){
     return;
   }
   con.innerHTML=chatMessages.map(m=>{
-    const isMe=m.user_id===CU?.id;
+    const isMe=CU?.id?m.user_id===CU.id:CU?.username?m.user_id===CU.username:m.user_role===CR&&m.display_name===(CU.first_name+' '+(CU.last_name||'').trim());
     const isAdmin=m.user_role==='admin';
     const isStaff=m.user_role==='staff';
     const roleBadge=isAdmin?`<span class="chat-badge ba">ADMIN</span>`:isStaff?`<span class="chat-badge bs">STAFF</span>`:'';
@@ -1938,7 +1938,7 @@ async function sendChat(role){
       sendChatEmailBlast(msg,displayName);
       document.getElementById('adminEmailBlast').checked=false;
     }
-  }catch(e){console.error('sendChat error:',e);toast('Error sending message: '+e.message,true);}
+  }catch(e){input.value=msg;toast('Message not sent — try again',true);}
 }
 
 async function sendChatEmailBlast(msg,from){
