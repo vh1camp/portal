@@ -811,7 +811,6 @@ const CFG={
 };
 
 // ═══ SUPABASE REALTIME CLIENT ═══
-let supabase=null;try{supabase=window.supabase?.createClient(CFG.SUPA_URL,CFG.SUPA_KEY);}catch(e){console.warn('Supabase Realtime unavailable',e);}
 
 // ═══ STATE ═══
 let campers=[],evaluations=[],clinicians=[],staffList=[],settings={};
@@ -1842,8 +1841,9 @@ function handlePhotoUpload(input){
 // ═══ CHAT ═══
 let chatMessages=[];
 let chatLastRead=parseInt(localStorage.getItem('chatLastRead')||'0');
-let chatRealtimeChannel=null;
+let chatPollTimer=null;
 let chatActiveRole=null;
+let chatLastMsgCount=0;
 
 async function loadChat(){
   try{
@@ -1867,38 +1867,23 @@ function markChatRead(role){
   checkChatBadge();
 }
 
-function startChatRealtime(role){
-  if(chatRealtimeChannel){
-    supabase?.removeChannel(chatRealtimeChannel);
-    chatRealtimeChannel=null;
-  }
+function startChatPoll(role){
+  if(chatPollTimer)clearInterval(chatPollTimer);
   chatActiveRole=role;
-  chatRealtimeChannel=supabase?.channel('chat-broadcast',{config:{broadcast:{self:false}}})
-    .on('broadcast',{event:'new_message'},(payload)=>{
-      const m=payload.payload;
-      if(m&&!chatMessages.find(x=>x.id===m.id)){
-        chatMessages.push(m);
-        checkChatBadge();
-        renderChatMessages(chatActiveRole);
-      }
-    })
-    .on('broadcast',{event:'delete_message'},(payload)=>{
-      const {id}=payload.payload;
-      chatMessages=chatMessages.filter(m=>m.id!==id);
+  chatLastMsgCount=chatMessages.length;
+  chatPollTimer=setInterval(async()=>{
+    const prev=chatMessages.length;
+    const prevIds=chatMessages.map(m=>m.id).join(',');
+    await loadChat();
+    const newIds=chatMessages.map(m=>m.id).join(',');
+    if(newIds!==prevIds){
       renderChatMessages(chatActiveRole);
-    })
-    .on('broadcast',{event:'clear_chat'},()=>{
-      chatMessages=[];
-      renderChatMessages(chatActiveRole);
-    })
-    .subscribe();
+    }
+  },2000);
 }
 
-function stopChatRealtime(){
-  if(chatRealtimeChannel){
-    supabase?.removeChannel(chatRealtimeChannel);
-    chatRealtimeChannel=null;
-  }
+function stopChatPoll(){
+  if(chatPollTimer){clearInterval(chatPollTimer);chatPollTimer=null;}
   chatActiveRole=null;
 }
 
@@ -1929,7 +1914,7 @@ function renderChatMessages(role){
 
 function renderChat(role){
   renderChatMessages(role);
-  startChatRealtime(role);
+  startChatPoll(role);
 }
 
 async function sendChat(role){
@@ -1946,12 +1931,8 @@ async function sendChat(role){
       user_role:CR,
       message:msg
     });
-    // Broadcast to all subscribers instantly
+    // Update local immediately for sender
     const newMsg=Array.isArray(saved)?saved[0]:saved;
-    if(newMsg&&chatRealtimeChannel){
-      chatRealtimeChannel.send({type:'broadcast',event:'new_message',payload:newMsg});
-    }
-    // Also update local immediately
     if(newMsg&&!chatMessages.find(m=>m.id===newMsg.id)){
       chatMessages.push(newMsg);
       renderChatMessages(suffix==='Admin'?'Admin':suffix==='Staff'?'Staff':'Camper');
@@ -1988,13 +1969,12 @@ async function sendChatEmailBlast(msg,from){
 
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// Stop realtime when tab hidden, restart when visible
+// Pause poll when tab hidden, resume when visible
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
-    stopChatRealtime();
+    stopChatPoll();
   } else if(chatActiveRole){
-    // Reload messages and resubscribe when tab comes back
-    loadChat().then(()=>startChatRealtime(chatActiveRole));
+    loadChat().then(()=>startChatPoll(chatActiveRole));
   }
 });
 
@@ -2082,7 +2062,6 @@ async function clearChat(){
     await supa('chat','DELETE',null,'?id=not.is.null');
     chatMessages=[];
     renderChatMessages('Admin');
-    if(chatRealtimeChannel)chatRealtimeChannel.send({type:'broadcast',event:'clear_chat',payload:{}});
     toast('Chat cleared');
   }catch(e){toast('Error clearing chat',true);}
 }
@@ -2091,7 +2070,6 @@ async function deleteChatMsg(id){
   try{
     await supa('chat','DELETE',null,`?id=eq.${id}`);
     chatMessages=chatMessages.filter(m=>m.id!==id);
-    if(chatRealtimeChannel)chatRealtimeChannel.send({type:'broadcast',event:'delete_message',payload:{id}});
     // Re-render whichever chat is visible
     if(document.getElementById('chatMsgsAdmin')?.closest('.tc.on'))renderChatMessages('Admin');
     else if(document.getElementById('chatMsgsStaff')?.closest('.view.on'))renderChatMessages('Staff');
@@ -2387,6 +2365,5 @@ async function deleteAllClinicians(){
 }
 
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onload="try{supabase=window.supabase.createClient(CFG.SUPA_URL,CFG.SUPA_KEY);}catch(e){console.warn('Supabase client init failed',e);}"></script>
 </body>
 </html>
