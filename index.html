@@ -803,7 +803,7 @@ if('serviceWorker' in navigator){
 // ═══ CONFIG ═══
 const CFG={
   SUPA_URL:'https://ekxundkaorvycwljtmqj.supabase.co',
-  SUPA_KEY:'sb_publishable_fBG0l023rAdmO28jiX6sVA_yFTRYTyo',
+  SUPA_KEY:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVreHVuZGthb3J2eWN3bGp0bXFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzNDU1NDIsImV4cCI6MjA5MDkyMTU0Mn0.7Yj_shBBlGXmmViMP4F5vCuFPamUvWWo8IuQXBqF4HA',
   SENDGRID_URL:'https://vh1camp2026.netlify.app/.netlify/functions/send-email',
   FROM_EMAIL:'admin@vh1basketball.com',
   CAMP_NAME:'VH1 Basketball Officials Camp',
@@ -1848,7 +1848,7 @@ let _chatPollTimer=null;
 async function loadChat(){
   try{
     const msgs=await supa('chat','GET',null,'?order=created_at.asc&limit=100');
-    chatMessages=msgs||[];console.log("loadChat fetched",chatMessages.length,"msgs",JSON.stringify(chatMessages.map(m=>({id:m.id,role:m.user_role,name:m.display_name}))));
+    chatMessages=msgs||[];
     checkChatBadge();
   }catch(e){console.warn('Chat load error',e);}
 }
