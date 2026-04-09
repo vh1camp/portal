@@ -359,6 +359,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div id="toast"></div>
@@ -809,6 +810,9 @@ const CFG={
   CAMP_NAME:'VH1 Basketball Officials Camp',
   CATS:['Mechanics','Rules Knowledge','Positioning','Game Management','Communication','Professionalism']
 };
+
+// ═══ SUPABASE REALTIME CLIENT ═══
+const supabase=window.supabase.createClient(CFG.SUPA_URL,CFG.SUPA_KEY);
 
 // ═══ STATE ═══
 let campers=[],evaluations=[],clinicians=[],staffList=[],settings={};
@@ -1839,7 +1843,8 @@ function handlePhotoUpload(input){
 // ═══ CHAT ═══
 let chatMessages=[];
 let chatLastRead=parseInt(localStorage.getItem('chatLastRead')||'0');
-let chatPollTimer=null;
+let chatRealtimeChannel=null;
+let chatActiveRole=null;
 
 async function loadChat(){
   try{
@@ -1863,7 +1868,39 @@ function markChatRead(role){
   checkChatBadge();
 }
 
-function renderChat(role){
+function startChatRealtime(role){
+  // Unsubscribe from any existing channel first
+  if(chatRealtimeChannel){
+    supabase.removeChannel(chatRealtimeChannel);
+    chatRealtimeChannel=null;
+  }
+  chatActiveRole=role;
+  chatRealtimeChannel=supabase
+    .channel('chat-realtime')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat'},(payload)=>{
+      // Avoid duplicates
+      if(!chatMessages.find(m=>m.id===payload.new.id)){
+        chatMessages.push(payload.new);
+        checkChatBadge();
+        renderChatMessages(chatActiveRole);
+      }
+    })
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'chat'},(payload)=>{
+      chatMessages=chatMessages.filter(m=>m.id!==payload.old.id);
+      renderChatMessages(chatActiveRole);
+    })
+    .subscribe();
+}
+
+function stopChatRealtime(){
+  if(chatRealtimeChannel){
+    supabase.removeChannel(chatRealtimeChannel);
+    chatRealtimeChannel=null;
+  }
+  chatActiveRole=null;
+}
+
+function renderChatMessages(role){
   const suffix=role==='Camper'?'Camper':role==='Staff'?'Staff':'Admin';
   const con=document.getElementById('chatMsgs'+suffix);
   if(!con)return;
@@ -1886,15 +1923,11 @@ function renderChat(role){
     </div>`;
   }).join('');
   con.scrollTop=con.scrollHeight;
-  // Start polling when chat is open
-  if(chatPollTimer)clearInterval(chatPollTimer);
-  chatPollTimer=setInterval(()=>pollChat(suffix),5000);
 }
 
-async function pollChat(suffix){
-  const prev=chatMessages.length;
-  await loadChat();
-  if(chatMessages.length!==prev)renderChat(suffix);
+function renderChat(role){
+  renderChatMessages(role);
+  startChatRealtime(role);
 }
 
 async function sendChat(role){
@@ -1911,8 +1944,7 @@ async function sendChat(role){
       user_role:CR,
       message:msg
     });
-    await loadChat();
-    renderChat(suffix);
+    // Realtime subscription handles the UI update automatically
     // If admin checked email blast
     if(role==='admin'&&document.getElementById('adminEmailBlast')?.checked){
       sendChatEmailBlast(msg,displayName);
@@ -1945,8 +1977,15 @@ async function sendChatEmailBlast(msg,from){
 
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-// Stop polling when leaving chat
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&chatPollTimer){clearInterval(chatPollTimer);chatPollTimer=null;}});
+// Stop realtime when tab hidden, restart when visible
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    stopChatRealtime();
+  } else if(chatActiveRole){
+    // Reload messages and resubscribe when tab comes back
+    loadChat().then(()=>startChatRealtime(chatActiveRole));
+  }
+});
 
 // ═══ CAMPER PROFILES VIEW ═══
 function renderCamperProfiles(search){
@@ -2031,7 +2070,7 @@ async function clearChat(){
   try{
     await supa('chat','DELETE',null,'?id=not.is.null');
     chatMessages=[];
-    renderChat('Admin');
+    renderChatMessages('Admin');
     toast('Chat cleared');
   }catch(e){toast('Error clearing chat',true);}
 }
@@ -2041,9 +2080,9 @@ async function deleteChatMsg(id){
     await supa('chat','DELETE',null,`?id=eq.${id}`);
     chatMessages=chatMessages.filter(m=>m.id!==id);
     // Re-render whichever chat is visible
-    if(document.getElementById('chatMsgsAdmin')?.closest('.tc.on'))renderChat('Admin');
-    else if(document.getElementById('chatMsgsStaff')?.closest('.view.on'))renderChat('Staff');
-    else renderChat('Camper');
+    if(document.getElementById('chatMsgsAdmin')?.closest('.tc.on'))renderChatMessages('Admin');
+    else if(document.getElementById('chatMsgsStaff')?.closest('.view.on'))renderChatMessages('Staff');
+    else renderChatMessages('Camper');
   }catch(e){toast('Error',true);}
 }
 
