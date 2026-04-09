@@ -876,7 +876,6 @@ function closeModal(id){
     if(CR==='camper'&&navC)navC.style.display='flex';
     else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
   startGlobalChatPoll();
-  startGlobalChatPoll();
   }else{el.classList.remove('on');}
 }
 
@@ -1870,16 +1869,16 @@ function markChatRead(role){
 function startChatPoll(role){
   if(chatPollTimer)clearInterval(chatPollTimer);
   chatActiveRole=role;
-  chatLastMsgCount=chatMessages.length;
   chatPollTimer=setInterval(async()=>{
-    const prev=chatMessages.length;
-    const prevIds=chatMessages.map(m=>m.id).join(',');
+    const prevCount=chatMessages.length;
+    const prevLast=chatMessages[chatMessages.length-1]?.id;
     await loadChat();
-    const newIds=chatMessages.map(m=>m.id).join(',');
-    if(newIds!==prevIds){
+    const newCount=chatMessages.length;
+    const newLast=chatMessages[chatMessages.length-1]?.id;
+    if(newCount!==prevCount||newLast!==prevLast){
       renderChatMessages(chatActiveRole);
     }
-  },2000);
+  },1500);
 }
 
 function stopChatPoll(){
@@ -2317,11 +2316,21 @@ async function emailCampDocs(){
   toast(`Sent to ${sent} campers`);
 }
 
-// Global background chat poll
+// Global background chat poll (badge updates + re-render if chat is open)
 let globalChatPollTimer=null;
 function startGlobalChatPoll(){
   if(globalChatPollTimer)return;
-  globalChatPollTimer=setInterval(async()=>{await loadChat();},10000);
+  globalChatPollTimer=setInterval(async()=>{
+    const prevCount=chatMessages.length;
+    const prevLast=chatMessages[chatMessages.length-1]?.id;
+    await loadChat();
+    const newCount=chatMessages.length;
+    const newLast=chatMessages[chatMessages.length-1]?.id;
+    if(newCount!==prevCount||newLast!==prevLast){
+      // If chat tab is currently open, re-render it
+      if(chatActiveRole)renderChatMessages(chatActiveRole);
+    }
+  },3000);
 }
 
 // ═══ DELETE ALL ═══
