@@ -739,7 +739,7 @@ if('serviceWorker' in navigator){
     <div id="pmImgWrap"></div>
     <button onclick="closeModal('mProfile')" type="button" style="position:fixed;top:12px;right:12px;z-index:300;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.25);border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
   </div>
-  <div class="pmod-body" id="pmBody" style="padding-bottom:80px"></div>
+  <div class="pmod-body" id="pmBody" style="padding:0"></div>
 </div></div>
 
 
@@ -1610,7 +1610,7 @@ function openProfile(id){
   if(c.is_returning)tags+='<span class="ptag ptag-ret">↩ Returning</span>';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
   let body=imgHtml;
-  body+=`<div class="pmod-body" style="padding:16px 16px 0">`;
+  body+=`<div style="padding:16px 16px 0">`;
   body+=`<div class="pmod-name">${c.first_name} ${c.last_name}</div>`;
   if(loc||c.conference)body+=`<div class="pmod-meta">${[loc,c.conference].filter(Boolean).join(' · ')}</div>`;
   if(tags)body+=`<div class="pmod-tags">${tags}</div>`;
@@ -1634,16 +1634,15 @@ function openProfile(id){
   }
   if(c.email||c.phone){
     body+='<div class="pmod-sec">Contact</div>';
-    if(c.email)body+=`<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">✉️ ${c.email}</div>`;
-    if(c.phone)body+=`<div style="font-size:12px;color:var(--tx2)">📞 ${c.phone}</div>`;
+    if(c.email)body+=`<div style="font-size:13px;color:var(--tx2);margin-bottom:6px">✉️ ${c.email}</div>`;
+    if(c.phone)body+=`<div style="font-size:13px;color:var(--tx2)">📞 ${c.phone}</div>`;
   }
   body+=`</div>`;
   if(CR==='admin'){
-    body+=`<div style="padding:16px"><div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div></div>`;
+    body+=`<div style="padding:16px 16px 32px"><div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div></div>`;
   }else{
-    body+=`<div style="padding:16px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
+    body+=`<div style="padding:16px 16px 32px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
   }
-  body+=`<div style="height:env(safe-area-inset-bottom,20px);min-height:20px"></div>`;
   document.getElementById('pmImgWrap').innerHTML='';
   document.getElementById('pmBody').innerHTML=body;
   openModal('mProfile');
