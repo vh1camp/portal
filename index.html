@@ -739,7 +739,7 @@ if('serviceWorker' in navigator){
     <div id="pmImgWrap"></div>
     <button onclick="closeModal('mProfile')" type="button" style="position:fixed;top:12px;right:12px;z-index:300;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.25);border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
   </div>
-  <div class="pmod-body" id="pmBody" style="padding-bottom:40px"></div>
+  <div class="pmod-body" id="pmBody" style="padding-bottom:80px"></div>
 </div></div>
 
 
@@ -1639,7 +1639,12 @@ function openProfile(id){
     if(c.phone)body+=`<div style="font-size:12px;color:var(--tx2)">📞 ${c.phone}</div>`;
   }
   // Edit button
-  body+=`<div style="margin-top:16px;display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div>`;
+  if(CR==='admin'){
+    body+=`<div style="margin-top:16px;display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div>`;
+  } else {
+    body+=`<div style="margin-top:16px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
+  }
+  body+=`<div style="height:60px"></div>`;
   document.getElementById('pmBody').innerHTML=body;
   openModal('mProfile');
 }
