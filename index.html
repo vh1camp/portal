@@ -1601,20 +1601,20 @@ function openProfile(id){
   const cs=buildCamperScores();
   const sc=cs[id];
   const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
-  // Image
-  const imgWrap=document.getElementById('pmImgWrap');
-  imgWrap.innerHTML=c.photo?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`:`<div class="pmod-initials">${initials}</div>`;
-  // Body
+  const imgHtml=c.photo
+    ?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
+    :`<div class="pmod-initials">${initials}</div>`;
   const loc=(c.city||'')+(c.state?', '+c.state:'');
   let tags='';
   if(c.rmac)tags+='<span class="ptag ptag-rmac">RMAC</span>';
   if(c.is_returning)tags+='<span class="ptag ptag-ret">↩ Returning</span>';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
-  let body=`<div class="pmod-name">${c.first_name} ${c.last_name}</div>`;
+  let body=imgHtml;
+  body+=`<div class="pmod-body" style="padding:16px 16px 0">`;
+  body+=`<div class="pmod-name">${c.first_name} ${c.last_name}</div>`;
   if(loc||c.conference)body+=`<div class="pmod-meta">${[loc,c.conference].filter(Boolean).join(' · ')}</div>`;
   if(tags)body+=`<div class="pmod-tags">${tags}</div>`;
   if(c.bio)body+=`<div class="pmod-bio">${c.bio}</div>`;
-  // Scores
   if(sc){
     body+=`<div class="pmod-overall"><div class="pmod-overall-val">${sc.overall.toFixed(1)}</div><div class="pmod-overall-lbl">Overall Average · ${sc.evalCount} Eval${sc.evalCount!==1?'s':''}</div></div>`;
     body+='<div class="pmod-sec">Category Scores</div>';
@@ -1632,19 +1632,19 @@ function openProfile(id){
   }else{
     body+='<div style="text-align:center;padding:20px 0;color:var(--tx3);font-size:13px">No evaluations yet</div>';
   }
-  // Contact
   if(c.email||c.phone){
     body+='<div class="pmod-sec">Contact</div>';
     if(c.email)body+=`<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">✉️ ${c.email}</div>`;
     if(c.phone)body+=`<div style="font-size:12px;color:var(--tx2)">📞 ${c.phone}</div>`;
   }
-  // Edit button
+  body+=`</div>`;
   if(CR==='admin'){
-    body+=`<div style="margin-top:16px;display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div>`;
-  } else {
-    body+=`<div style="margin-top:16px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
+    body+=`<div style="padding:16px"><div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mProfile')">Close</button><button class="btn bor" style="flex:1" onclick="closeModal('mProfile');editCamper('${id}')">✏️ Edit</button></div></div>`;
+  }else{
+    body+=`<div style="padding:16px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
   }
-  body+=`<div style="height:60px"></div>`;
+  body+=`<div style="height:env(safe-area-inset-bottom,20px);min-height:20px"></div>`;
+  document.getElementById('pmImgWrap').innerHTML='';
   document.getElementById('pmBody').innerHTML=body;
   openModal('mProfile');
 }
