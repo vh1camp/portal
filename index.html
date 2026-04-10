@@ -828,6 +828,7 @@ let campers=[],evaluations=[],clinicians=[],staffList=[],settings={};
 let CU=null,CR=null; // current user, current role
 let ynState={rmac:null,conference:null,top10:null};
 let ynStateAe={rmac:null,conference:null,top10:null};
+let rankClinician=null;
 let rankSort='overall';
 let csvParsed=[];
 
@@ -1012,7 +1013,7 @@ function sView(v){
 function populateStaffEvalForm(){
   const s=document.getElementById('seCamper');
   s.innerHTML='<option value="">— Select Camper —</option>';
-  campers.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.first_name+' '+c.last_name;s.appendChild(o);});
+  [...campers].sort((a,b)=>(a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase())).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.last_name+', '+c.first_name;s.appendChild(o);});
   document.getElementById('seForm').style.display='none';
 }
 function onStaffCamperSelected(){
@@ -1167,7 +1168,7 @@ function buildEmailHTML(camper,evals){
 function populateAdminForms(){
   // Camper select
   const ac=document.getElementById('aeCamper');ac.innerHTML='<option value="">— Select —</option>';
-  campers.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.first_name+' '+c.last_name;ac.appendChild(o);});
+  [...campers].sort((a,b)=>(a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase())).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.last_name+', '+c.first_name;ac.appendChild(o);});
   // Clinician select
   const cl=document.getElementById('aeClinician');cl.innerHTML='<option value="">— Select —</option>';
   clinicians.forEach(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;cl.appendChild(o);});
@@ -1326,7 +1327,7 @@ function renderAdminClinicians(){
   const tbody=document.getElementById('aclbody');
   if(!clinicians.length){tbody.innerHTML='<tr><td colspan="3"><div class="empty"><span class="ei">🏁</span><div class="et">No Clinicians Yet</div></div></td></tr>';return;}
   tbody.innerHTML='';
-  clinicians.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm">${c.name}</td><td style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')">✏️</button><button class="btn bred bsm" onclick="delClinician('${c.id}')">🗑</button></td>`;tbody.appendChild(tr);});
+  clinicians.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline" onclick="viewClinicianRankings('${c.name}')">${c.name}</span></td><td style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')">✏️</button><button class="btn bred bsm" onclick="delClinician('${c.id}')">🗑</button></td>`;tbody.appendChild(tr);});
 }
 let _editClinicianId=null;
 let _editStaffId=null;
@@ -1451,6 +1452,8 @@ function buildClinicianEmailHTML(first,last,username,password){
     </div>
   </div>`;
 }
+function viewClinicianRankings(name){rankClinician=name;rankSort='overall';aTab('rankings',document.querySelector('.atab[onclick*="rankings"]'));renderAdminRankings();}
+
 async function delClinician(id){const ok=await cf('Remove this clinician?','Remove','Cancel');if(!ok)return;try{await supa('clinicians','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminClinicians();updateAdminStats();}catch(e){toast('Error',true);}}
 
 // ═══ RANKINGS ═══
@@ -1461,14 +1464,20 @@ function buildCamperScores(){
 }
 function renderAdminRankings(){
   const fr=document.getElementById('rankFilter');fr.innerHTML='';
-  ['overall',...CFG.CATS,'top10'].forEach(cat=>{const c=document.createElement('button');c.className='fchip'+(cat===rankSort?' on':'');c.textContent=cat==='overall'?'Overall':cat==='top10'?'Top 10':cat;c.onclick=()=>{rankSort=cat;renderAdminRankings();};fr.appendChild(c);});
+  // Clinician filter indicator
+  if(rankClinician){const clr=document.createElement('div');clr.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--tx2)';clr.innerHTML=`Showing: <strong style="color:var(--or)">${rankClinician}</strong>'s evaluations &nbsp;<button class="btn bsec bsm" onclick="rankClinician=null;renderAdminRankings()">✕ Clear</button>`;fr.appendChild(clr);}
+  const chipWrap=document.createElement('div');chipWrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
+  ['overall',...CFG.CATS,'top10','rmac'].forEach(cat=>{const c=document.createElement('button');c.className='fchip'+(cat===rankSort?' on':'');c.textContent=cat==='overall'?'Overall':cat==='top10'?'Top 10':cat==='rmac'?'RMAC Ready':cat;c.onclick=()=>{rankSort=cat;renderAdminRankings();};chipWrap.appendChild(c);});
+  fr.appendChild(chipWrap);
   const cs=buildCamperScores();
   let sorted=Object.values(cs);
+  if(rankClinician){sorted=sorted.filter(e=>e.clinicians.includes(rankClinician));}
   if(rankSort==='top10'){sorted=sorted.filter(e=>e.top10);sorted.sort((a,b)=>b.overall-a.overall);}
+  else if(rankSort==='rmac'){sorted=sorted.filter(e=>e.rmac);sorted.sort((a,b)=>b.overall-a.overall);}
   else if(rankSort==='overall')sorted.sort((a,b)=>b.overall-a.overall);
   else sorted.sort((a,b)=>(b.catAverages[rankSort]||0)-(a.catAverages[rankSort]||0));
   const con=document.getElementById('arankcon');
-  if(!sorted.length){con.innerHTML='<div class="empty"><span class="ei">'+(rankSort==='top10'?'⭐':'📊')+'</span><div class="et">'+(rankSort==='top10'?'No Top 10 campers yet':'No evaluations yet')+'</div></div>';return;}
+  if(!sorted.length){con.innerHTML='<div class="empty"><span class="ei">'+(rankSort==='top10'?'⭐':rankSort==='rmac'?'✅':'📊')+'</span><div class="et">'+(rankSort==='top10'?'No Top 10 campers yet':rankSort==='rmac'?'No RMAC Ready campers yet':'No evaluations yet')+'</div></div>';return;}
   con.innerHTML=sorted.map((e,idx)=>{const rc=idx<3?'r'+(idx+1):'';const bars=CFG.CATS.map(cat=>{const v=e.catAverages[cat]||0;const p=(v/10)*100;return`<div class="rank-bar-row"><span class="rank-bar-lbl">${cat.length>8?cat.substring(0,8):cat}</span><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${p}%"></div></div><span class="rank-bar-val">${v.toFixed(1)}</span></div>`;}).join('');let tags='';if(e.rmac)tags+='<span class="bdg bdgrn">RMAC</span>';if(e.conference)tags+='<span class="bdg bdo">Conference</span>';if(e.top10)tags+='<span class="bdg bdgold">Top 10</span>';return`<div class="rank-card ${rc}"><div class="rank-num">${idx+1}</div><div class="rank-info"><div class="rank-name">${e.camper.first_name} ${e.camper.last_name}</div><div class="rank-det">${e.evalCount} eval${e.evalCount!==1?'s':''} · ${e.clinicians.join(', ')}</div>${tags?`<div class="rank-tags">${tags}</div>`:''}<div class="rank-bars">${bars}</div></div><div class="rank-avg">${e.overall.toFixed(1)}</div></div>`;}).join('');
 }
 
