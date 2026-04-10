@@ -383,7 +383,7 @@ if('serviceWorker' in navigator){
 <div class="lsub">June 18 – 20, 2026 • Denver, CO</div>
 <div class="ltabs" id="ltabs">
 <button class="ltab on" data-tab="camper" type="button">🏀 Camper</button>
-<button class="ltab" data-tab="staff" type="button">🎯 Staff</button>
+<button class="ltab" data-tab="staff" type="button">🎯 Staff / Clinician</button>
 <button class="ltab" data-tab="admin" type="button">🔒 Admin</button>
 </div>
 <div class="lform" id="lfCamper">
@@ -561,7 +561,7 @@ if('serviceWorker' in navigator){
 <div class="tabs-bar">
 <button class="atab on" onclick="aTab('overview',this)" type="button">📊 Overview</button>
 <button class="atab" onclick="aTab('campers',this)" type="button">👥 Campers</button>
-<button class="atab" onclick="aTab('staff',this)" type="button">🎯 Staff</button>
+<button class="atab" onclick="aTab('staff',this)" type="button">🎯 Staff / Clinician</button>
 <button class="atab" onclick="aTab('evaluate',this)" type="button">📝 Evaluate</button>
 <button class="atab" onclick="aTab('rankings',this)" type="button">🏆 Rankings</button>
 <button class="atab" onclick="aTab('profiles',this)" type="button">🪪 Profiles</button>
@@ -604,7 +604,7 @@ if('serviceWorker' in navigator){
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
 <div class="stitle" style="margin:0">CLINICIAN <span>LIST</span></div>
 <div style="display:flex;gap:6px">
-<button class="btn bor bsm" onclick="openModal('mClinician')" type="button">➕ Add Clinician</button>
+<button class="btn bor bsm" onclick="resetClinicianModal();openModal('mClinician')" type="button">➕ Add Clinician</button>
 <button class="btn bred bsm" onclick="deleteAllClinicians()" type="button">🗑 Del All</button>
 </div>
 </div>
@@ -793,14 +793,14 @@ if('serviceWorker' in navigator){
 <div style="display:flex;gap:8px;margin-top:14px"><button class="btn bsec" style="flex:1" onclick="closeModal('mStaff')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveStaffMember()" type="button">Save</button></div>
 </div></div></div>
 
-<div class="overlay" id="mClinician"><div class="modal"><div class="mhd"><div class="mtitle">ADD CLINICIAN</div><button class="mclose" onclick="closeModal('mClinician')" type="button">✕</button></div><div class="mbody">
+<div class="overlay" id="mClinician"><div class="modal"><div class="mhd"><div class="mtitle" id="clModalTitle">ADD CLINICIAN</div><button class="mclose" onclick="closeModal('mClinician')" type="button">✕</button></div><div class="mbody">
 <div class="frow"><div><label class="flabel">First Name *</label><input class="finput" id="clFirst" placeholder="Tommy" style="margin-bottom:0"></div><div><label class="flabel">Last Name *</label><input class="finput" id="clLast" placeholder="Nunez" style="margin-bottom:0"></div></div>
 <label class="flabel" style="margin-top:10px">Email *</label><input class="finput" id="clEmail" placeholder="tommy@example.com" type="email">
 <div class="frow" style="margin-top:0"><div><label class="flabel">Username *</label><input class="finput" id="clUser" placeholder="tnunez" style="margin-bottom:0" autocomplete="off"></div><div><label class="flabel">Password *</label><input class="finput" id="clPass" placeholder="••••••" type="password" style="margin-bottom:0" autocomplete="new-password"></div></div>
 <label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="clRole"><option>Evaluator</option><option>Lead Clinician</option><option>Camp Director</option></select>
 <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="clSendEmail" checked style="accent-color:var(--or)"> Send login credentials email</label>
 <div class="ferr" id="clErr" style="display:none;color:var(--red2);font-size:12px;margin-bottom:8px"></div>
-<div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mClinician')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveClinician()" type="button">Save & Invite</button></div>
+<div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mClinician')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveClinician()" id="clSaveBtn" type="button">Save &amp; Invite</button></div>
 </div></div></div>
 
 <div class="overlay" id="mImport"><div class="modal"><div class="mhd"><div class="mtitle">IMPORT CAMPERS</div><button class="mclose" onclick="closeModal('mImport')" type="button">✕</button></div><div class="mbody">
@@ -881,13 +881,13 @@ function closeModal(id){
   const el=document.getElementById(id);
   if(id==='mProfile'){
     el.style.display='none';
-    // Restore correct bottom nav
     const navC=document.getElementById('navC');
     const navS=document.getElementById('navS');
     if(CR==='camper'&&navC)navC.style.display='flex';
     else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
-  startChatBackgroundPoll();
+    startChatBackgroundPoll();
   }else{el.classList.remove('on');}
+  if(id==='mClinician')resetClinicianModal();
 }
 
 // ═══ LOGIN ═══
@@ -1326,8 +1326,42 @@ function renderAdminClinicians(){
   const tbody=document.getElementById('aclbody');
   if(!clinicians.length){tbody.innerHTML='<tr><td colspan="3"><div class="empty"><span class="ei">🏁</span><div class="et">No Clinicians Yet</div></div></td></tr>';return;}
   tbody.innerHTML='';
-  clinicians.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm">${c.name}</td><td><button class="btn bred bsm" onclick="delClinician('${c.id}')">🗑</button></td>`;tbody.appendChild(tr);});
+  clinicians.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm">${c.name}</td><td style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')">✏️</button><button class="btn bred bsm" onclick="delClinician('${c.id}')">🗑</button></td>`;tbody.appendChild(tr);});
 }
+let _editClinicianId=null;
+let _editStaffId=null;
+
+function openEditClinician(clinicianId){
+  const cl=clinicians.find(c=>c.id===clinicianId);
+  if(!cl)return;
+  const nameParts=cl.name.split(' ');
+  const first=nameParts[0]||'';
+  const last=nameParts.slice(1).join(' ')||'';
+  const staff=staffList.find(s=>s.first_name===first&&s.last_name===last);
+  _editClinicianId=clinicianId;
+  _editStaffId=staff?staff.id:null;
+  document.getElementById('clFirst').value=first;
+  document.getElementById('clLast').value=last;
+  document.getElementById('clEmail').value='';
+  document.getElementById('clUser').value=staff?staff.username:'';
+  document.getElementById('clPass').value=staff?staff.password:'';
+  if(staff&&document.getElementById('clRole'))document.getElementById('clRole').value=staff.role||'Evaluator';
+  document.getElementById('clModalTitle').textContent='EDIT CLINICIAN';
+  document.getElementById('clSaveBtn').textContent='Save Changes';
+  document.getElementById('clSendEmail').checked=false;
+  document.getElementById('clErr').style.display='none';
+  openModal('mClinician');
+}
+
+function resetClinicianModal(){
+  _editClinicianId=null;
+  _editStaffId=null;
+  document.getElementById('clModalTitle').textContent='ADD CLINICIAN';
+  document.getElementById('clSaveBtn').textContent='Save & Invite';
+  document.getElementById('clSendEmail').checked=true;
+  ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
 async function saveClinician(){
   const first=document.getElementById('clFirst').value.trim();
   const last=document.getElementById('clLast').value.trim();
@@ -1338,32 +1372,39 @@ async function saveClinician(){
   const errEl=document.getElementById('clErr');
   errEl.style.display='none';
   if(!first||!last){errEl.textContent='First and last name required.';errEl.style.display='block';return;}
-  if(!email||!email.includes('@')){errEl.textContent='Valid email required.';errEl.style.display='block';return;}
   if(!user){errEl.textContent='Username required.';errEl.style.display='block';return;}
   if(!pass||pass.length<4){errEl.textContent='Password must be at least 4 characters.';errEl.style.display='block';return;}
   const fullName=first+' '+last;
   try{
-    // Check for duplicate username
+    // ── EDIT MODE ──
+    if(_editClinicianId){
+      if(_editStaffId){
+        await supa('staff','PATCH',{first_name:first,last_name:last,username:user,password:pass,role},`?id=eq.${_editStaffId}`);
+      }
+      await supa('clinicians','PATCH',{name:fullName},`?id=eq.${_editClinicianId}`);
+      closeModal('mClinician');
+      resetClinicianModal();
+      toast('Clinician updated!');
+      await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
+      return;
+    }
+    // ── ADD MODE ──
+    if(!email||!email.includes('@')){errEl.textContent='Valid email required.';errEl.style.display='block';return;}
     const existing=staffList.find(s=>s.username&&s.username.toLowerCase()===user.toLowerCase());
     if(existing){
-      // If staff record exists but not in clinicians list, update it and re-add to clinicians
       const inClinicians=clinicians.find(c=>c.name===(first+' '+last));
       if(!inClinicians){
         await supa('staff','PATCH',{first_name:first,last_name:last,password:pass,role},`?id=eq.${existing.id}`);
         await supa('clinicians','POST',{name:first+' '+last});
         closeModal('mClinician');toast('Clinician re-added!');
-        ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-        document.getElementById('clSendEmail').checked=true;
+        resetClinicianModal();
         await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
         return;
       }
       errEl.textContent='Username already taken — choose a different one.';errEl.style.display='block';return;
     }
-    // Create staff login account
     await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,role});
-    // Also add to clinicians list for eval dropdown
     await supa('clinicians','POST',{name:fullName});
-    // Send welcome email if checked
     if(document.getElementById('clSendEmail').checked&&email){
       try{
         await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
@@ -1375,9 +1416,7 @@ async function saveClinician(){
     }
     closeModal('mClinician');
     toast('Clinician added & invited!');
-    // Reset form
-    ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    document.getElementById('clSendEmail').checked=true;
+    resetClinicianModal();
     await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
   }catch(e){console.error('saveClinician error:',e);errEl.textContent='Error: '+(e.message||'Unknown error');errEl.style.display='block';}
 }
