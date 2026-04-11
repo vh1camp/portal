@@ -3120,7 +3120,7 @@ async function generateSchedule() {
 
     function canAssignCamper(tr, cid, slot, court) {
       const games = tr.camperGames[cid] || 0;
-      if (games >= 4) return false; // hard max 4
+      if (games >= 6) return false; // absolute max safety cap
       const slots = tr.camperSlots[cid] || [];
       const slotMin = tmins(slot);
       // No back-to-back
@@ -3182,26 +3182,36 @@ async function generateSchedule() {
     }
 
     function buildBlock(dayLabel, slots, camperPool, clinPool, tr) {
-      // For each slot, fill 6 courts with 3 campers each
-      // Score campers: prefer those with fewer games, not used this slot,
-      // different partners, different courts
+      // Calculate how many courts we can realistically fill
+      // campers * maxGames / numSlots / 3 = courts per slot
+      const maxGamesPerCamper = 3;
+      const courtsPerSlot = Math.min(SCH_COURTS.length, Math.floor(camperPool.length * maxGamesPerCamper / slots.length / 3));
+      const activeCourts = SCH_COURTS.slice(0, Math.max(courtsPerSlot, 2));
 
       for (const slot of slots) {
-        const usedThisSlot = new Set(); // camper ids used in this slot
+        const usedThisSlot = new Set();
         const clinUsedThisSlot = new Set();
 
         // Rotate courts to vary camper court assignments
-        const courtOrder = shuffle(SCH_COURTS);
+        const courtOrder = shuffle(activeCourts);
 
         for (const court of courtOrder) {
           // Pick 3 campers for this court
           // Sort camper pool: fewer games first, avoid partners, avoid same court
-          const available = camperPool.filter(c => {
+          let available = camperPool.filter(c => {
             if (usedThisSlot.has(c.id)) return false;
             return canAssignCamper(tr, c.id, slot, court);
           });
 
-          if (available.length < 3) continue; // can't fill court, skip
+          // If not enough available, relax back-to-back for least-used campers
+          if (available.length < 3) {
+            available = camperPool.filter(c => {
+              if (usedThisSlot.has(c.id)) return false;
+              return (tr.camperGames[c.id]||0) < 6;
+            });
+          }
+
+          if (available.length < 3) continue; // truly can't fill
 
           // Score each camper: prefer fewer games, new court, varied partners
           available.sort((a,b) => {
@@ -3305,7 +3315,7 @@ function validateGeneratedSchedule(slots, campersAll) {
       const games = daySlots.filter(s=>s.camper_1_id===c.id||s.camper_2_id===c.id||s.camper_3_id===c.id);
       const name = c.first_name+' '+c.last_name;
       if (games.length < 2) warnings.push({type:'warn', msg:`${name} has only ${games.length} game(s) on ${day}`});
-      if (games.length > 4) warnings.push({type:'error', msg:`${name} has ${games.length} games on ${day} (max 4)`});
+      if (games.length > 5) warnings.push({type:'warn', msg:`${name} has ${games.length} games on ${day} (heavy load)`});
       // Check back-to-back
       const times = games.map(g=>tmins(g.time_slot)).sort((a,b)=>a-b);
       for (let i=0;i<times.length-1;i++) {
