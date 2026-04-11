@@ -364,7 +364,29 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 #chatNotif-hint{font-size:11px;color:#888;flex-shrink:0}
 .bb{position:relative}
 
-/* SCHEDULE placeholder */
+/* ═══ SCHEDULE ═══ */
+.sch-day-header{font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--or);padding:14px 0 6px;border-bottom:2px solid var(--or);margin-bottom:10px}
+.sch-card{background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.sch-card-meta{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:6px}
+.sch-card-court{font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;color:var(--or);margin-bottom:8px}
+.sch-card-names{display:flex;flex-direction:column;gap:3px}
+.sch-card-name{font-size:14px;color:var(--tx);font-weight:600}
+.sch-card-clinician{font-size:12px;color:var(--tx2);margin-top:6px;padding-top:6px;border-top:1px solid var(--b2)}
+.sch-flag{background:var(--redd);border:1px solid var(--redb);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);margin-bottom:8px;font-weight:600}
+.sch-warn{background:rgba(232,98,26,.08);border:1px solid rgba(232,98,26,.25);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--or);margin-bottom:8px;font-weight:600}
+/* Admin schedule builder */
+.sch-slot-row{background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px}
+.sch-slot-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sch-slot-title{font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;color:var(--tx)}
+.sch-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.sch-selects-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.sch-select{width:100%;padding:9px 10px;background:var(--gray2);border:1px solid var(--b3);border-radius:var(--rs);color:var(--tx);font-size:13px;font-family:'Source Sans 3',sans-serif}
+.sch-publish-bar{background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.sch-published-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;letter-spacing:.06em}
+.sch-published-badge.on{background:var(--grnd);color:var(--grn);border:1px solid var(--grnb)}
+.sch-published-badge.off{background:var(--redd);color:var(--red);border:1px solid var(--redb)}
+.sch-day-tab{padding:8px 14px;border-radius:20px;border:1px solid var(--b3);background:transparent;color:var(--tx2);font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.06em}
+.sch-day-tab.on{background:var(--or);color:#fff;border-color:var(--or)}
 .schedule-empty{text-align:center;padding:60px 20px}
 .schedule-empty-icon{font-size:52px;margin-bottom:12px}
 .schedule-empty-txt{font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:.06em;color:var(--tx2);margin-bottom:8px}
@@ -501,11 +523,8 @@ if('serviceWorker' in navigator){
 <div class="pgrid" id="cpGrid"></div>
 </div>
 <div class="view" id="cv-schedule">
-<div class="schedule-empty">
-<div class="schedule-empty-icon">📅</div>
-<div class="schedule-empty-txt">Schedule Coming Soon</div>
-<div class="schedule-empty-sub">The camp schedule will appear here once published by the director.</div>
-</div>
+<div class="stitle" style="margin-bottom:14px">MY <span>SCHEDULE</span></div>
+<div id="cvSchContent"><div class="schedule-empty"><div class="schedule-empty-txt">Schedule Coming Soon</div><div class="schedule-empty-sub">Your schedule will appear here once published by the director.</div></div></div>
 </div>
 <div class="view" id="cv-campinfo">
 <div class="stitle">CAMP <span>INFO</span></div>
@@ -606,11 +625,8 @@ if('serviceWorker' in navigator){
 <div class="pgrid" id="srGrid"></div>
 </div>
 <div class="view" id="sv-schedule">
-<div class="schedule-empty">
-<div class="schedule-empty-icon">📅</div>
-<div class="schedule-empty-txt">Schedule Coming Soon</div>
-<div class="schedule-empty-sub">The camp schedule will appear here once published.</div>
-</div>
+<div class="stitle" style="margin-bottom:14px">MY <span>SCHEDULE</span></div>
+<div id="svSchContent"><div class="schedule-empty"><div class="schedule-empty-txt">Schedule Coming Soon</div><div class="schedule-empty-sub">Your schedule will appear here once published.</div></div></div>
 </div>
 <div class="view" id="sv-campinfo">
 <div class="stitle">CAMP <span>INFO</span></div>
@@ -737,11 +753,32 @@ if('serviceWorker' in navigator){
 <div class="pgrid" id="apGrid"></div>
 </div>
 <div class="tc" id="at-schedule">
-<div class="schedule-empty">
-<div class="schedule-empty-icon">📅</div>
-<div class="schedule-empty-txt">Schedule Builder Coming Soon</div>
-<div class="schedule-empty-sub">You'll be able to build and publish the camp schedule here.</div>
+<div class="stitle" style="margin-bottom:14px">SCHEDULE <span>BUILDER</span></div>
+
+<!-- Publish bar -->
+<div class="sch-publish-bar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:13px;font-weight:600;color:var(--tx)">Schedule Status:</span>
+    <span class="sch-published-badge off" id="schPublishBadge">UNPUBLISHED</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn bsec bsm" onclick="toggleSchedulePublish()" id="schPublishBtn" type="button">Publish</button>
+    <button class="btn bsec bsm" onclick="clearSchedule()" type="button">Clear All</button>
+  </div>
 </div>
+
+<!-- Day tabs -->
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <button class="sch-day-tab on" onclick="adminSchDay('thu',this)" type="button">Thu Jun 18</button>
+  <button class="sch-day-tab" onclick="adminSchDay('fri',this)" type="button">Fri Jun 19</button>
+  <button class="sch-day-tab" onclick="adminSchDay('sat',this)" type="button">Sat Jun 20</button>
+</div>
+
+<!-- Flags summary -->
+<div id="schFlagsBox" style="display:none;margin-bottom:12px"></div>
+
+<!-- Slots -->
+<div id="schBuilderSlots"></div>
 </div>
 <div class="tc" id="at-chat">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -927,6 +964,7 @@ async function supa(table,method,body,query){
 
 // ═══ DATA LOADING ═══
 async function loadAll(){
+  await loadSchedule();
   try{
     [campers,evaluations,clinicians,staffList]=await Promise.all([
       supa('campers','GET',null,'?order=last_name.asc'),
@@ -1050,6 +1088,7 @@ function cView(v){
   if(v==='myprofile')renderMyProfile('camper');
   if(v==='chat'){markChatRead();renderChat('Camper');}
   if(v==='campinfo')renderCampInfoViewer('cv');
+  if(v==='schedule')renderCamperSchedule();
 }
 function renderCamperHome(){
   document.getElementById('cwname').textContent=CU.first_name+' '+CU.last_name;
@@ -1096,6 +1135,7 @@ function sView(v){
   if(v==='roster')renderStaffRoster('');
   if(v==='chat'){markChatRead();renderChat('Staff');}
   if(v==='campinfo')renderCampInfoViewer('sv');
+  if(v==='schedule')renderClinicianSchedule();
   if(v==='myprofile')renderMyProfile('staff');
 }
 function populateStaffEvalForm(){
@@ -2550,6 +2590,401 @@ function closeMoreS(){
   document.getElementById('moreDrawerS').classList.remove('open');
   document.getElementById('moreOverlayS').classList.remove('open');
 }
+
+// ═══════════════════════════════════════════════════════
+// SCHEDULE SYSTEM
+// ═══════════════════════════════════════════════════════
+
+const SCHEDULE_DAYS = {
+  thu: { label: 'Thursday June 18, 2026', slots: ['10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM'] },
+  fri: { label: 'Friday June 19, 2026',   slots: ['10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM'] },
+  sat: { label: 'Saturday June 20, 2026', slots: ['8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM'] }
+};
+const COURTS = ['Court 1','Court 2','Court 3','Court 4','Court 5','Court 6'];
+const PLACEHOLDER_CLINICIANS = ['Clinician 1','Clinician 2','Clinician 3','Clinician 4','Clinician 5','Clinician 6'];
+
+let scheduleData = [];      // loaded from Supabase
+let schedulePublished = false;
+let currentAdminDay = 'thu';
+
+// ── LOAD SCHEDULE ────────────────────────────────────────
+async function loadSchedule() {
+  try {
+    const res = await sf('schedule', '?select=*&order=day,time_slot,court');
+    scheduleData = res.ok ? await res.json() : [];
+    const sr = await sf('schedule_settings', '?id=eq.1&select=published');
+    if (sr.ok) {
+      const s = await sr.json();
+      schedulePublished = s[0]?.published || false;
+    }
+  } catch(e) { scheduleData = []; }
+}
+
+// ── TIME SLOT ORDER helper ────────────────────────────────
+function timeToMinutes(t) {
+  const [time, ampm] = t.split(' ');
+  let [h, m] = time.split(':').map(Number);
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+// ── ADMIN: Switch day ────────────────────────────────────
+function adminSchDay(day, btn) {
+  currentAdminDay = day;
+  document.querySelectorAll('.sch-day-tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderAdminSchedule();
+}
+
+// ── ADMIN: Render schedule builder ──────────────────────
+function renderAdminSchedule() {
+  const dayKey = currentAdminDay;
+  const dayInfo = SCHEDULE_DAYS[dayKey];
+  const container = document.getElementById('schBuilderSlots');
+  if (!container) return;
+
+  // Build camper options
+  let camperOpts = '<option value="">— Camper —</option>';
+  [...campers].sort((a,b) => (a.last_name||'').localeCompare(b.last_name||'')).forEach(c => {
+    camperOpts += `<option value="${c.id}">${c.first_name} ${c.last_name}</option>`;
+  });
+
+  // Build clinician options
+  let clinOpts = '<option value="">— Clinician —</option>';
+  // Try real clinicians first
+  const clinList = clinicians.length ? clinicians : PLACEHOLDER_CLINICIANS.map((n,i) => ({id:'ph_'+i, name:n}));
+  clinList.forEach(c => {
+    const id = c.id || 'ph_'+c.name;
+    const name = c.name || (c.first_name + ' ' + c.last_name);
+    clinOpts += `<option value="${id}">${name}</option>`;
+  });
+
+  let html = '';
+  dayInfo.slots.forEach(slot => {
+    COURTS.forEach(court => {
+      const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
+      const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+      
+      html += `<div class="sch-slot-row" id="row_${slotId}">
+        <div class="sch-slot-header">
+          <span class="sch-slot-title">${slot} · ${court}</span>
+          <button class="btn bsec bsm" onclick="saveSlot('${dayKey}','${slot}','${court}')" type="button">Save</button>
+        </div>
+        <div class="sch-selects-3" style="margin-bottom:8px">
+          <select class="sch-select" id="c1_${slotId}">${camperOpts}</select>
+          <select class="sch-select" id="c2_${slotId}">${camperOpts}</select>
+          <select class="sch-select" id="c3_${slotId}">${camperOpts}</select>
+        </div>
+        <select class="sch-select" id="cl_${slotId}" style="width:100%">${clinOpts}</select>
+        <div id="flag_${slotId}" style="margin-top:6px"></div>
+      </div>`;
+    });
+  });
+
+  container.innerHTML = html;
+
+  // Populate existing values
+  dayInfo.slots.forEach(slot => {
+    COURTS.forEach(court => {
+      const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
+      if (!existing) return;
+      const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+      const s1 = document.getElementById(`c1_${slotId}`);
+      const s2 = document.getElementById(`c2_${slotId}`);
+      const s3 = document.getElementById(`c3_${slotId}`);
+      const sc = document.getElementById(`cl_${slotId}`);
+      if (s1 && existing.camper_1_id) s1.value = existing.camper_1_id;
+      if (s2 && existing.camper_2_id) s2.value = existing.camper_2_id;
+      if (s3 && existing.camper_3_id) s3.value = existing.camper_3_id;
+      if (sc && existing.clinician_id) sc.value = existing.clinician_id;
+    });
+  });
+
+  updateAllFlags();
+}
+
+// ── SAVE A SLOT ─────────────────────────────────────────
+async function saveSlot(dayKey, slot, court) {
+  const dayInfo = SCHEDULE_DAYS[dayKey];
+  const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+  const c1 = document.getElementById(`c1_${slotId}`)?.value || null;
+  const c2 = document.getElementById(`c2_${slotId}`)?.value || null;
+  const c3 = document.getElementById(`c3_${slotId}`)?.value || null;
+  const cl = document.getElementById(`cl_${slotId}`)?.value || null;
+
+  // Validate before save
+  const flags = validateSlot(dayInfo.label, slot, court, c1, c2, c3, cl, null);
+  const flagBox = document.getElementById(`flag_${slotId}`);
+  if (flagBox) {
+    flagBox.innerHTML = flags.map(f =>
+      `<div class="${f.type === 'error' ? 'sch-flag' : 'sch-warn'}">${f.type === 'error' ? '🔴' : '🟡'} ${f.msg}</div>`
+    ).join('');
+  }
+
+  const payload = {
+    day: dayInfo.label,
+    time_slot: slot,
+    court: court,
+    camper_1_id: c1 || null,
+    camper_2_id: c2 || null,
+    camper_3_id: c3 || null,
+    clinician_id: cl && !cl.startsWith('ph_') ? cl : null
+  };
+
+  // Check if exists
+  const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
+  let res;
+  if (existing) {
+    res = await sf('schedule', `?id=eq.${existing.id}`, 'PATCH', payload);
+  } else {
+    res = await sf('schedule', '', 'POST', payload);
+  }
+
+  if (res.ok) {
+    toast('Saved');
+    await loadSchedule();
+    updateAllFlags();
+  } else {
+    toast('Save failed', true);
+  }
+}
+
+// ── VALIDATE A SLOT ─────────────────────────────────────
+function validateSlot(day, slot, court, c1, c2, c3, cl, excludeId) {
+  const flags = [];
+  const camperIds = [c1, c2, c3].filter(Boolean);
+  const slotMinutes = timeToMinutes(slot);
+
+  // Get all slots for this day (excluding current)
+  const daySlots = scheduleData.filter(s => s.day === day && s.id !== excludeId);
+
+  camperIds.forEach(cid => {
+    const camper = campers.find(c => c.id === cid);
+    const name = camper ? camper.first_name + ' ' + camper.last_name : 'Camper';
+
+    // Count games today
+    const todayGames = daySlots.filter(s =>
+      s.camper_1_id === cid || s.camper_2_id === cid || s.camper_3_id === cid
+    );
+
+    if (todayGames.length >= 3) {
+      flags.push({ type: 'error', msg: `${name} already has 3 games today (max reached)` });
+    }
+
+    // Back-to-back check
+    todayGames.forEach(s => {
+      const diff = Math.abs(timeToMinutes(s.time_slot) - slotMinutes);
+      if (diff === 60) {
+        flags.push({ type: 'error', msg: `${name} has a back-to-back game at ${s.time_slot}` });
+      }
+    });
+  });
+
+  // Clinician: same camper twice check
+  if (cl && !cl.startsWith('ph_')) {
+    const clinGames = daySlots.filter(s => s.clinician_id === cl);
+    camperIds.forEach(cid => {
+      const seenCount = clinGames.filter(s =>
+        s.camper_1_id === cid || s.camper_2_id === cid || s.camper_3_id === cid
+      ).length;
+      if (seenCount >= 2) {
+        const camper = campers.find(c => c.id === cid);
+        const name = camper ? camper.first_name + ' ' + camper.last_name : 'this camper';
+        flags.push({ type: 'error', msg: `Clinician has already seen ${name} twice today` });
+      }
+    });
+
+    // Clinician on/off rotation check (guideline)
+    const clinSlots = clinGames.map(s => timeToMinutes(s.time_slot)).sort((a,b)=>a-b);
+    if (clinSlots.length >= 2) {
+      let consecutive = false;
+      for (let i = 0; i < clinSlots.length - 1; i++) {
+        if (clinSlots[i+1] - clinSlots[i] === 60) { consecutive = true; break; }
+      }
+      if (consecutive) {
+        flags.push({ type: 'warn', msg: `Clinician has consecutive games (rotation guideline)` });
+      }
+    }
+  }
+
+  return flags;
+}
+
+// ── UPDATE ALL FLAGS (admin view) ────────────────────────
+function updateAllFlags() {
+  const dayKey = currentAdminDay;
+  const dayInfo = SCHEDULE_DAYS[dayKey];
+  let totalErrors = 0, totalWarns = 0;
+
+  dayInfo.slots.forEach(slot => {
+    COURTS.forEach(court => {
+      const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+      const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
+      if (!existing) return;
+      const flags = validateSlot(dayInfo.label, slot, court,
+        existing.camper_1_id, existing.camper_2_id, existing.camper_3_id,
+        existing.clinician_id, existing.id);
+      const flagBox = document.getElementById(`flag_${slotId}`);
+      if (flagBox) {
+        flagBox.innerHTML = flags.map(f =>
+          `<div class="${f.type === 'error' ? 'sch-flag' : 'sch-warn'}">${f.type === 'error' ? '🔴' : '🟡'} ${f.msg}</div>`
+        ).join('');
+      }
+      totalErrors += flags.filter(f => f.type === 'error').length;
+      totalWarns += flags.filter(f => f.type === 'warn').length;
+    });
+  });
+
+  // Summary banner
+  const flagsBox = document.getElementById('schFlagsBox');
+  if (flagsBox) {
+    if (totalErrors + totalWarns === 0) {
+      flagsBox.style.display = 'none';
+    } else {
+      flagsBox.style.display = 'block';
+      flagsBox.innerHTML =
+        (totalErrors ? `<div class="sch-flag">🔴 ${totalErrors} rule violation${totalErrors>1?'s':''} found</div>` : '') +
+        (totalWarns ? `<div class="sch-warn">🟡 ${totalWarns} guideline warning${totalWarns>1?'s':''}</div>` : '');
+    }
+  }
+}
+
+// ── TOGGLE PUBLISH ───────────────────────────────────────
+async function toggleSchedulePublish() {
+  const newState = !schedulePublished;
+  const res = await sf('schedule_settings', '?id=eq.1', 'PATCH', { published: newState });
+  if (res.ok) {
+    schedulePublished = newState;
+    const badge = document.getElementById('schPublishBadge');
+    const btn = document.getElementById('schPublishBtn');
+    if (badge) { badge.textContent = newState ? 'PUBLISHED' : 'UNPUBLISHED'; badge.className = 'sch-published-badge ' + (newState ? 'on' : 'off'); }
+    if (btn) btn.textContent = newState ? 'Unpublish' : 'Publish';
+    toast(newState ? 'Schedule published!' : 'Schedule unpublished');
+  }
+}
+
+// ── CLEAR ALL ────────────────────────────────────────────
+async function clearSchedule() {
+  const ok = await cf('Clear all schedule data? This cannot be undone.', 'Clear All', 'Cancel');
+  if (!ok) return;
+  await sf('schedule', '', 'DELETE');
+  scheduleData = [];
+  renderAdminSchedule();
+  toast('Schedule cleared');
+}
+
+// ── CAMPER VIEW ─────────────────────────────────────────
+function renderCamperSchedule() {
+  const el = document.getElementById('cvSchContent');
+  if (!el) return;
+
+  if (!schedulePublished) {
+    el.innerHTML = '<div class="schedule-empty"><div class="schedule-empty-txt">Schedule Coming Soon</div><div class="schedule-empty-sub">Your schedule will appear here once published by the director.</div></div>';
+    return;
+  }
+
+  const mySlots = scheduleData.filter(s =>
+    s.camper_1_id === CU.id || s.camper_2_id === CU.id || s.camper_3_id === CU.id
+  ).sort((a,b) => {
+    const dayOrder = ['Thursday June 18, 2026','Friday June 19, 2026','Saturday June 20, 2026'];
+    const d = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+    if (d !== 0) return d;
+    return timeToMinutes(a.time_slot) - timeToMinutes(b.time_slot);
+  });
+
+  if (!mySlots.length) {
+    el.innerHTML = '<div class="schedule-empty"><div class="schedule-empty-txt">No Games Scheduled</div><div class="schedule-empty-sub">Check back soon.</div></div>';
+    return;
+  }
+
+  let html = '';
+  let lastDay = '';
+
+  mySlots.forEach(s => {
+    if (s.day !== lastDay) {
+      html += `<div class="sch-day-header">${s.day}</div>`;
+      lastDay = s.day;
+    }
+
+    // Get partner names
+    const allIds = [s.camper_1_id, s.camper_2_id, s.camper_3_id].filter(Boolean);
+    const partners = allIds.filter(id => id !== CU.id).map(id => {
+      const c = campers.find(x => x.id === id);
+      return c ? c.first_name + ' ' + c.last_name : '';
+    }).filter(Boolean);
+
+    // Clinician name
+    let clinName = '';
+    if (s.clinician_id) {
+      const cl = clinicians.find(x => x.id === s.clinician_id);
+      clinName = cl ? (cl.name || cl.first_name + ' ' + cl.last_name) : '';
+    }
+
+    html += `<div class="sch-card">
+      <div class="sch-card-meta">${s.time_slot}</div>
+      <div class="sch-card-court">${s.court}</div>
+      <div class="sch-card-names">
+        ${partners.map(p => `<div class="sch-card-name">${p}</div>`).join('')}
+      </div>
+      ${clinName ? `<div class="sch-card-clinician">Evaluator: ${clinName}</div>` : ''}
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+// ── CLINICIAN VIEW ──────────────────────────────────────
+function renderClinicianSchedule() {
+  const el = document.getElementById('svSchContent');
+  if (!el) return;
+
+  if (!schedulePublished) {
+    el.innerHTML = '<div class="schedule-empty"><div class="schedule-empty-txt">Schedule Coming Soon</div><div class="schedule-empty-sub">Your schedule will appear here once published.</div></div>';
+    return;
+  }
+
+  // Match clinician by id or by name for placeholders
+  const mySlots = scheduleData.filter(s => s.clinician_id === CU.id)
+    .sort((a,b) => {
+      const dayOrder = ['Thursday June 18, 2026','Friday June 19, 2026','Saturday June 20, 2026'];
+      const d = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+      if (d !== 0) return d;
+      return timeToMinutes(a.time_slot) - timeToMinutes(b.time_slot);
+    });
+
+  if (!mySlots.length) {
+    el.innerHTML = '<div class="schedule-empty"><div class="schedule-empty-txt">No Assignments Yet</div><div class="schedule-empty-sub">Check back once the schedule is finalized.</div></div>';
+    return;
+  }
+
+  let html = '';
+  let lastDay = '';
+
+  mySlots.forEach(s => {
+    if (s.day !== lastDay) {
+      html += `<div class="sch-day-header">${s.day}</div>`;
+      lastDay = s.day;
+    }
+
+    const camperIds = [s.camper_1_id, s.camper_2_id, s.camper_3_id].filter(Boolean);
+    const camperNames = camperIds.map(id => {
+      const c = campers.find(x => x.id === id);
+      return c ? c.first_name + ' ' + c.last_name : '';
+    }).filter(Boolean);
+
+    html += `<div class="sch-card">
+      <div class="sch-card-meta">${s.time_slot}</div>
+      <div class="sch-card-court">${s.court}</div>
+      <div class="sch-card-names">
+        ${camperNames.map(n => `<div class="sch-card-name">${n}</div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
 </script>
 </body>
 </html>
