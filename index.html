@@ -3083,214 +3083,149 @@ async function generateSchedule() {
   btn.textContent = 'Generating...';
 
   try {
-    // Pull fresh data
     const campersAll = await supa('campers','GET',null,'?select=id,first_name,last_name&order=last_name') || [];
     const clinAll = await supa('clinicians','GET',null,'?select=id,name&order=name') || [];
 
     if (campersAll.length < 3) { toast('Need at least 3 campers', true); return; }
-    if (clinAll.length < 2)    { toast('Need at least 2 clinicians', true); return; }
+    if (clinAll.length < 1)    { toast('Need at least 1 clinician', true); return; }
 
     const getName = c => c.name || (c.first_name + ' ' + c.last_name);
-
-    // ── RANDOM GROUP SPLIT ──────────────────────────────
-    const shuffledCampers = shuffle(campersAll);
-    const half = Math.floor(shuffledCampers.length / 2);
-    const camperGroupA = shuffledCampers.slice(0, half);       // AM floor Thu/Fri
-    const camperGroupB = shuffledCampers.slice(half);          // PM floor Thu/Fri
-
-    const shuffledClin = shuffle(clinAll);
-    const clinHalf = Math.floor(shuffledClin.length / 2);
-    const clinGroupA = shuffledClin.slice(0, clinHalf);        // AM floor Thu/Fri
-    const clinGroupB = shuffledClin.slice(clinHalf);           // PM floor Thu/Fri
-
-    const generated = []; // { day, time_slot, court, camper_1_id, camper_2_id, camper_3_id, clinician_id }
+    const generated = [];
 
     // ── PER-DAY TRACKING ──────────────────────────────
-    function buildTracker() {
+    function makeTracker() {
       return {
-        camperGames: {},      // camper_id → count
-        camperSlots: {},      // camper_id → [time_slot]
-        camperPartners: {},   // camper_id → Set of partner ids
-        camperCourts: {},     // camper_id → Set of courts
-        clinGames: {},        // clin_id → count
-        clinSlots: {},        // clin_id → [time_slot]
-        clinCamperSeen: {},   // clin_id → { camper_id: count }
+        camperGames: {},      // id → count
+        camperSlots: {},      // id → [timeslot]
+        camperPartners: {},   // id → Set of partner ids
+        camperCourts: {},     // id → Set of courts used
+        clinSlots: {},        // id → [timeslot]
+        clinCamperSeen: {},   // id → {camper_id: count}
       };
     }
 
-    function canAssignCamper(tr, cid, slot, court) {
-      const games = tr.camperGames[cid] || 0;
-      if (games >= 6) return false; // absolute max safety cap
-      const slots = tr.camperSlots[cid] || [];
-      const slotMin = tmins(slot);
-      // No back-to-back
-      for (const s of slots) {
-        if (Math.abs(tmins(s) - slotMin) === 60) return false;
-      }
-      return true;
+    // Strict no-back-to-back check
+    function isBackToBack(tr, cid, slot) {
+      const prev = tr.camperSlots[cid] || [];
+      const m = tmins(slot);
+      return prev.some(s => Math.abs(tmins(s) - m) === 60);
     }
 
-    function canAssignClin(tr, clid, slot) {
-      const slots = tr.clinSlots[clid] || [];
-      const slotMin = tmins(slot);
-      // on/off: check if worked previous slot (guideline - soft check)
-      // We'll try to enforce but won't hard block
-      return true;
+    // Pick best clinician: not in this slot, on/off rotation, least seen these campers
+    function pickClin(tr, clinPool, slot, camperIds) {
+      const m = tmins(slot);
+      const candidates = clinPool
+        .filter(cl => !(tr.clinSlots[cl.id]||[]).includes(slot))
+        .map(cl => {
+          const slots = tr.clinSlots[cl.id] || [];
+          const lastM = slots.length ? tmins(slots[slots.length-1]) : -999;
+          const backToBack = Math.abs(lastM - m) === 60;
+          const seen = tr.clinCamperSeen[cl.id] || {};
+          const seenTotal = camperIds.reduce((s,id) => s + (seen[id]||0), 0);
+          const games = slots.length;
+          return { cl, backToBack, seenTotal, games };
+        })
+        .sort((a,b) => {
+          if (a.backToBack !== b.backToBack) return a.backToBack ? 1 : -1;
+          if (a.seenTotal !== b.seenTotal) return a.seenTotal - b.seenTotal;
+          return a.games - b.games;
+        });
+      return candidates[0]?.cl || clinPool[0];
     }
 
-    function recordAssignment(tr, c1, c2, c3, clid, slot, court) {
-      [c1,c2,c3].forEach(cid => {
-        tr.camperGames[cid] = (tr.camperGames[cid]||0) + 1;
-        tr.camperSlots[cid] = tr.camperSlots[cid] || [];
-        tr.camperSlots[cid].push(slot);
-        tr.camperCourts[cid] = tr.camperCourts[cid] || new Set();
-        tr.camperCourts[cid].add(court);
-        tr.camperPartners[cid] = tr.camperPartners[cid] || new Set();
-        [c1,c2,c3].filter(x=>x!==cid).forEach(p=>tr.camperPartners[cid].add(p));
+    function recordSlot(tr, c1, c2, c3, clid, slot, court) {
+      [c1,c2,c3].forEach(id => {
+        tr.camperGames[id] = (tr.camperGames[id]||0) + 1;
+        (tr.camperSlots[id] = tr.camperSlots[id]||[]).push(slot);
+        tr.camperCourts[id] = tr.camperCourts[id] || new Set();
+        tr.camperCourts[id].add(court);
+        tr.camperPartners[id] = tr.camperPartners[id] || new Set();
+        [c1,c2,c3].filter(x=>x!==id).forEach(p => tr.camperPartners[id].add(p));
       });
-      tr.clinGames[clid] = (tr.clinGames[clid]||0) + 1;
-      tr.clinSlots[clid] = tr.clinSlots[clid] || [];
-      tr.clinSlots[clid].push(slot);
+      (tr.clinSlots[clid] = tr.clinSlots[clid]||[]).push(slot);
       tr.clinCamperSeen[clid] = tr.clinCamperSeen[clid] || {};
-      [c1,c2,c3].forEach(cid => {
-        tr.clinCamperSeen[clid][cid] = (tr.clinCamperSeen[clid][cid]||0) + 1;
+      [c1,c2,c3].forEach(id => {
+        tr.clinCamperSeen[clid][id] = (tr.clinCamperSeen[clid][id]||0) + 1;
       });
     }
 
-    function pickClinician(tr, clinPool, slot, camperIds) {
-      // Sort by: least games today, on/off rotation, least seen these campers
-      const slotMin = tmins(slot);
-      const candidates = clinPool.map(cl => {
-        const games = tr.clinGames[cl.id] || 0;
-        const slots = tr.clinSlots[cl.id] || [];
-        // Check on/off - prefer clinicians who didn't work last slot
-        const lastSlot = slots.length ? slots[slots.length-1] : null;
-        const backToBack = lastSlot && Math.abs(tmins(lastSlot) - slotMin) === 60;
-        const seen = tr.clinCamperSeen[cl.id] || {};
-        const seenCount = camperIds.reduce((s,cid) => s + (seen[cid]||0), 0);
-        return { cl, games, backToBack, seenCount };
-      }).filter(x => {
-        // Hard block: clinician already in this slot
-        const slots = tr.clinSlots[x.cl.id] || [];
-        return !slots.includes(slot);
-      }).sort((a,b) => {
-        if (a.backToBack !== b.backToBack) return a.backToBack ? 1 : -1;
-        if (a.seenCount !== b.seenCount) return a.seenCount - b.seenCount;
-        return a.games - b.games;
-      });
-      return candidates[0]?.cl || null;
-    }
-
-    function buildBlock(dayLabel, slots, camperPool, clinPool, tr) {
-      // Calculate how many courts we can realistically fill
-      // campers * maxGames / numSlots / 3 = courts per slot
-      const maxGamesPerCamper = 3;
-      const courtsPerSlot = Math.min(SCH_COURTS.length, Math.floor(camperPool.length * maxGamesPerCamper / slots.length / 3));
-      const activeCourts = SCH_COURTS.slice(0, Math.max(courtsPerSlot, 2));
+    function buildDay(dayLabel, slots, camperPool, clinPool) {
+      const tr = makeTracker();
 
       for (const slot of slots) {
         const usedThisSlot = new Set();
-        const clinUsedThisSlot = new Set();
-
-        // Rotate courts to vary camper court assignments
-        const courtOrder = shuffle(activeCourts);
+        const courtOrder = shuffle([...SCH_COURTS]);
 
         for (const court of courtOrder) {
-          // Pick 3 campers for this court
-          // Sort camper pool: fewer games first, avoid partners, avoid same court
-          let available = camperPool.filter(c => {
-            if (usedThisSlot.has(c.id)) return false;
-            return canAssignCamper(tr, c.id, slot, court);
-          });
+          // Available: not used this slot, no back-to-back
+          let avail = camperPool.filter(c =>
+            !usedThisSlot.has(c.id) && !isBackToBack(tr, c.id, slot)
+          );
 
-          // If not enough available, relax back-to-back for least-used campers
-          if (available.length < 3) {
-            available = camperPool.filter(c => {
-              if (usedThisSlot.has(c.id)) return false;
-              return (tr.camperGames[c.id]||0) < 6;
-            });
+          // If fewer than 3 available (rare), relax back-to-back for least-played campers
+          if (avail.length < 3) {
+            avail = camperPool
+              .filter(c => !usedThisSlot.has(c.id))
+              .sort((a,b) => (tr.camperGames[a.id]||0) - (tr.camperGames[b.id]||0));
           }
 
-          if (available.length < 3) continue; // truly can't fill
+          if (avail.length < 3) continue;
 
-          // Score each camper: prefer fewer games, new court, varied partners
-          available.sort((a,b) => {
-            const ga = tr.camperGames[a.id]||0;
-            const gb = tr.camperGames[b.id]||0;
+          // Sort: fewest games first, then varied courts, then varied partners
+          avail.sort((a,b) => {
+            const ga = tr.camperGames[a.id]||0, gb = tr.camperGames[b.id]||0;
+            if (ga !== gb) return ga - gb;
             const ca = (tr.camperCourts[a.id]||new Set()).has(court) ? 1 : 0;
             const cb = (tr.camperCourts[b.id]||new Set()).has(court) ? 1 : 0;
-            if (ga !== gb) return ga - gb;
             return ca - cb;
           });
 
-          // Pick first 3 but try to avoid repeated partnerships
+          // Find trio with no repeated partnerships (or least repeats)
           let trio = null;
-          for (let i = 0; i < available.length - 2; i++) {
-            for (let j = i+1; j < available.length - 1; j++) {
-              for (let k = j+1; k < available.length; k++) {
-                const c1 = available[i], c2 = available[j], c3 = available[k];
-                const partners1 = tr.camperPartners[c1.id] || new Set();
-                const partners2 = tr.camperPartners[c2.id] || new Set();
-                const partners3 = tr.camperPartners[c3.id] || new Set();
-                const repeats = (partners1.has(c2.id)?1:0) + (partners1.has(c3.id)?1:0) + (partners2.has(c3.id)?1:0);
-                if (repeats === 0) { trio = [c1,c2,c3]; break; }
-                if (!trio) trio = [c1,c2,c3]; // fallback
+          outer: for (let i = 0; i < Math.min(avail.length-2, 12); i++) {
+            for (let j = i+1; j < Math.min(avail.length-1, 13); j++) {
+              for (let k = j+1; k < Math.min(avail.length, 14); k++) {
+                const a=avail[i], b=avail[j], c=avail[k];
+                const p1 = tr.camperPartners[a.id]||new Set();
+                const p2 = tr.camperPartners[b.id]||new Set();
+                const p3 = tr.camperPartners[c.id]||new Set();
+                const rpts = (p1.has(b.id)?1:0)+(p1.has(c.id)?1:0)+(p2.has(c.id)?1:0);
+                if (rpts === 0) { trio = [a,b,c]; break outer; }
+                if (!trio) trio = [a,b,c];
               }
-              if (trio && !tr.camperPartners[trio[0].id]?.has(trio[1].id)) break;
             }
-            if (trio && !tr.camperPartners[trio[0].id]?.has(trio[1].id)) break;
           }
-
-          if (!trio) trio = available.slice(0,3);
+          if (!trio) trio = avail.slice(0,3);
 
           const [c1,c2,c3] = trio;
-          const cl = pickClinician(tr, clinPool, slot, [c1.id,c2.id,c3.id]);
-          if (!cl) continue;
+          const cl = pickClin(tr, clinPool, slot, [c1.id,c2.id,c3.id]);
 
           usedThisSlot.add(c1.id); usedThisSlot.add(c2.id); usedThisSlot.add(c3.id);
-          clinUsedThisSlot.add(cl.id);
+          recordSlot(tr, c1.id, c2.id, c3.id, cl.id, slot, court);
 
-          recordAssignment(tr, c1.id, c2.id, c3.id, cl.id, slot, court);
           generated.push({
-            day: dayLabel,
-            time_slot: slot,
-            court,
-            camper_1_id: c1.id,
-            camper_2_id: c2.id,
-            camper_3_id: c3.id,
+            day: dayLabel, time_slot: slot, court,
+            camper_1_id: c1.id, camper_2_id: c2.id, camper_3_id: c3.id,
             clinician_id: cl.id,
-            // for CSV export
-            camper_1_name: getName(c1),
-            camper_2_name: getName(c2),
-            camper_3_name: getName(c3),
-            clinician_name: getName(cl)
+            camper_1_name: getName(c1), camper_2_name: getName(c2),
+            camper_3_name: getName(c3), clinician_name: getName(cl)
           });
         }
       }
     }
 
-    // ── BUILD EACH DAY ──────────────────────────────────
+    // ── BUILD ALL 3 DAYS — NO GROUP SPLIT ──────────────
+    // All campers available all day, classroom rotation handled separately
     for (const [dayLabel, blocks] of Object.entries(SCH_STRUCTURE)) {
-      const tr = buildTracker();
-
-      if (blocks.all) {
-        // Saturday - all campers, all clinicians
-        buildBlock(dayLabel, blocks.all, campersAll, clinAll, tr);
-      } else {
-        // Thu/Fri - split groups
-        buildBlock(dayLabel, blocks.am, camperGroupA, clinGroupA, tr);
-        buildBlock(dayLabel, blocks.pm, camperGroupB, clinGroupB, tr);
-      }
+      const allSlots = blocks.all || [...(blocks.am||[]), ...(blocks.pm||[])];
+      buildDay(dayLabel, allSlots, campersAll, clinAll);
     }
 
-    // ── VALIDATE & REPORT ──────────────────────────────
+    // ── VALIDATE & SHOW ────────────────────────────────
     const warnings = validateGeneratedSchedule(generated, campersAll);
-
-    // ── STORE GLOBALLY & SHOW PREVIEW ──────────────────
     window._generatedSchedule = generated;
     window._generatedCampers = campersAll;
     window._generatedClinicians = clinAll;
-
     showGeneratedPreview(generated, campersAll, clinAll, warnings);
 
   } catch(e) {
