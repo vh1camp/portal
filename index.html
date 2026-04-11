@@ -2610,13 +2610,9 @@ let currentAdminDay = 'thu';
 // ── LOAD SCHEDULE ────────────────────────────────────────
 async function loadSchedule() {
   try {
-    const res = await sf('schedule', '?select=*&order=day,time_slot,court');
-    scheduleData = res.ok ? await res.json() : [];
-    const sr = await sf('schedule_settings', '?id=eq.1&select=published');
-    if (sr.ok) {
-      const s = await sr.json();
-      schedulePublished = s[0]?.published || false;
-    }
+    scheduleData = await supa('schedule','GET',null,'?select=*&order=day,time_slot,court') || [];
+    const s = await supa('schedule_settings','GET',null,'?id=eq.1&select=published');
+    schedulePublished = s?.[0]?.published || false;
   } catch(e) { scheduleData = []; }
 }
 
@@ -2669,12 +2665,24 @@ function renderAdminSchedule() {
       html += `<div class="sch-slot-row" id="row_${slotId}">
         <div class="sch-slot-header">
           <span class="sch-slot-title">${slot} · ${court}</span>
-          <button class="btn bsec bsm" onclick="saveSlot('${dayKey}','${slot}','${court}')" type="button">Save</button>
+          <button class="btn bor bsm" onclick="saveSlot('${dayKey}','${slot}','${court}')" type="button">Save</button>
         </div>
         <div class="sch-selects-3" style="margin-bottom:8px">
-          <select class="sch-select" id="c1_${slotId}">${camperOpts}</select>
-          <select class="sch-select" id="c2_${slotId}">${camperOpts}</select>
-          <select class="sch-select" id="c3_${slotId}">${camperOpts}</select>
+          <div style="position:relative">
+            <input class="sch-select" id="c1i_${slotId}" placeholder="Camper 1..." oninput="filterCamperDrop('c1_${slotId}',this.value)" onfocus="showCamperDrop('c1_${slotId}')" onblur="hideCamperDrop('c1_${slotId}')" autocomplete="off" type="text">
+            <input type="hidden" id="c1_${slotId}">
+            <div class="cdrop" id="c1_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+          </div>
+          <div style="position:relative">
+            <input class="sch-select" id="c2i_${slotId}" placeholder="Camper 2..." oninput="filterCamperDrop('c2_${slotId}',this.value)" onfocus="showCamperDrop('c2_${slotId}')" onblur="hideCamperDrop('c2_${slotId}')" autocomplete="off" type="text">
+            <input type="hidden" id="c2_${slotId}">
+            <div class="cdrop" id="c2_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+          </div>
+          <div style="position:relative">
+            <input class="sch-select" id="c3i_${slotId}" placeholder="Camper 3..." oninput="filterCamperDrop('c3_${slotId}',this.value)" onfocus="showCamperDrop('c3_${slotId}')" onblur="hideCamperDrop('c3_${slotId}')" autocomplete="off" type="text">
+            <input type="hidden" id="c3_${slotId}">
+            <div class="cdrop" id="c3_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+          </div>
         </div>
         <select class="sch-select" id="cl_${slotId}" style="width:100%">${clinOpts}</select>
         <div id="flag_${slotId}" style="margin-top:6px"></div>
@@ -2694,9 +2702,10 @@ function renderAdminSchedule() {
       const s2 = document.getElementById(`c2_${slotId}`);
       const s3 = document.getElementById(`c3_${slotId}`);
       const sc = document.getElementById(`cl_${slotId}`);
-      if (s1 && existing.camper_1_id) s1.value = existing.camper_1_id;
-      if (s2 && existing.camper_2_id) s2.value = existing.camper_2_id;
-      if (s3 && existing.camper_3_id) s3.value = existing.camper_3_id;
+      const getName = id => { const c = campers.find(x=>x.id===id); return c ? c.first_name+' '+c.last_name : ''; };
+      if (s1 && existing.camper_1_id) { s1.value = existing.camper_1_id; const ti=document.getElementById('c1i_'+slotId); if(ti) ti.value=getName(existing.camper_1_id); }
+      if (s2 && existing.camper_2_id) { s2.value = existing.camper_2_id; const ti=document.getElementById('c2i_'+slotId); if(ti) ti.value=getName(existing.camper_2_id); }
+      if (s3 && existing.camper_3_id) { s3.value = existing.camper_3_id; const ti=document.getElementById('c3i_'+slotId); if(ti) ti.value=getName(existing.camper_3_id); }
       if (sc && existing.clinician_id) sc.value = existing.clinician_id;
     });
   });
@@ -2712,6 +2721,7 @@ async function saveSlot(dayKey, slot, court) {
   const c2 = document.getElementById(`c2_${slotId}`)?.value || null;
   const c3 = document.getElementById(`c3_${slotId}`)?.value || null;
   const cl = document.getElementById(`cl_${slotId}`)?.value || null;
+  if (!c1 && !c2 && !c3) { toast('Select at least one camper', true); return; }
 
   // Validate before save
   const flags = validateSlot(dayInfo.label, slot, court, c1, c2, c3, cl, null);
@@ -2734,19 +2744,17 @@ async function saveSlot(dayKey, slot, court) {
 
   // Check if exists
   const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
-  let res;
-  if (existing) {
-    res = await sf('schedule', `?id=eq.${existing.id}`, 'PATCH', payload);
-  } else {
-    res = await sf('schedule', '', 'POST', payload);
-  }
-
-  if (res.ok) {
+  try {
+    if (existing) {
+      await supa('schedule','PATCH',payload,`?id=eq.${existing.id}`);
+    } else {
+      await supa('schedule','POST',payload);
+    }
     toast('Saved');
     await loadSchedule();
     updateAllFlags();
-  } else {
-    toast('Save failed', true);
+  } catch(e) {
+    toast('Save failed: '+e.message, true);
   }
 }
 
@@ -2853,22 +2861,24 @@ function updateAllFlags() {
 // ── TOGGLE PUBLISH ───────────────────────────────────────
 async function toggleSchedulePublish() {
   const newState = !schedulePublished;
-  const res = await sf('schedule_settings', '?id=eq.1', 'PATCH', { published: newState });
-  if (res.ok) {
+  try {
+    await supa('schedule_settings','PATCH',{ published: newState },'?id=eq.1');
+    {
     schedulePublished = newState;
     const badge = document.getElementById('schPublishBadge');
     const btn = document.getElementById('schPublishBtn');
     if (badge) { badge.textContent = newState ? 'PUBLISHED' : 'UNPUBLISHED'; badge.className = 'sch-published-badge ' + (newState ? 'on' : 'off'); }
     if (btn) btn.textContent = newState ? 'Unpublish' : 'Publish';
     toast(newState ? 'Schedule published!' : 'Schedule unpublished');
-  }
+    }
+  } catch(e) { toast('Error: '+e.message, true); }
 }
 
 // ── CLEAR ALL ────────────────────────────────────────────
 async function clearSchedule() {
   const ok = await cf('Clear all schedule data? This cannot be undone.', 'Clear All', 'Cancel');
   if (!ok) return;
-  await sf('schedule', '', 'DELETE');
+  try { await supa('schedule','DELETE',null,'?id=not.is.null'); } catch(e) {}
   scheduleData = [];
   renderAdminSchedule();
   toast('Schedule cleared');
@@ -2983,6 +2993,47 @@ function renderClinicianSchedule() {
   });
 
   el.innerHTML = html;
+}
+
+
+// ── CAMPER SEARCH DROPDOWN ──────────────────────────────
+function showCamperDrop(fieldId) {
+  filterCamperDrop(fieldId, document.getElementById(fieldId+'i_'+ fieldId.split('_').slice(1).join('_')) ? 
+    document.getElementById(fieldId+'i_'+ fieldId.split('_').slice(1).join('_')).value : '');
+}
+
+function filterCamperDrop(fieldId, query) {
+  const drop = document.getElementById(fieldId+'_drop');
+  if (!drop) return;
+  const q = (query||'').toLowerCase();
+  const sorted = [...campers].sort((a,b)=>(a.last_name||'').localeCompare(b.last_name||''));
+  const filtered = q ? sorted.filter(c=>((c.last_name||'')+(c.first_name||'')).toLowerCase().includes(q)||(c.first_name+' '+c.last_name).toLowerCase().includes(q)) : sorted;
+  drop.style.display = 'block';
+  drop.innerHTML = filtered.slice(0,25).map(c =>
+    `<div style="padding:8px 12px;cursor:pointer;font-size:13px;color:#1a1a1a;border-bottom:1px solid #f0f0f0"
+      onmousedown="selectCamper('${fieldId}','${c.id}','${c.first_name} ${c.last_name}')"
+      onmouseover="this.style.background='#f5f0eb'" onmouseout="this.style.background=''"
+    >${c.last_name}, ${c.first_name}</div>`
+  ).join('') || '<div style="padding:8px 12px;color:#999;font-size:13px">No results</div>';
+}
+
+function selectCamper(fieldId, id, name) {
+  // fieldId is like "c1_thu_1000AM_Court1"
+  const hidden = document.getElementById(fieldId);
+  if (hidden) hidden.value = id;
+  // text input is c1i_ prefix
+  const textId = fieldId.replace(/^(c[123])_/, '$1i_');
+  const text = document.getElementById(textId);
+  if (text) text.value = name;
+  const drop = document.getElementById(fieldId+'_drop');
+  if (drop) drop.style.display = 'none';
+}
+
+function hideCamperDrop(fieldId) {
+  setTimeout(() => {
+    const drop = document.getElementById(fieldId+'_drop');
+    if (drop) drop.style.display = 'none';
+  }, 200);
 }
 
 </script>
