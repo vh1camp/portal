@@ -761,9 +761,13 @@ if('serviceWorker' in navigator){
     <span style="font-size:13px;font-weight:600;color:var(--tx)">Schedule Status:</span>
     <span class="sch-published-badge off" id="schPublishBadge">UNPUBLISHED</span>
   </div>
-  <div style="display:flex;gap:8px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn bor bsm" onclick="generateSchedule()" id="schGenBtn" type="button">Generate Schedule</button>
+    <button class="btn bsec bsm" onclick="document.getElementById('schCSVInput').click()" type="button">Upload CSV</button>
+    <input type="file" id="schCSVInput" accept=".csv" style="display:none" onchange="uploadScheduleCSV(this)">
+    <button class="btn bsec bsm" onclick="downloadScheduleTemplate()" type="button">Download Template</button>
     <button class="btn bsec bsm" onclick="toggleSchedulePublish()" id="schPublishBtn" type="button">Publish</button>
-    <button class="btn bsec bsm" onclick="clearSchedule()" type="button">Clear All</button>
+    <button class="btn bred bsm" onclick="clearSchedule()" type="button">Clear All</button>
   </div>
 </div>
 
@@ -3036,6 +3040,488 @@ function hideCamperDrop(fieldId) {
   }, 200);
 }
 
+
+// ═══════════════════════════════════════════════════════
+// SCHEDULE GENERATOR
+// ═══════════════════════════════════════════════════════
+
+const SCH_STRUCTURE = {
+  'Thursday June 18, 2026': {
+    am: ['10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM'],
+    pm: ['3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM']
+  },
+  'Friday June 19, 2026': {
+    am: ['10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM'],
+    pm: ['3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM']
+  },
+  'Saturday June 20, 2026': {
+    all: ['8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM']
+  }
+};
+const SCH_COURTS = ['Court 1','Court 2','Court 3','Court 4','Court 5','Court 6'];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function tmins(t) {
+  const [time, ampm] = t.split(' ');
+  let [h, m] = time.split(':').map(Number);
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+async function generateSchedule() {
+  const btn = document.getElementById('schGenBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+
+  try {
+    // Pull fresh data
+    const campersAll = await supa('campers','GET',null,'?select=id,first_name,last_name&order=last_name') || [];
+    const clinAll = await supa('clinicians','GET',null,'?select=id,name,first_name,last_name&order=name') || [];
+
+    if (campersAll.length < 3) { toast('Need at least 3 campers', true); return; }
+    if (clinAll.length < 2)    { toast('Need at least 2 clinicians', true); return; }
+
+    const getName = c => c.name || (c.first_name + ' ' + c.last_name);
+
+    // ── RANDOM GROUP SPLIT ──────────────────────────────
+    const shuffledCampers = shuffle(campersAll);
+    const half = Math.floor(shuffledCampers.length / 2);
+    const camperGroupA = shuffledCampers.slice(0, half);       // AM floor Thu/Fri
+    const camperGroupB = shuffledCampers.slice(half);          // PM floor Thu/Fri
+
+    const shuffledClin = shuffle(clinAll);
+    const clinHalf = Math.floor(shuffledClin.length / 2);
+    const clinGroupA = shuffledClin.slice(0, clinHalf);        // AM floor Thu/Fri
+    const clinGroupB = shuffledClin.slice(clinHalf);           // PM floor Thu/Fri
+
+    const generated = []; // { day, time_slot, court, camper_1_id, camper_2_id, camper_3_id, clinician_id }
+
+    // ── PER-DAY TRACKING ──────────────────────────────
+    function buildTracker() {
+      return {
+        camperGames: {},      // camper_id → count
+        camperSlots: {},      // camper_id → [time_slot]
+        camperPartners: {},   // camper_id → Set of partner ids
+        camperCourts: {},     // camper_id → Set of courts
+        clinGames: {},        // clin_id → count
+        clinSlots: {},        // clin_id → [time_slot]
+        clinCamperSeen: {},   // clin_id → { camper_id: count }
+      };
+    }
+
+    function canAssignCamper(tr, cid, slot, court) {
+      const games = tr.camperGames[cid] || 0;
+      if (games >= 4) return false; // hard max 4
+      const slots = tr.camperSlots[cid] || [];
+      const slotMin = tmins(slot);
+      // No back-to-back
+      for (const s of slots) {
+        if (Math.abs(tmins(s) - slotMin) === 60) return false;
+      }
+      return true;
+    }
+
+    function canAssignClin(tr, clid, slot) {
+      const slots = tr.clinSlots[clid] || [];
+      const slotMin = tmins(slot);
+      // on/off: check if worked previous slot (guideline - soft check)
+      // We'll try to enforce but won't hard block
+      return true;
+    }
+
+    function recordAssignment(tr, c1, c2, c3, clid, slot, court) {
+      [c1,c2,c3].forEach(cid => {
+        tr.camperGames[cid] = (tr.camperGames[cid]||0) + 1;
+        tr.camperSlots[cid] = tr.camperSlots[cid] || [];
+        tr.camperSlots[cid].push(slot);
+        tr.camperCourts[cid] = tr.camperCourts[cid] || new Set();
+        tr.camperCourts[cid].add(court);
+        tr.camperPartners[cid] = tr.camperPartners[cid] || new Set();
+        [c1,c2,c3].filter(x=>x!==cid).forEach(p=>tr.camperPartners[cid].add(p));
+      });
+      tr.clinGames[clid] = (tr.clinGames[clid]||0) + 1;
+      tr.clinSlots[clid] = tr.clinSlots[clid] || [];
+      tr.clinSlots[clid].push(slot);
+      tr.clinCamperSeen[clid] = tr.clinCamperSeen[clid] || {};
+      [c1,c2,c3].forEach(cid => {
+        tr.clinCamperSeen[clid][cid] = (tr.clinCamperSeen[clid][cid]||0) + 1;
+      });
+    }
+
+    function pickClinician(tr, clinPool, slot, camperIds) {
+      // Sort by: least games today, on/off rotation, least seen these campers
+      const slotMin = tmins(slot);
+      const candidates = clinPool.map(cl => {
+        const games = tr.clinGames[cl.id] || 0;
+        const slots = tr.clinSlots[cl.id] || [];
+        // Check on/off - prefer clinicians who didn't work last slot
+        const lastSlot = slots.length ? slots[slots.length-1] : null;
+        const backToBack = lastSlot && Math.abs(tmins(lastSlot) - slotMin) === 60;
+        const seen = tr.clinCamperSeen[cl.id] || {};
+        const seenCount = camperIds.reduce((s,cid) => s + (seen[cid]||0), 0);
+        return { cl, games, backToBack, seenCount };
+      }).filter(x => {
+        // Hard block: clinician already in this slot
+        const slots = tr.clinSlots[x.cl.id] || [];
+        return !slots.includes(slot);
+      }).sort((a,b) => {
+        if (a.backToBack !== b.backToBack) return a.backToBack ? 1 : -1;
+        if (a.seenCount !== b.seenCount) return a.seenCount - b.seenCount;
+        return a.games - b.games;
+      });
+      return candidates[0]?.cl || null;
+    }
+
+    function buildBlock(dayLabel, slots, camperPool, clinPool, tr) {
+      // For each slot, fill 6 courts with 3 campers each
+      // Score campers: prefer those with fewer games, not used this slot,
+      // different partners, different courts
+
+      for (const slot of slots) {
+        const usedThisSlot = new Set(); // camper ids used in this slot
+        const clinUsedThisSlot = new Set();
+
+        // Rotate courts to vary camper court assignments
+        const courtOrder = shuffle(SCH_COURTS);
+
+        for (const court of courtOrder) {
+          // Pick 3 campers for this court
+          // Sort camper pool: fewer games first, avoid partners, avoid same court
+          const available = camperPool.filter(c => {
+            if (usedThisSlot.has(c.id)) return false;
+            return canAssignCamper(tr, c.id, slot, court);
+          });
+
+          if (available.length < 3) continue; // can't fill court, skip
+
+          // Score each camper: prefer fewer games, new court, varied partners
+          available.sort((a,b) => {
+            const ga = tr.camperGames[a.id]||0;
+            const gb = tr.camperGames[b.id]||0;
+            const ca = (tr.camperCourts[a.id]||new Set()).has(court) ? 1 : 0;
+            const cb = (tr.camperCourts[b.id]||new Set()).has(court) ? 1 : 0;
+            if (ga !== gb) return ga - gb;
+            return ca - cb;
+          });
+
+          // Pick first 3 but try to avoid repeated partnerships
+          let trio = null;
+          for (let i = 0; i < available.length - 2; i++) {
+            for (let j = i+1; j < available.length - 1; j++) {
+              for (let k = j+1; k < available.length; k++) {
+                const c1 = available[i], c2 = available[j], c3 = available[k];
+                const partners1 = tr.camperPartners[c1.id] || new Set();
+                const partners2 = tr.camperPartners[c2.id] || new Set();
+                const partners3 = tr.camperPartners[c3.id] || new Set();
+                const repeats = (partners1.has(c2.id)?1:0) + (partners1.has(c3.id)?1:0) + (partners2.has(c3.id)?1:0);
+                if (repeats === 0) { trio = [c1,c2,c3]; break; }
+                if (!trio) trio = [c1,c2,c3]; // fallback
+              }
+              if (trio && !tr.camperPartners[trio[0].id]?.has(trio[1].id)) break;
+            }
+            if (trio && !tr.camperPartners[trio[0].id]?.has(trio[1].id)) break;
+          }
+
+          if (!trio) trio = available.slice(0,3);
+
+          const [c1,c2,c3] = trio;
+          const cl = pickClinician(tr, clinPool, slot, [c1.id,c2.id,c3.id]);
+          if (!cl) continue;
+
+          usedThisSlot.add(c1.id); usedThisSlot.add(c2.id); usedThisSlot.add(c3.id);
+          clinUsedThisSlot.add(cl.id);
+
+          recordAssignment(tr, c1.id, c2.id, c3.id, cl.id, slot, court);
+          generated.push({
+            day: dayLabel,
+            time_slot: slot,
+            court,
+            camper_1_id: c1.id,
+            camper_2_id: c2.id,
+            camper_3_id: c3.id,
+            clinician_id: cl.id,
+            // for CSV export
+            camper_1_name: getName(c1),
+            camper_2_name: getName(c2),
+            camper_3_name: getName(c3),
+            clinician_name: getName(cl)
+          });
+        }
+      }
+    }
+
+    // ── BUILD EACH DAY ──────────────────────────────────
+    for (const [dayLabel, blocks] of Object.entries(SCH_STRUCTURE)) {
+      const tr = buildTracker();
+
+      if (blocks.all) {
+        // Saturday - all campers, all clinicians
+        buildBlock(dayLabel, blocks.all, campersAll, clinAll, tr);
+      } else {
+        // Thu/Fri - split groups
+        buildBlock(dayLabel, blocks.am, camperGroupA, clinGroupA, tr);
+        buildBlock(dayLabel, blocks.pm, camperGroupB, clinGroupB, tr);
+      }
+    }
+
+    // ── VALIDATE & REPORT ──────────────────────────────
+    const warnings = validateGeneratedSchedule(generated, campersAll);
+
+    // ── STORE GLOBALLY & SHOW PREVIEW ──────────────────
+    window._generatedSchedule = generated;
+    window._generatedCampers = campersAll;
+    window._generatedClinicians = clinAll;
+
+    showGeneratedPreview(generated, campersAll, clinAll, warnings);
+
+  } catch(e) {
+    toast('Generator error: ' + e.message, true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Schedule';
+  }
+}
+
+// ── VALIDATE GENERATED ────────────────────────────────
+function validateGeneratedSchedule(slots, campersAll) {
+  const warnings = [];
+  const days = [...new Set(slots.map(s=>s.day))];
+
+  days.forEach(day => {
+    const daySlots = slots.filter(s=>s.day===day);
+
+    // Check each camper's games per day
+    campersAll.forEach(c => {
+      const games = daySlots.filter(s=>s.camper_1_id===c.id||s.camper_2_id===c.id||s.camper_3_id===c.id);
+      const name = c.first_name+' '+c.last_name;
+      if (games.length < 2) warnings.push({type:'warn', msg:`${name} has only ${games.length} game(s) on ${day}`});
+      if (games.length > 4) warnings.push({type:'error', msg:`${name} has ${games.length} games on ${day} (max 4)`});
+      // Check back-to-back
+      const times = games.map(g=>tmins(g.time_slot)).sort((a,b)=>a-b);
+      for (let i=0;i<times.length-1;i++) {
+        if (times[i+1]-times[i]===60) warnings.push({type:'error', msg:`${name} has back-to-back games on ${day}`});
+      }
+    });
+  });
+
+  return warnings;
+}
+
+// ── PREVIEW MODAL ─────────────────────────────────────
+function showGeneratedPreview(generated, campersAll, clinAll, warnings) {
+  const getName = c => c.name || (c.first_name+' '+c.last_name);
+
+  // Group by day → time → court
+  const days = ['Thursday June 18, 2026','Friday June 19, 2026','Saturday June 20, 2026'];
+  let html = '';
+
+  if (warnings.length) {
+    html += warnings.map(w =>
+      `<div class="${w.type==='error'?'sch-flag':'sch-warn'}">${w.type==='error'?'🔴':'🟡'} ${w.msg}</div>`
+    ).join('');
+    html += '<div style="margin-bottom:12px"></div>';
+  } else {
+    html += '<div class="sch-warn" style="background:var(--grnd);border-color:var(--grnb);color:var(--grn)">✅ Schedule generated with no violations!</div>';
+  }
+
+  html += `<div style="font-size:13px;color:var(--tx2);margin-bottom:12px">${generated.length} slots generated across 3 days</div>`;
+
+  days.forEach(day => {
+    const daySlots = generated.filter(s=>s.day===day);
+    if (!daySlots.length) return;
+    html += `<div class="sch-day-header">${day}</div>`;
+    const times = [...new Set(daySlots.map(s=>s.time_slot))].sort((a,b)=>tmins(a)-tmins(b));
+    times.forEach(t => {
+      const tSlots = daySlots.filter(s=>s.time_slot===t);
+      html += `<div style="font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.08em;margin:8px 0 4px;text-transform:uppercase">${t}</div>`;
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px">';
+      tSlots.forEach(s => {
+        html += `<div class="sch-card" style="margin:0">
+          <div class="sch-card-meta">${s.court}</div>
+          <div class="sch-card-names">
+            <div class="sch-card-name" style="font-size:12px">${s.camper_1_name}</div>
+            <div class="sch-card-name" style="font-size:12px">${s.camper_2_name}</div>
+            <div class="sch-card-name" style="font-size:12px">${s.camper_3_name}</div>
+          </div>
+          <div class="sch-card-clinician" style="font-size:11px">${s.clinician_name}</div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+  });
+
+  // Show in modal
+  document.getElementById('mGenSchBody').innerHTML = html;
+  document.getElementById('mGenSch').style.display = 'flex';
+}
+
+// ── SAVE GENERATED TO SUPABASE ────────────────────────
+async function saveGeneratedSchedule() {
+  const slots = window._generatedSchedule;
+  if (!slots || !slots.length) { toast('Nothing to save', true); return; }
+
+  const btn = document.getElementById('saveGenBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  try {
+    // Clear existing schedule first
+    try { await supa('schedule','DELETE',null,'?id=not.is.null'); } catch(e) {}
+
+    // Save in batches of 20
+    const payload = slots.map(s => ({
+      day: s.day, time_slot: s.time_slot, court: s.court,
+      camper_1_id: s.camper_1_id, camper_2_id: s.camper_2_id,
+      camper_3_id: s.camper_3_id, clinician_id: s.clinician_id
+    }));
+
+    for (let i = 0; i < payload.length; i += 20) {
+      await supa('schedule','POST', payload.slice(i, i+20));
+    }
+
+    toast(`${slots.length} slots saved!`);
+    document.getElementById('mGenSch').style.display = 'none';
+    await loadSchedule();
+    renderAdminSchedule();
+
+    // Update publish badge
+    const badge = document.getElementById('schPublishBadge');
+    const pubBtn = document.getElementById('schPublishBtn');
+    if (badge) { badge.textContent = 'UNPUBLISHED'; badge.className = 'sch-published-badge off'; }
+    if (pubBtn) pubBtn.textContent = 'Publish';
+
+  } catch(e) {
+    toast('Save error: '+e.message, true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save to Portal';
+  }
+}
+
+// ── DOWNLOAD AS CSV ───────────────────────────────────
+function downloadGeneratedCSV() {
+  const slots = window._generatedSchedule;
+  if (!slots || !slots.length) { toast('Generate first', true); return; }
+
+  const rows = [['Day','Time','Court','Camper 1','Camper 2','Camper 3','Clinician']];
+  slots.forEach(s => rows.push([s.day, s.time_slot, s.court, s.camper_1_name, s.camper_2_name, s.camper_3_name, s.clinician_name]));
+
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'VH1_Schedule_2026.csv';
+  a.click();
+}
+
+// ── DOWNLOAD BLANK TEMPLATE ───────────────────────────
+function downloadScheduleTemplate() {
+  const rows = [['Day','Time','Court','Camper 1','Camper 2','Camper 3','Clinician']];
+  Object.entries(SCH_STRUCTURE).forEach(([day, blocks]) => {
+    const slots = blocks.all || [...(blocks.am||[]), ...(blocks.pm||[])];
+    slots.forEach(time => {
+      SCH_COURTS.forEach(court => rows.push([day, time, court, '','','','']));
+    });
+  });
+  const csv = rows.map(r => r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'VH1_Schedule_Template_2026.csv';
+  a.click();
+}
+
+// ── UPLOAD CSV ────────────────────────────────────────
+async function uploadScheduleCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const text = await file.text();
+  const lines = text.trim().split('\n');
+  const headers = lines[0].replace(/"/g,'').split(',').map(h=>h.trim().toLowerCase());
+
+  const campersAll = await supa('campers','GET',null,'?select=id,first_name,last_name') || [];
+  const clinAll = await supa('clinicians','GET',null,'?select=id,name,first_name,last_name') || [];
+
+  const findCamper = name => {
+    const n = name.toLowerCase().trim();
+    return campersAll.find(c => {
+      const full = (c.first_name+' '+c.last_name).toLowerCase();
+      const rev = (c.last_name+' '+c.first_name).toLowerCase();
+      return full.includes(n) || rev.includes(n) || n.includes(c.last_name.toLowerCase());
+    });
+  };
+
+  const findClin = name => {
+    const n = name.toLowerCase().trim();
+    return clinAll.find(c => {
+      const full = (c.name || c.first_name+' '+c.last_name).toLowerCase();
+      return full.includes(n) || n.includes(full.split(' ')[0]);
+    });
+  };
+
+  const parsed = []; const errors = [];
+  lines.slice(1).forEach((line, i) => {
+    const vals = line.replace(/"/g,'').split(',').map(v=>v.trim());
+    const row = {};
+    headers.forEach((h,j) => row[h] = vals[j] || '');
+    if (!row.day || !row.time || !row.court) return;
+
+    const c1 = row['camper 1'] ? findCamper(row['camper 1']) : null;
+    const c2 = row['camper 2'] ? findCamper(row['camper 2']) : null;
+    const c3 = row['camper 3'] ? findCamper(row['camper 3']) : null;
+    const cl = row['clinician'] ? findClin(row['clinician']) : null;
+
+    if (row['camper 1'] && !c1) errors.push(`Row ${i+2}: "${row['camper 1']}" not found`);
+    if (row['camper 2'] && !c2) errors.push(`Row ${i+2}: "${row['camper 2']}" not found`);
+    if (row['camper 3'] && !c3) errors.push(`Row ${i+2}: "${row['camper 3']}" not found`);
+
+    parsed.push({
+      day: row.day, time_slot: row.time, court: row.court,
+      camper_1_id: c1?.id||null, camper_2_id: c2?.id||null, camper_3_id: c3?.id||null,
+      clinician_id: cl?.id||null,
+      camper_1_name: c1 ? c1.first_name+' '+c1.last_name : row['camper 1'],
+      camper_2_name: c2 ? c2.first_name+' '+c2.last_name : row['camper 2'],
+      camper_3_name: c3 ? c3.first_name+' '+c3.last_name : row['camper 3'],
+      clinician_name: cl ? (cl.name||cl.first_name+' '+cl.last_name) : row['clinician']
+    });
+  });
+
+  if (errors.length) {
+    const proceed = await cf(`${errors.length} name(s) not matched:\n${errors.slice(0,5).join('\n')}${errors.length>5?'\n...and more':''}\n\nProceed anyway?`, 'Upload Anyway', 'Cancel');
+    if (!proceed) { input.value=''; return; }
+  }
+
+  window._generatedSchedule = parsed;
+  const warnings = validateGeneratedSchedule(parsed, campersAll);
+  showGeneratedPreview(parsed, campersAll, clinAll, warnings);
+  input.value = '';
+}
+
 </script>
+
+<!-- Generated Schedule Preview Modal -->
+<div id="mGenSch" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center">
+  <div style="background:var(--gray);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:92dvh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div class="stitle" style="margin:0">GENERATED <span>SCHEDULE</span></div>
+      <button onclick="document.getElementById('mGenSch').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--tx2)" type="button">✕</button>
+    </div>
+    <div style="padding:12px 16px;flex-shrink:0;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--b2)">
+      <button class="btn bor bsm" id="saveGenBtn" onclick="saveGeneratedSchedule()" type="button">Save to Portal</button>
+      <button class="btn bsec bsm" onclick="downloadGeneratedCSV()" type="button">Download CSV</button>
+      <button class="btn bsec bsm" onclick="generateSchedule()" type="button">Regenerate</button>
+    </div>
+    <div id="mGenSchBody" style="overflow-y:auto;padding:16px;flex:1"></div>
+  </div>
+</div>
+
 </body>
 </html>
