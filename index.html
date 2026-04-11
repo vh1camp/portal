@@ -3085,7 +3085,7 @@ async function generateSchedule() {
   try {
     // Pull fresh data
     const campersAll = await supa('campers','GET',null,'?select=id,first_name,last_name&order=last_name') || [];
-    const clinAll = await supa('clinicians','GET',null,'?select=id,name,first_name,last_name&order=name') || [];
+    const clinAll = await supa('clinicians','GET',null,'?select=id,name&order=name') || [];
 
     if (campersAll.length < 3) { toast('Need at least 3 campers', true); return; }
     if (clinAll.length < 2)    { toast('Need at least 2 clinicians', true); return; }
@@ -3448,7 +3448,7 @@ async function uploadScheduleCSV(input) {
   const headers = lines[0].replace(/"/g,'').split(',').map(h=>h.trim().toLowerCase());
 
   const campersAll = await supa('campers','GET',null,'?select=id,first_name,last_name') || [];
-  const clinAll = await supa('clinicians','GET',null,'?select=id,name,first_name,last_name') || [];
+  const clinAll = await supa('clinicians','GET',null,'?select=id,name') || [];
 
   const findCamper = name => {
     const n = name.toLowerCase().trim();
