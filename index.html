@@ -2958,8 +2958,14 @@ function renderClinicianSchedule() {
     return;
   }
 
-  // Match clinician by id or by name for placeholders
-  const mySlots = scheduleData.filter(s => s.clinician_id === CU.id)
+  // Match clinician by name since staff table ID != clinicians table ID
+  const cuName = ((CU.first_name||'') + ' ' + (CU.last_name||'')).toLowerCase().trim();
+  const matchedClin = clinicians.find(c => {
+    const cn = (c.name || (c.first_name||'') + ' ' + (c.last_name||'')).toLowerCase().trim();
+    return cn === cuName || cn.includes(cuName) || cuName.includes(cn.split(' ')[0]);
+  });
+  const clinId = matchedClin?.id || CU.id;
+  const mySlots = scheduleData.filter(s => s.clinician_id === clinId)
     .sort((a,b) => {
       const dayOrder = ['Thursday June 18, 2026','Friday June 19, 2026','Saturday June 20, 2026'];
       const d = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
