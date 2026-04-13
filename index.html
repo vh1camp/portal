@@ -297,6 +297,8 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.sg4{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
+.ae-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media(max-width:600px){.ae-fields{grid-template-columns:1fr}}
 
 /* PROFILES GRID */
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:4px}
@@ -758,7 +760,7 @@ if('serviceWorker' in navigator){
 <div class="tc" id="at-evaluate">
 <div class="stitle" style="margin-bottom:4px">SUBMIT <span>EVALUATION</span></div>
 <div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Evaluate a camper as admin</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+<div class="frow ae-fields">
 <div><label class="flabel">Camper</label><select class="finput" id="aeCamper" style="margin-bottom:0"><option value="">— Select —</option></select></div>
 <div><label class="flabel">Clinician</label><select class="finput" id="aeClinician" style="margin-bottom:0"><option value="">— Select —</option></select></div>
 <div><label class="flabel">Date</label><input type="date" class="finput" id="aeDate" style="margin-bottom:0"></div>
