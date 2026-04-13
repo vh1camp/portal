@@ -114,11 +114,25 @@ body::before{content:'';display:none}
 .view{display:none;padding:14px;padding-bottom:calc(16px + 80px + var(--safe))}
 .view.on{display:block}
 
-/* ADMIN TABS */
-.tabs-bar{display:flex;padding:0 12px;border-bottom:2px solid var(--b2);background:#ffffff;overflow-x:auto;scrollbar-width:none;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.05)}
-.tabs-bar::-webkit-scrollbar{display:none}
-.atab{padding:12px 16px;font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;margin-bottom:-1px;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none}
+/* ADMIN HYBRID NAV */
+.tabs-bar{display:flex;align-items:stretch;padding:0;border-bottom:2px solid var(--b2);background:#ffffff;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.05);position:relative}
+.tabs-pinned{display:flex;flex:1;min-width:0;overflow:hidden}
+.atab{padding:12px 14px;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s;margin-bottom:-2px;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none;flex-shrink:0}
 .atab.on{color:var(--or);border-bottom-color:var(--or)}
+/* More button */
+.atab-more{padding:12px 14px;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none;border-left:1px solid var(--b2);display:flex;align-items:center;gap:5px;flex-shrink:0;position:relative}
+.atab-more.on{color:var(--or);border-bottom-color:var(--or)}
+.atab-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.atab-more.open svg{transform:rotate(180deg)}
+/* Admin more dropdown */
+.admin-more-dropdown{position:absolute;top:calc(100% + 2px);right:0;background:#fff;border:1px solid var(--b2);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.13);z-index:500;min-width:180px;padding:6px;display:none}
+.admin-more-dropdown.open{display:block}
+.admin-more-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:7px;cursor:pointer;transition:background .12s;border:none;background:none;width:100%;text-align:left;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tx2)}
+.admin-more-item:hover{background:var(--gray2)}
+.admin-more-item.on{color:var(--or);background:var(--ord)}
+.admin-more-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.amd-overlay{position:fixed;inset:0;z-index:499;display:none}
+.amd-overlay.open{display:block}
 .tc{display:none;padding:14px;padding-bottom:40px}
 .tc.on{display:block;flex:1;min-height:0}
 
@@ -656,17 +670,47 @@ if('serviceWorker' in navigator){
 <!-- ADMIN PORTAL -->
 <div class="portal" id="pAdmin">
 <div class="tabs-bar">
-<button class="atab on" onclick="aTab('overview',this)" type="button">Overview</button>
-<button class="atab" onclick="aTab('campers',this)" type="button">Campers</button>
-<button class="atab" onclick="aTab('staff',this)" type="button">Clinician</button>
-<button class="atab" onclick="aTab('evaluate',this)" type="button">Evaluate</button>
-<button class="atab" onclick="aTab('rankings',this)" type="button">Rankings</button>
-<button class="atab" onclick="aTab('profiles',this)" type="button">Profiles</button>
-<button class="atab" onclick="aTab('schedule',this)" type="button">Schedule</button>
-<button class="atab" id="campInfoTab" onclick="aTab('campinfo',this)" type="button">Camp Info</button>
-<button class="atab" id="chatAdminTab" onclick="aTab('chat',this)" type="button">Chat <span class="badge-dot" id="chatDotA" style="position:relative;top:-6px;right:0"></span></button>
-<button class="atab" onclick="aTab('settings',this)" type="button">Settings</button>
+  <div class="tabs-pinned">
+    <button class="atab on" id="atab-overview" onclick="aTab('overview',this)" type="button">Overview</button>
+    <button class="atab" id="atab-evaluate" onclick="aTab('evaluate',this)" type="button">Evaluate</button>
+    <button class="atab" id="atab-rankings" onclick="aTab('rankings',this)" type="button">Rankings</button>
+    <button class="atab" id="atab-chat" onclick="aTab('chat',this)" type="button">Chat <span class="badge-dot" id="chatDotA" style="position:relative;top:-6px;right:0"></span></button>
+  </div>
+  <!-- More button -->
+  <button class="atab-more" id="adminMoreBtn" onclick="toggleAdminMoreMenu()" type="button">
+    More
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
+  <!-- Dropdown -->
+  <div class="admin-more-dropdown" id="adminMoreDropdown">
+    <button class="admin-more-item" id="atab-campers" onclick="aTabMore('campers')" type="button">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Campers
+    </button>
+    <button class="admin-more-item" id="atab-staff" onclick="aTabMore('staff')" type="button">
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      Clinician
+    </button>
+    <button class="admin-more-item" id="atab-profiles" onclick="aTabMore('profiles')" type="button">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Profiles
+    </button>
+    <button class="admin-more-item" id="atab-schedule" onclick="aTabMore('schedule')" type="button">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Schedule
+    </button>
+    <button class="admin-more-item" id="atab-campinfo" onclick="aTabMore('campinfo')" type="button">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Camp Info
+    </button>
+    <button class="admin-more-item" id="atab-settings" onclick="aTabMore('settings')" type="button">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
 </div>
+<!-- Overlay to close dropdown -->
+<div class="amd-overlay" id="amdOverlay" onclick="closeAdminMoreMenu()"></div>
 <div class="tc on" id="at-overview">
 <div class="sg4">
 <div class="sc sor"><div class="sn" id="asc">0</div><div class="sl">Campers</div></div>
@@ -679,9 +723,9 @@ if('serviceWorker' in navigator){
 <table><thead><tr><th>Camper</th><th>Clinician</th><th>Score</th><th>Date</th></tr></thead><tbody id="arecentbody"><tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:18px">None yet</td></tr></tbody></table>
 </div>
 <div style="display:flex;flex-direction:column;gap:7px;max-width:400px">
-<button class="btn bor" style="width:100%;justify-content:center;padding:13px" onclick="aTab('campers',document.querySelectorAll('.atab')[1])" type="button">➕ Add / Import Campers</button>
-<button class="btn bsec" style="width:100%;justify-content:center;padding:13px" onclick="aTab('evaluate',document.querySelectorAll('.atab')[3])" type="button">Submit Evaluation</button>
-<button class="btn bsec" style="width:100%;justify-content:center;padding:13px" onclick="aTab('rankings',document.querySelectorAll('.atab')[4])" type="button">View Rankings</button>
+<button class="btn bor" style="width:100%;justify-content:center;padding:13px" onclick="aTabMore('campers')" type="button">➕ Add / Import Campers</button>
+<button class="btn bsec" style="width:100%;justify-content:center;padding:13px" onclick="aTab('evaluate',document.getElementById('atab-evaluate'))" type="button">Submit Evaluation</button>
+<button class="btn bsec" style="width:100%;justify-content:center;padding:13px" onclick="aTab('rankings',document.getElementById('atab-rankings'))" type="button">View Rankings</button>
 </div>
 </div>
 <div class="tc" id="at-campers">
@@ -1311,12 +1355,42 @@ function populateAdminForms(){
   document.getElementById('tResults').checked=settings['results_released']==='true';
 }
 
+function toggleAdminMoreMenu(){
+  const btn=document.getElementById('adminMoreBtn');
+  const dd=document.getElementById('adminMoreDropdown');
+  const ov=document.getElementById('amdOverlay');
+  const isOpen=dd.classList.contains('open');
+  if(isOpen){closeAdminMoreMenu();}else{btn.classList.add('open');dd.classList.add('open');ov.classList.add('open');}
+}
+function closeAdminMoreMenu(){
+  document.getElementById('adminMoreBtn').classList.remove('open');
+  document.getElementById('adminMoreDropdown').classList.remove('open');
+  document.getElementById('amdOverlay').classList.remove('open');
+}
+function aTabMore(name){
+  closeAdminMoreMenu();
+  // Mark more btn as "on" if a drawer item is active
+  const moreBtn=document.getElementById('adminMoreBtn');
+  document.querySelectorAll('.atab').forEach(t=>t.classList.remove('on'));
+  moreBtn.classList.add('on');
+  document.querySelectorAll('.admin-more-item').forEach(t=>t.classList.remove('on'));
+  const mi=document.getElementById('atab-'+name);if(mi)mi.classList.add('on');
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('on'));
+  document.getElementById('at-'+name).classList.add('on');
+  if(name!=='chat')chatActiveSuffix=null;
+  _aTabActions(name);
+}
 function aTab(name,btn){
   if(name!=='chat')chatActiveSuffix=null;
   document.querySelectorAll('.tc').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.atab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.admin-more-item').forEach(t=>t.classList.remove('on'));
+  document.getElementById('adminMoreBtn').classList.remove('on');
   document.getElementById('at-'+name).classList.add('on');
   if(btn)btn.classList.add('on');
+  _aTabActions(name);
+}
+function _aTabActions(name){
   if(name==='overview'){updateAdminStats();renderRecentEvals();}
   if(name==='campers'){camperSortCol='name';camperSortDir=1;document.querySelectorAll('.sort-arrow').forEach(a=>{a.classList.remove('active');a.textContent='';});const sa=document.getElementById('sa-name');if(sa){sa.textContent='↑';sa.classList.add('active');}renderAdminCampers();}
   if(name==='staff'){renderAdminClinicians();}
@@ -1324,7 +1398,6 @@ function aTab(name,btn){
   if(name==='rankings')renderAdminRankings();
   if(name==='profiles')renderProfiles('');
   if(name==='chat'){markChatRead();renderChat('Admin');}
-  if(name==='campinfo'){renderCampInfoDocs();}
   if(name==='campinfo'){renderCampInfoDocs();}
 }
 function updateAdminStats(){
