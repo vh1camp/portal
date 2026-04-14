@@ -960,7 +960,7 @@ if('serviceWorker' in navigator){
 <div class="frow"><div><label class="flabel">First Name *</label><input class="finput" id="sfFirst" placeholder="Coach" style="margin-bottom:0"></div><div><label class="flabel">Last Name *</label><input class="finput" id="sfLast" placeholder="Smith" style="margin-bottom:0"></div></div>
 <label class="flabel" style="margin-top:10px">Title</label><input class="finput" id="sfTitle" placeholder="Head Clinician">
 <div class="frow"><div><label class="flabel">Username *</label><input class="finput" id="sfUser" placeholder="csmith" style="margin-bottom:0"></div><div><label class="flabel">Password *</label><input class="finput" id="sfPass" type="password" placeholder="••••••" style="margin-bottom:0"></div></div>
-<label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="sfRole"><option>Evaluator</option><option>Lead Clinician</option><option>Camp Director</option></select>
+<label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="sfRole"><option>Clinician</option><option>Lead Clinician</option><option>Camp Director</option></select>
 <div class="ferr" id="sfErr"></div>
 <div style="display:flex;gap:8px;margin-top:14px"><button class="btn bsec" style="flex:1" onclick="closeModal('mStaff')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveStaffMember()" type="button">Save</button></div>
 </div></div></div>
@@ -969,7 +969,7 @@ if('serviceWorker' in navigator){
 <div class="frow"><div><label class="flabel">First Name *</label><input class="finput" id="clFirst" placeholder="Tommy" style="margin-bottom:0"></div><div><label class="flabel">Last Name *</label><input class="finput" id="clLast" placeholder="Nunez" style="margin-bottom:0"></div></div>
 <label class="flabel" style="margin-top:10px">Email *</label><input class="finput" id="clEmail" placeholder="tommy@example.com" type="email">
 <div class="frow" style="margin-top:0"><div><label class="flabel">Username *</label><input class="finput" id="clUser" placeholder="tnunez" style="margin-bottom:0" autocomplete="off"></div><div><label class="flabel">Password *</label><input class="finput" id="clPass" placeholder="••••••" type="password" style="margin-bottom:0" autocomplete="new-password"></div></div>
-<label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="clRole"><option>Evaluator</option><option>Lead Clinician</option><option>Camp Director</option></select>
+<label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="clRole"><option>Clinician</option><option>Lead Clinician</option><option>Camp Director</option></select>
 <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="clSendEmail" checked style="accent-color:var(--or)"> Send login credentials email</label>
 <div class="ferr" id="clErr" style="display:none;color:var(--red2);font-size:12px;margin-bottom:8px"></div>
 <div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mClinician')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveClinician()" id="clSaveBtn" type="button">Save &amp; Invite</button></div>
@@ -3018,9 +3018,10 @@ function renderCamperSchedule() {
       <div class="sch-card-meta">${s.time_slot}</div>
       <div class="sch-card-court">${s.court}</div>
       <div class="sch-card-names">
+        <div class="sch-card-name" style="color:var(--or)">${CU.first_name} ${CU.last_name}</div>
         ${partners.map(p => `<div class="sch-card-name">${p}</div>`).join('')}
       </div>
-      ${clinName ? `<div class="sch-card-clinician">Evaluator: ${clinName}</div>` : ''}
+      ${clinName ? `<div class="sch-card-clinician">Clinician: ${clinName}</div>` : ''}
     </div>`;
   });
 
