@@ -3073,11 +3073,19 @@ function renderClinicianSchedule() {
       return c ? c.first_name + ' ' + c.last_name : '';
     }).filter(Boolean);
 
-    html += `<div class="sch-card">
+    const firstCamperId = camperIds[0] || '';
+    html += `<div class="sch-card" style="cursor:pointer;border-color:var(--or);opacity:0.95;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.95'">
       <div class="sch-card-meta">${s.time_slot}</div>
       <div class="sch-card-court">${s.court}</div>
       <div class="sch-card-names">
-        ${camperNames.map(n => `<div class="sch-card-name">${n}</div>`).join('')}
+        ${camperIds.map((id, i) => {
+          const c = campers.find(x => x.id === id);
+          const name = c ? c.first_name + ' ' + c.last_name : '';
+          return name ? `<div class="sch-card-name" style="display:flex;align-items:center;justify-content:space-between">
+            <span>${name}</span>
+            <button onclick="event.stopPropagation();openEvalFromSchedule('${id}','${s.court}','${s.time_slot}','${s.day}')" style="background:var(--or);color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.08em;padding:4px 10px;cursor:pointer;font-family:Oswald,sans-serif;text-transform:uppercase">Eval</button>
+          </div>` : '';
+        }).filter(Boolean).join('')}
       </div>
     </div>`;
   });
@@ -3085,6 +3093,42 @@ function renderClinicianSchedule() {
   el.innerHTML = html;
 }
 
+
+
+// ── OPEN EVAL FROM SCHEDULE CARD ────────────────────────
+function openEvalFromSchedule(camperId, court, timeSlot, day) {
+  // Switch to evaluate view
+  sView('evaluate');
+  // Populate the camper dropdown first
+  populateStaffEvalForm();
+  // Pre-select the camper
+  const sel = document.getElementById('seCamper');
+  if (sel) {
+    sel.value = camperId;
+    onStaffCamperSelected();
+  }
+  // Pre-fill court
+  const courtSel = document.getElementById('seCourt');
+  if (courtSel && court) {
+    const courtNum = court.replace(/[^0-9]/g, '');
+    courtSel.value = courtNum;
+  }
+  // Pre-fill time
+  const timeSel = document.getElementById('seTime');
+  if (timeSel && timeSlot) {
+    // Normalize time: "10:00 AM" matches option values
+    for (let i = 0; i < timeSel.options.length; i++) {
+      if (timeSel.options[i].text === timeSlot || timeSel.options[i].value === timeSlot) {
+        timeSel.selectedIndex = i;
+        break;
+      }
+    }
+  }
+  // Pre-fill date from day string
+  const dateParts = { 'Thursday June 18, 2026': '2026-06-18', 'Friday June 19, 2026': '2026-06-19', 'Saturday June 20, 2026': '2026-06-20' };
+  const dateEl = document.getElementById('seDate');
+  if (dateEl && dateParts[day]) dateEl.value = dateParts[day];
+}
 
 // ── CAMPER SEARCH DROPDOWN ──────────────────────────────
 function showCamperDrop(fieldId) {
