@@ -590,6 +590,10 @@ if('serviceWorker' in navigator){
   <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="badge-dot" id="chatDotS" style="top:0;right:0"></span></div>
   <span class="bl">Chat</span>
 </button>
+<button class="bb" id="sb-staffchat" onclick="sView('staffchat')" type="button">
+  <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="badge-dot" id="chatDotSR" style="top:0;right:0"></span></div>
+  <span class="bl">Staff</span>
+</button>
 <button class="bb" id="sb-more-btn" onclick="openMoreS()" type="button">
   <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></div>
   <span class="bl">More</span>
@@ -663,11 +667,24 @@ if('serviceWorker' in navigator){
 <div id="sMyProfileCon"></div>
 </div>
 <div class="view" id="sv-chat">
-<div class="chat-wrap">
+<div class="stitle" style="margin-bottom:8px">CAMP <span>CHAT</span></div>
+<div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Visible to everyone — campers, staff, and admin</div>
+<div class="chat-wrap" style="height:calc(100dvh - 200px)">
 <div class="chat-messages" id="chatMsgsStaff"></div>
 <div class="chat-input-row">
 <textarea class="chat-input" id="chatInputStaff" placeholder="Message the camp..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('staff');}"></textarea>
 <button class="chat-send" onclick="sendChat('staff')">➤</button>
+</div>
+</div>
+</div>
+<div class="view" id="sv-staffchat">
+<div class="stitle" style="margin-bottom:8px">STAFF <span>ROOM</span></div>
+<div style="font-size:11px;color:var(--tx3);margin-bottom:10px">🔒 Staff &amp; clinicians only — campers cannot see this</div>
+<div class="chat-wrap" style="height:calc(100dvh - 200px)">
+<div class="chat-messages" id="chatMsgsStaffRoom"></div>
+<div class="chat-input-row">
+<textarea class="chat-input" id="chatInputStaffRoom" placeholder="Message staff only..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('staffroom');}"></textarea>
+<button class="chat-send" onclick="sendChat('staffroom')" style="background:#e05a00">➤</button>
 </div>
 </div>
 </div>
@@ -708,6 +725,10 @@ if('serviceWorker' in navigator){
     <button class="admin-more-item" id="atab-campinfo" onclick="aTabMore('campinfo')" type="button">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Camp Info
+    </button>
+    <button class="admin-more-item" id="atab-emailblast" onclick="aTabMore('emailblast')" type="button">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Email Blast
     </button>
     <button class="admin-more-item" id="atab-settings" onclick="aTabMore('settings')" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -835,18 +856,21 @@ if('serviceWorker' in navigator){
 <div id="schBuilderSlots"></div>
 </div>
 <div class="tc" id="at-chat">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-<div class="stitle" style="margin:0">CAMP <span>CHAT</span></div>
-<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);cursor:pointer"><input type="checkbox" id="adminEmailBlast" style="accent-color:var(--or)"> Email all campers</label>
+<!-- Chat room tabs -->
+<div style="display:flex;gap:0;margin-bottom:12px;border:1px solid var(--b2);border-radius:var(--r);overflow:hidden">
+  <button id="adminChatTab-general" onclick="switchAdminChatRoom('general')" style="flex:1;padding:10px;background:var(--or);color:#000;border:none;font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">CAMP CHAT</button>
+  <button id="adminChatTab-staff" onclick="switchAdminChatRoom('staff')" style="flex:1;padding:10px;background:var(--gray2);color:var(--tx2);border:none;border-left:1px solid var(--b2);font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">STAFF ROOM 🔒</button>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+<div id="adminChatRoomLabel" style="font-size:11px;color:var(--tx3)">Visible to everyone</div>
 <button class="btn bred bsm" onclick="clearChat()" type="button">Clear Chat</button>
 </div>
-</div>
-<div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 280px)">
+<div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 320px)">
 <div class="chat-messages" id="chatMsgsAdmin"></div>
-<div class="chat-input-row">
+<div class="chat-input-row" style="display:flex;align-items:center;gap:8px">
+<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx2);white-space:nowrap"><input type="checkbox" id="adminEmailBlast" style="accent-color:var(--or)"> Email</label>
 <textarea class="chat-input" id="chatInputAdmin" placeholder="Send announcement or message..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('admin');}"></textarea>
-<button class="chat-send" onclick="sendChat('admin')">➤</button>
+<button class="chat-send" id="adminChatSendBtn" onclick="sendChat('admin')">➤</button>
 </div>
 </div>
 </div>
@@ -882,6 +906,60 @@ if('serviceWorker' in navigator){
   <div id="campInfoEmailStatus" style="margin-top:8px;font-size:12px;color:var(--tx2)"></div>
 </div>
 </div>
+<div class="tc" id="at-emailblast">
+<div class="stitle" style="margin-bottom:14px">EMAIL <span>BLAST</span></div>
+
+<!-- Recipient selector -->
+<div style="margin-bottom:14px">
+  <div class="flabel" style="margin-bottom:6px">Send To</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx2);cursor:pointer;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px">
+      <input type="radio" name="blastRecipient" value="campers" checked style="accent-color:var(--or)"> All Campers
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx2);cursor:pointer;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px">
+      <input type="radio" name="blastRecipient" value="staff" style="accent-color:var(--or)"> All Staff
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx2);cursor:pointer;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px">
+      <input type="radio" name="blastRecipient" value="everyone" style="accent-color:var(--or)"> Everyone
+    </label>
+  </div>
+</div>
+
+<!-- Subject -->
+<div style="margin-bottom:12px">
+  <label class="flabel">Subject</label>
+  <input class="finput" id="blastSubject" type="text" placeholder="VH1 Camp — Important Update" style="margin-bottom:0">
+</div>
+
+<!-- Message -->
+<div style="margin-bottom:12px">
+  <label class="flabel">Message</label>
+  <textarea class="finput" id="blastMessage" placeholder="Type your message here..." style="min-height:120px;resize:vertical;margin-bottom:0"></textarea>
+</div>
+
+<!-- Attachment -->
+<div style="margin-bottom:16px">
+  <label class="flabel">Attachment (optional)</label>
+  <div style="background:var(--gray2);border:1px dashed var(--b2);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer" onclick="document.getElementById('blastAttachInput').click()">
+    <div style="font-size:22px;margin-bottom:6px">📎</div>
+    <div style="font-size:12px;color:var(--tx2)" id="blastAttachLabel">Tap to attach a PDF or image</div>
+  </div>
+  <input type="file" id="blastAttachInput" accept="application/pdf,image/*" style="display:none" onchange="handleBlastAttach(this)">
+</div>
+
+<!-- Send button -->
+<button class="btn bor" style="width:100%;justify-content:center;padding:15px;font-family:'Oswald',sans-serif;font-size:18px;letter-spacing:.08em" onclick="sendEmailBlast()" id="blastSendBtn">
+  SEND EMAIL BLAST
+</button>
+<div id="blastStatus" style="margin-top:10px;font-size:12px;color:var(--tx2)"></div>
+
+<!-- History -->
+<div style="margin-top:20px">
+  <div class="flabel" style="margin-bottom:8px">Recent Blasts</div>
+  <div id="blastHistory" style="display:flex;flex-direction:column;gap:8px"></div>
+</div>
+</div>
+
 <div class="tc" id="at-settings">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
 <div>
@@ -1182,7 +1260,7 @@ function sView(v){
   document.getElementById('sv-'+v).classList.add('on');
   const btn=document.getElementById('sb-'+v);if(btn)btn.classList.add('on');
   // Highlight More btn for drawer items
-  const drawerViewsS=['schedule','myprofile','campinfo'];
+  const drawerViewsS=['schedule','myprofile','campinfo','staffchat'];
   if(drawerViewsS.includes(v)){const mb=document.getElementById('sb-more-btn');if(mb)mb.classList.add('on');}
   if(v==='evaluate')populateStaffEvalForm();
   if(v==='history')renderStaffHistory();
@@ -1401,6 +1479,7 @@ function _aTabActions(name){
   if(name==='campers'){camperSortCol='name';camperSortDir=1;document.querySelectorAll('.sort-arrow').forEach(a=>{a.classList.remove('active');a.textContent='';});const sa=document.getElementById('sa-name');if(sa){sa.textContent='↑';sa.classList.add('active');}renderAdminCampers();}
   if(name==='staff'){renderAdminClinicians();}
   if(name==='evaluate'){populateAdminForms();}
+  if(name==='emailblast'){renderBlastHistory();}
   if(name==='rankings')renderAdminRankings();
   if(name==='profiles')renderProfiles('');
   if(name==='chat'){markChatRead();renderChat('Admin');}
@@ -2118,6 +2197,21 @@ function handlePhotoUpload(input){
   reader.readAsDataURL(file);
 }
 
+
+// ── ADMIN CHAT ROOM SWITCHER ────────────────────────────
+let _adminChatRoom = 'general';
+function switchAdminChatRoom(room){
+  _adminChatRoom = room;
+  const isStaff = room === 'staff';
+  document.getElementById('adminChatTab-general').style.background = isStaff ? 'var(--gray2)' : 'var(--or)';
+  document.getElementById('adminChatTab-general').style.color = isStaff ? 'var(--tx2)' : '#000';
+  document.getElementById('adminChatTab-staff').style.background = isStaff ? 'var(--or)' : 'var(--gray2)';
+  document.getElementById('adminChatTab-staff').style.color = isStaff ? '#000' : 'var(--tx2)';
+  document.getElementById('adminChatRoomLabel').textContent = isStaff ? '🔒 Staff & clinicians only — campers cannot see this' : 'Visible to everyone — campers, staff, and admin';
+  document.getElementById('adminChatSendBtn').style.background = isStaff ? '#e05a00' : 'var(--or)';
+  renderChat('Admin');
+}
+
 // ═══ CHAT ═══
 let chatMessages=[];
 let chatLastRead=parseInt(localStorage.getItem('chatLastRead')||'0');
@@ -2131,13 +2225,24 @@ async function loadChat(){
     checkChatBadge();
   }catch(e){console.warn('Chat load error',e);}
 }
+function getChatRoom(messages, room){
+  // 'general' = messages with room='general' OR room is null/undefined (legacy)
+  // 'staff' = messages with room='staff'
+  if(room==='staff') return messages.filter(m=>m.room==='staff');
+  return messages.filter(m=>!m.room||m.room==='general');
+}
 
 function checkChatBadge(){
-  const unread=chatMessages.filter(m=>new Date(m.created_at).getTime()>chatLastRead&&m.user_id!==CU?.id).length;
+  const generalMsgs = getChatRoom(chatMessages,'general');
+  const staffMsgs = getChatRoom(chatMessages,'staff');
+  const unreadGeneral = generalMsgs.filter(m=>new Date(m.created_at).getTime()>chatLastRead&&m.user_id!==CU?.id).length;
+  const unreadStaff = staffMsgs.filter(m=>new Date(m.created_at).getTime()>chatLastRead&&m.user_id!==CU?.id).length;
   ['chatDotC','chatDotS','chatDotA'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el)el.classList.toggle('show',unread>0);
+    if(el)el.classList.toggle('show',unreadGeneral>0);
   });
+  const staffDot = document.getElementById('chatDotSR');
+  if(staffDot) staffDot.classList.toggle('show', unreadStaff>0);
 }
 
 function markChatRead(){
@@ -2186,11 +2291,13 @@ function renderChatMessages(suffix){
   const con=document.getElementById('chatMsgs'+suffix);
   if(!con)return;
   const wasAtBottom=con.scrollHeight-con.scrollTop-con.clientHeight<60;
-  if(!chatMessages.length){
+  const room = (suffix==='StaffRoom' || (suffix==='Admin' && typeof _adminChatRoom!=='undefined' && _adminChatRoom==='staff')) ? 'staff' : 'general';
+  const msgs = getChatRoom(chatMessages, room);
+  if(!msgs.length){
     con.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px">No messages yet. Say hello! 👋</div>';
     return;
   }
-  con.innerHTML=chatMessages.map(m=>{
+  con.innerHTML=msgs.map(m=>{
     const isMe=CU?.id?m.user_id===CU.id:CU?.username?m.user_id===CU.username:m.user_role===CR&&m.display_name===(CU.first_name+' '+(CU.last_name||'').trim());
     const isAdmin=m.user_role==='admin';
     const isStaff=m.user_role==='staff';
@@ -2216,18 +2323,20 @@ function renderChat(suffix){
 }
 
 async function sendChat(role){
-  const suffix=role==='camper'?'Camper':role==='staff'?'Staff':'Admin';
+  const suffix=role==='camper'?'Camper':role==='staffroom'?'StaffRoom':role==='staff'?'Staff':'Admin';
   const input=document.getElementById('chatInput'+suffix);
   const msg=input.value.trim();
   if(!msg)return;
   input.value='';
   const displayName=CU.first_name+' '+(CU.last_name||'');
   try{
+    const chatRoom = (role==='staffroom' || (role==='admin' && typeof _adminChatRoom!=='undefined' && _adminChatRoom==='staff')) ? 'staff' : 'general';
     const saved=await supa('chat','POST',{
       user_id:CU.id||CU.username||displayName,
       display_name:displayName,
       user_role:CR,
-      message:msg
+      message:msg,
+      room:chatRoom
     });
     // Update local immediately for sender
     const newMsg=Array.isArray(saved)?saved[0]:saved;
@@ -2243,6 +2352,139 @@ async function sendChat(role){
       document.getElementById('adminEmailBlast').checked=false;
     }
   }catch(e){input.value=msg;toast('Message not sent — try again',true);}
+}
+
+
+// ═══ EMAIL BLAST ═══
+let _blastAttachData = null;
+let _blastAttachName = null;
+let _blastHistory = JSON.parse(localStorage.getItem('vh1BlastHistory')||'[]');
+
+function handleBlastAttach(input){
+  const file = input.files[0];
+  if(!file) return;
+  const label = document.getElementById('blastAttachLabel');
+  if(file.size > 5 * 1024 * 1024){
+    toast('File too large — max 5MB', true);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _blastAttachData = e.target.result.split(',')[1]; // base64
+    _blastAttachName = file.name;
+    _blastAttachType = file.type;
+    if(label) label.textContent = '📎 ' + file.name + ' (' + (file.size/1024).toFixed(0) + 'KB) — tap to change';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function sendEmailBlast(){
+  const subject = document.getElementById('blastSubject')?.value?.trim();
+  const message = document.getElementById('blastMessage')?.value?.trim();
+  const recipientType = document.querySelector('input[name="blastRecipient"]:checked')?.value || 'campers';
+  const statusEl = document.getElementById('blastStatus');
+  const btn = document.getElementById('blastSendBtn');
+
+  if(!subject){ toast('Please enter a subject', true); return; }
+  if(!message){ toast('Please enter a message', true); return; }
+
+  // Build recipient list
+  let recipients = [];
+  if(recipientType === 'campers' || recipientType === 'everyone'){
+    recipients = [...recipients, ...campers.filter(c=>c.email).map(c=>({email:c.email, name:c.first_name+' '+c.last_name}))];
+  }
+  if(recipientType === 'staff' || recipientType === 'everyone'){
+    recipients = [...recipients, ...staffList.filter(s=>s.email).map(s=>({email:s.email, name:(s.first_name||'')+' '+(s.last_name||s.name||'')}))];
+  }
+  // Deduplicate by email
+  const seen = new Set();
+  recipients = recipients.filter(r=>{if(seen.has(r.email))return false;seen.add(r.email);return true;});
+
+  if(!recipients.length){ toast('No email addresses found for selected recipients', true); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'SENDING...';
+  if(statusEl) statusEl.innerHTML = `<span style="color:var(--or)">⏳ Sending to ${recipients.length} recipients...</span>`;
+
+  let sent = 0, failed = 0;
+
+  for(const r of recipients){
+    try{
+      const body = {
+        to: r.email,
+        from: CFG.FROM_EMAIL,
+        subject: subject,
+        html: `<div style="max-width:480px;margin:0 auto;font-family:Arial,sans-serif;background:#111;border-radius:10px;overflow:hidden;">
+          <div style="background:#F47B20;padding:14px 18px;">
+            <div style="color:#fff;font-size:15px;font-weight:700;letter-spacing:1px;">VH1 BASKETBALL OFFICIALS CAMP</div>
+          </div>
+          <div style="padding:18px;">
+            <p style="color:#aaa;font-size:11px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.08em;">Message from Camp Administration</p>
+            <h2 style="color:#F47B20;font-size:18px;margin:0 0 12px">${subject}</h2>
+            <div style="color:#f0f0eb;font-size:14px;line-height:1.7;margin:0 0 16px;white-space:pre-wrap">${message}</div>
+            <a href="https://vh1camp.github.io/portal/" style="display:inline-block;background:#F47B20;color:#000;font-weight:700;font-size:13px;padding:10px 22px;border-radius:6px;text-decoration:none;">Open Camp Portal →</a>
+          </div>
+          <div style="padding:10px 18px;border-top:1px solid #333;font-size:10px;color:#555">VH1 Basketball Officials Camp · Denver, CO · June 18–20, 2026</div>
+        </div>`
+      };
+      // Add attachment if present
+      if(_blastAttachData && _blastAttachName){
+        body.attachments = [{
+          content: _blastAttachData,
+          filename: _blastAttachName,
+          type: _blastAttachType || 'application/octet-stream',
+          disposition: 'attachment'
+        }];
+      }
+      await fetch(CFG.SENDGRID_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      sent++;
+    }catch(e){ failed++; }
+    await new Promise(r=>setTimeout(r,120));
+  }
+
+  // Log to history
+  const entry = {
+    date: new Date().toLocaleString(),
+    subject,
+    recipients: recipientType,
+    sent,
+    failed,
+    hasAttachment: !!_blastAttachName
+  };
+  _blastHistory.unshift(entry);
+  if(_blastHistory.length > 20) _blastHistory.pop();
+  localStorage.setItem('vh1BlastHistory', JSON.stringify(_blastHistory));
+
+  btn.disabled = false;
+  btn.textContent = 'SEND EMAIL BLAST';
+  if(statusEl) statusEl.innerHTML = `<span style="color:var(--grn)">✅ Sent to ${sent} recipients${failed?` · ${failed} failed`:''}${_blastAttachName?' · with attachment':''}</span>`;
+
+  // Reset form
+  document.getElementById('blastSubject').value = '';
+  document.getElementById('blastMessage').value = '';
+  document.getElementById('blastAttachLabel').textContent = 'Tap to attach a PDF or image';
+  _blastAttachData = null; _blastAttachName = null;
+  document.getElementById('blastAttachInput').value = '';
+  renderBlastHistory();
+  toast('📧 Blast sent to ' + sent + ' recipients!');
+}
+
+function renderBlastHistory(){
+  const con = document.getElementById('blastHistory');
+  if(!con) return;
+  if(!_blastHistory.length){
+    con.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px 0">No blasts sent yet</div>';
+    return;
+  }
+  con.innerHTML = _blastHistory.slice(0,10).map(e=>`
+    <div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--tx)">${e.subject}</div>
+        <div style="font-size:10px;color:var(--tx3);white-space:nowrap">${e.date}</div>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:3px">To: ${e.recipients} · ${e.sent} sent${e.failed?' · '+e.failed+' failed':''}${e.hasAttachment?' · 📎':''}</div>
+    </div>
+  `).join('');
 }
 
 async function sendChatEmailBlast(msg,from){
