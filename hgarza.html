@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en" style="scroll-behavior:smooth;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Humberto Garza — BioLinked Protocol</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#8B7335;--gold-light:#A08840;--gold-dim:rgba(139,115,53,0.10);--gold-border:rgba(139,115,53,0.30);
+  --bg:#f5f5f5;--bg-card:#ffffff;--bg-card2:#f0f0f0;--white:#1a1a1a;
+  --text:#1a1a1a;--text-muted:#888880;--border:rgba(0,0,0,0.10);
+  --green:#2d6a4f;--green-dim:rgba(45,106,79,0.12);
+  --red:#e05c5c;--red-dim:rgba(224,92,92,0.1);--red-border:rgba(224,92,92,0.3);
+  --orange:#e08a2a;--orange-dim:rgba(224,138,42,0.1);--orange-border:rgba(224,138,42,0.3);
+}
+body{font-family:'Montserrat',sans-serif;background:#f5f5f5;color:#1a1a1a;line-height:1.7;font-size:15px;}
+.header{background:#ffffff;border-bottom:1px solid var(--gold-border);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;}
+.header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.header-logo{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem;font-weight:500;display:flex;align-items:center;justify-content:center;gap:12px;}
+.header-logo::before,.header-logo::after{content:'';width:40px;height:1px;background:var(--gold-border);}
+.header h1{font-family:'Cormorant Garamond',serif;font-size:clamp(36px,6vw,58px);color:var(--white);font-weight:400;line-height:1.1;margin-bottom:0.5rem;letter-spacing:0.02em;}
+.header h1 em{color:var(--gold);font-style:italic;}
+.header-sub{color:var(--text-muted);font-size:12px;font-weight:400;letter-spacing:0.12em;text-transform:uppercase;margin-top:0.5rem;}
+.header-meta{display:flex;justify-content:center;gap:0;margin-top:2.5rem;flex-wrap:wrap;border:1px solid var(--gold-border);border-radius:2px;overflow:hidden;max-width:780px;margin-left:auto;margin-right:auto;}
+.meta-item{flex:1;min-width:110px;text-align:center;padding:1rem 1.25rem;border-right:1px solid var(--gold-border);}
+.meta-item:last-child{border-right:none;}
+.meta-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;}
+.meta-value{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);font-weight:600;}
+.nav-tabs{display:flex;gap:0;border-bottom:1px solid var(--gold-border);background:#ffffff;position:sticky;top:56px;z-index:100;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 max(0.75rem,calc((100% - 900px)/2));}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{padding:1rem 1.5rem;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Montserrat',sans-serif;white-space:nowrap;flex-shrink:0;}
+.nav-tab:hover{color:var(--gold-light);}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.container{max-width:900px;margin:0 auto;padding:0 1.5rem 5rem;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.section{margin-top:4rem;}
+.section-header{display:flex;align-items:center;gap:14px;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--gold-border);}
+.section-icon{width:34px;height:34px;border-radius:2px;border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.section-icon svg{width:16px;height:16px;}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--white);letter-spacing:0.02em;}
+.intro-card{background:var(--bg-card);border:1px solid var(--gold-border);border-left:3px solid var(--gold);padding:1.5rem 2rem;margin-top:3rem;border-radius:2px;}
+.intro-card p{font-size:15px;color:var(--text);line-height:1.85;font-weight:300;}
+.intro-card strong{font-weight:600;color:var(--gold);}
+.transplant-alert{background:var(--red-dim);border:1px solid var(--red-border);border-left:3px solid var(--red);border-radius:2px;padding:1.5rem 1.75rem;margin-top:1.5rem;}
+.transplant-alert h4{font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--red);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.transplant-alert p{font-size:13px;color:rgba(224,92,92,0.8);line-height:1.75;font-weight:300;margin-bottom:8px;}
+.transplant-alert p:last-child{margin-bottom:0;}
+.transplant-alert strong{color:var(--red);font-weight:600;}
+.compound-flag{background:var(--orange-dim);border:1px solid var(--orange-border);border-left:3px solid var(--orange);border-radius:2px;padding:1rem 1.25rem;margin-top:0;}
+.compound-flag h5{font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--orange);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.compound-flag p{font-size:12px;color:rgba(224,138,42,0.8);line-height:1.65;font-weight:300;}
+.first-injector-note{background:rgba(99,179,237,0.07);border:1px solid rgba(99,179,237,0.2);border-left:3px solid #63b3ed;border-radius:2px;padding:1.25rem 1.75rem;margin-top:1.5rem;}
+.first-injector-note h4{font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#63b3ed;margin-bottom:8px;}
+.first-injector-note p{font-size:13px;color:rgba(99,179,237,0.75);line-height:1.7;font-weight:300;}
+.peptide-grid{display:grid;gap:1.5rem;}
+.peptide-card{background:var(--bg-card);border:1px solid var(--border);border-radius:2px;overflow:hidden;transition:border-color 0.2s;}
+.peptide-card:hover{border-color:var(--gold-border);}
+.peptide-card.flagged{border-color:var(--orange-border);}
+.peptide-header{padding:1.5rem 1.75rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;background:var(--bg-card2);}
+.peptide-name{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--white);margin-bottom:4px;letter-spacing:0.02em;}
+.peptide-tagline{font-size:10px;color:var(--gold);font-weight:500;letter-spacing:0.12em;text-transform:uppercase;}
+.flag-badge{background:var(--orange-dim);border:1px solid var(--orange-border);color:var(--orange);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:4px 10px;border-radius:2px;white-space:nowrap;margin-top:4px;display:inline-block;}
+.peptide-price{background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold-light);font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;padding:6px 16px;border-radius:2px;white-space:nowrap;}
+.peptide-body{padding:1.5rem 1.75rem;display:grid;gap:1.25rem;}
+.peptide-section-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;}
+.peptide-text{font-size:14px;color:#555550;line-height:1.75;font-weight:300;}
+.peptide-details{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:0.75rem;}
+.detail-box{background:#fafafa;border:1px solid var(--border);border-radius:2px;padding:0.875rem 1rem;}
+.detail-box .label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);font-weight:600;margin-bottom:4px;}
+.detail-box .value{font-size:14px;font-weight:500;color:var(--text);}
+.recon-steps{counter-reset:step;list-style:none;display:flex;flex-direction:column;gap:10px;}
+.recon-steps li{counter-increment:step;display:flex;align-items:flex-start;gap:12px;font-size:14px;color:#555550;line-height:1.65;font-weight:300;}
+.recon-steps li::before{content:counter(step);min-width:22px;height:22px;background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold);border-radius:50%;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.week-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--gold-border);border-radius:2px;overflow:hidden;}
+.week-cell{background:var(--bg-card);padding:1rem 0.75rem;text-align:center;}
+.week-cell.header{background:#f0f0f0;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;padding:0.875rem;}
+.week-cell .wk{font-size:11px;color:#888880;margin-bottom:4px;font-weight:500;}
+.week-cell .phase{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:600;color:var(--gold-light);}
+.week-cell .note{font-size:11px;color:#666660;margin-top:4px;line-height:1.5;font-weight:300;}
+.week-cell.phase-ramp{background:#eef4ef;}
+.week-cell.phase-full{background:#e8f4ea;}
+.week-cell.phase-taper{background:#f4f2ec;}
+.storage-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.storage-card{background:var(--bg-card);border:1px solid var(--border);border-radius:2px;padding:1.25rem 1.5rem;}
+.storage-card h4{font-size:13px;font-weight:600;margin-bottom:0.5rem;color:var(--gold-light);letter-spacing:0.03em;}
+.storage-card p{font-size:13px;color:#555550;line-height:1.7;font-weight:300;}
+.price-table{background:var(--bg-card);border:1px solid var(--gold-border);border-radius:2px;overflow:hidden;}
+.price-row{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 1.75rem;border-bottom:1px solid var(--border);}
+.price-row:last-child{border-bottom:none;}
+.price-row.total{background:#f0f0f0;border-top:1px solid var(--gold-border);}
+.price-row .item{font-size:15px;color:var(--text);font-weight:400;}
+.price-row .qty{font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:300;}
+.price-row .amt{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold-light);}
+.price-row.total .item{color:var(--white);font-size:16px;font-weight:600;}
+.price-row.total .amt{font-size:26px;color:var(--gold);}
+.venmo-section{background:linear-gradient(135deg,#f5f5f5 0%,#eeeeee 100%);border:1px solid var(--gold-border);border-top:2px solid var(--gold);border-radius:2px;padding:2rem;margin-top:3rem;text-align:center;}
+.venmo-section h3{font-family:'Cormorant Garamond',serif;font-size:26px;color:#1a1a1a;font-weight:400;margin-bottom:0.5rem;}
+.venmo-section h3 em{color:var(--gold);font-style:italic;}
+.venmo-section p{font-size:13px;color:var(--text-muted);margin-bottom:1.5rem;line-height:1.6;}
+.venmo-btn{display:inline-block;background:var(--gold);color:#ffffff;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;padding:16px 40px;border-radius:2px;text-decoration:none;}
+.venmo-btn:hover{background:var(--gold-light);}
+.venmo-handle{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--gold);font-weight:600;margin-top:12px;display:block;}
+.disclaimer{background:#f8f5f0;border:1px solid rgba(201,168,76,0.2);border-radius:2px;padding:1.25rem 1.75rem;margin-top:3.5rem;font-size:13px;color:#6a5a30;line-height:1.75;font-weight:300;}
+.disclaimer strong{font-weight:600;color:var(--gold);}
+.footer{text-align:center;padding:2rem;margin-top:2rem;border-top:1px solid var(--gold-border);font-size:11px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;}
+.footer strong{color:var(--gold);font-weight:600;}
+.tracker-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:2rem;}
+.tracker-stat{background:var(--bg-card);border:1px solid var(--gold-border);border-radius:2px;padding:1.25rem;text-align:center;}
+.tracker-stat .ts-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;}
+.tracker-stat .ts-value{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--gold);font-weight:600;}
+.tracker-stat .ts-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.week-selector{display:flex;align-items:center;gap:1rem;margin:2rem 0 1.5rem;justify-content:center;}
+.week-nav-btn{width:36px;height:36px;background:var(--bg-card);border:1px solid var(--gold-border);color:var(--gold);border-radius:2px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;}
+.week-label{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--white);font-weight:600;min-width:120px;text-align:center;}
+.day-header-row{display:grid;grid-template-columns:120px 1fr;gap:6px;margin-bottom:2px;}
+.day-headers-inner{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.day-header{text-align:center;font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);padding:8px 2px;background:#f0f0f0;border:1px solid rgba(0,0,0,0.10);border-radius:2px 2px 0 0;}
+.day-header.rest-day{color:#555;}
+.tracker-grid-wrap{display:grid;grid-template-columns:120px 1fr;gap:6px;margin-bottom:3px;}
+.tracker-compound-label{display:flex;align-items:center;justify-content:flex-end;padding-right:6px;}
+.compound-badge{font-size:10px;font-weight:600;letter-spacing:0.04em;color:var(--gold);text-align:right;line-height:1.3;}
+.compound-badge span{display:block;color:var(--text-muted);font-weight:400;font-size:9px;letter-spacing:0.06em;}
+.day-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.dose-cell{background:var(--bg-card);border:1px solid var(--border);border-top:none;padding:4px 2px;text-align:center;cursor:pointer;transition:all 0.15s;min-height:36px;display:flex;align-items:center;justify-content:center;}
+.dose-cell.scheduled:hover{background:var(--gold-dim);}
+.dose-cell.taken{background:var(--green-dim);border-color:rgba(58,122,90,0.4);}
+.dose-cell.taken::after{content:'✓';color:#5ab87a;font-size:15px;font-weight:700;}
+.dose-cell.scheduled:not(.taken)::after{content:'○';color:var(--gold-border);font-size:13px;}
+.dose-cell.rest{background:transparent;border-color:transparent;cursor:default;}
+.dose-cell.rest::after{content:'—';color:#aaa;font-size:12px;}
+.dose-cell.prn{background:rgba(139,115,53,0.04);border-color:var(--border);cursor:pointer;}
+.dose-cell.prn:not(.taken)::after{content:'·';color:#555;font-size:20px;line-height:1;}
+.notes-area{background:var(--bg-card);border:1px solid var(--border);border-radius:2px;padding:1rem 1.25rem;margin-top:1.5rem;}
+.notes-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:8px;}
+.notes-input{width:100%;background:#fafafa;border:1px solid rgba(0,0,0,0.10);border-radius:2px;padding:0.75rem 1rem;color:#1a1a1a;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:300;resize:vertical;min-height:70px;outline:none;}
+.notes-input::placeholder{color:var(--text-muted);}
+.tracker-actions{display:flex;gap:1rem;margin-top:1.5rem;flex-wrap:wrap;}
+.action-btn{flex:1;min-width:160px;padding:0.875rem 1.5rem;border:1px solid var(--gold-border);background:var(--gold-dim);color:var(--gold-light);font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all 0.2s;text-align:center;}
+.action-btn.primary{background:var(--gold);color:#ffffff;border-color:var(--gold);}
+.progress-bar-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:2px;padding:1rem 1.25rem;margin-top:1rem;}
+.progress-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:flex;justify-content:space-between;}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:2px;transition:width 0.4s ease;}
+.cycle-start-row{display:flex;align-items:center;gap:1rem;margin-top:1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:2px;padding:1rem 1.25rem;flex-wrap:wrap;}
+.cycle-start-row label{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);white-space:nowrap;}
+.cycle-start-row input[type="date"]{background:var(--bg);border:1px solid var(--gold-border);border-radius:2px;padding:6px 12px;color:var(--text);font-family:'Montserrat',sans-serif;font-size:13px;outline:none;color-scheme:light;}
+.save-badge{display:inline-block;background:var(--green-dim);border:1px solid rgba(58,122,90,0.5);color:#5ab87a;font-size:10px;font-weight:600;letter-spacing:0.08em;padding:3px 10px;border-radius:99px;opacity:0;transition:opacity 0.3s;}
+.save-badge.show{opacity:1;}
+.ios-download-banner{background:#f0f0f0;border:1px solid var(--gold-border);border-left:3px solid var(--gold);border-radius:2px;padding:1.25rem 1.75rem;margin-top:2.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.ios-banner-text{font-size:13px;color:var(--text-muted);line-height:1.6;}
+.ios-banner-text strong{color:var(--gold-light);font-weight:600;}
+.checklist-wrap{background:#f8f8f8;border:1px solid var(--gold-border);border-top:2px solid var(--gold);border-radius:2px;padding:1.5rem 1.75rem;margin-top:2rem;}
+.checklist-title{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:1rem;}
+.checklist-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#b0b0a8;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;}
+.checklist-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.checklist-link{color:var(--gold);font-size:10px;font-weight:600;letter-spacing:0.08em;text-decoration:none;white-space:nowrap;}
+.supply-card{background:var(--bg-card);border:1px solid var(--border);border-radius:2px;overflow:hidden;}
+.supply-hdr{background:var(--bg-card2);padding:1.25rem 1.75rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;}
+.supply-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--white);margin-bottom:3px;}
+.supply-sub{font-size:10px;color:var(--gold);font-weight:500;letter-spacing:0.12em;text-transform:uppercase;}
+.supply-body{padding:1.25rem 1.75rem;}
+.order-btn{display:inline-block;background:var(--gold);color:#ffffff;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;padding:10px 20px;border-radius:2px;text-decoration:none;white-space:nowrap;}
+.supply-text{font-size:14px;color:#555550;line-height:1.75;font-weight:300;margin-bottom:1rem;}
+@media(max-width:600px){
+  .week-grid{grid-template-columns:repeat(2,1fr)}
+  .storage-grid{grid-template-columns:1fr}
+  .peptide-header{flex-direction:column}
+  .header-meta{flex-direction:column}
+  .meta-item{border-right:none;border-bottom:1px solid var(--gold-border)}
+  .tracker-top{grid-template-columns:1fr 1fr}
+  .tracker-grid-wrap{grid-template-columns:80px 1fr}
+  .day-header-row{grid-template-columns:80px 1fr}
+}
+
+/* PRODUCT LINE */
+#tab-products{font-family:'Montserrat',sans-serif}
+#tab-products .pl-header{padding:2.5rem 0 1.5rem;border-bottom:1px solid var(--gold-border)}
+#tab-products .pl-eyebrow{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+#tab-products .pl-eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--gold)}
+#tab-products .pl-h1{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,44px);font-weight:600;color:#1a1a1a;line-height:1.05}
+#tab-products .pl-h1 em{font-style:italic;color:var(--gold)}
+#tab-products .pl-sub{margin-top:6px;font-size:13px;color:#888880;font-weight:300}
+#tab-products .pl-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:1.5rem 0 0}
+#tab-products .pl-search-wrap{position:relative;flex:1;min-width:180px;max-width:320px}
+#tab-products .pl-search-wrap input{width:100%;background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:4px;padding:10px 12px 10px 34px;font-family:'Montserrat',sans-serif;font-size:13px;color:#1a1a1a;outline:none;transition:border-color .2s}
+#tab-products .pl-search-wrap input::placeholder{color:#888880}
+#tab-products .pl-search-wrap input:focus{border-color:var(--gold-border)}
+#tab-products .pl-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#888880;font-size:12px;pointer-events:none}
+#tab-products .pl-filter-btns{display:flex;gap:5px;flex-wrap:wrap}
+#tab-products .pl-fbtn{background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:3px;padding:7px 12px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#888880;cursor:pointer;transition:all .15s;white-space:nowrap}
+#tab-products .pl-fbtn:hover{border-color:var(--gold-border);color:var(--gold)}
+#tab-products .pl-fbtn.active{background:var(--gold);border-color:var(--gold);color:#ffffff}
+#tab-products .pl-results-bar{font-size:11px;color:#888880;padding:10px 0 0}
+#tab-products .pl-results-bar span{color:var(--gold);font-weight:500}
+#tab-products .pl-section{margin-top:2rem}
+#tab-products .pl-section-title{font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:400;padding-bottom:10px;border-bottom:1px solid var(--gold-border);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+#tab-products .pl-section-title::after{content:'';flex:1;height:1px;background:var(--gold-border)}
+#tab-products .pl-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+#tab-products .pl-card,#tab-products .pl-multi-card{background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:4px;padding:16px 18px 14px;position:relative;transition:all .2s;overflow:hidden}
+#tab-products .pl-card:hover,#tab-products .pl-multi-card:hover{border-color:var(--gold-border);background:#f8f8f8}
+#tab-products .pl-card.pl-hidden,#tab-products .pl-multi-card.pl-hidden{display:none}
+#tab-products .pl-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+#tab-products .pl-card-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#1a1a1a;line-height:1.2;flex:1}
+#tab-products .pl-card-price{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold);white-space:nowrap;line-height:1}
+#tab-products .pl-card-meta{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+#tab-products .pl-card-sku{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#888880;font-weight:500}
+#tab-products .pl-card-dot{width:3px;height:3px;border-radius:50%;background:#888880}
+#tab-products .pl-card-strength{font-size:10px;font-weight:500;color:rgba(139,115,53,.8);background:rgba(139,115,53,.08);border:1px solid rgba(139,115,53,.15);border-radius:2px;padding:2px 7px}
+#tab-products .pl-card-desc{font-size:11px;color:#888880;line-height:1.65;font-weight:300}
+#tab-products .pl-multi-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#1a1a1a;margin-bottom:5px}
+#tab-products .pl-multi-desc{font-size:11px;color:#888880;line-height:1.65;font-weight:300;margin-bottom:12px}
+#tab-products .pl-variants{display:flex;flex-direction:column;gap:5px}
+#tab-products .pl-variant-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(139,115,53,.04);border:1px solid rgba(139,115,53,.1);border-radius:3px}
+#tab-products .pl-variant-left{display:flex;align-items:center;gap:8px}
+#tab-products .pl-variant-sku{font-size:9px;color:#888880;letter-spacing:.1em;font-weight:500;text-transform:uppercase;min-width:48px}
+#tab-products .pl-variant-size{font-size:11px;color:rgba(139,115,53,.8);font-weight:500}
+#tab-products .pl-variant-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+#tab-products .pl-supply-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:4px;margin-bottom:6px}
+#tab-products .pl-supply-row.pl-hidden{display:none}
+#tab-products .pl-supply-name{font-size:13px;font-weight:500;color:#1a1a1a}
+#tab-products .pl-supply-detail{font-size:10px;color:#888880;margin-top:2px}
+#tab-products .pl-supply-right{display:flex;align-items:center;gap:14px}
+#tab-products .pl-supply-size{font-size:10px;color:rgba(139,115,53,.8);background:rgba(139,115,53,.07);border:1px solid rgba(139,115,53,.12);border-radius:2px;padding:2px 7px}
+#tab-products .pl-supply-price{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);min-width:44px;text-align:right}
+#tab-products .pl-no-results{display:none;text-align:center;padding:48px 20px;color:#888880}
+#tab-products .pl-no-results.show{display:block}
+#tab-products .pl-disclaimer{margin-top:2.5rem;border:1px solid rgba(139,115,53,.12);border-radius:4px;padding:14px 18px;font-size:11px;color:#888880;line-height:1.7;background:rgba(139,115,53,.02)}
+#tab-products .pl-disclaimer strong{color:rgba(139,115,53,.7)}
+@media(max-width:600px){#tab-products .pl-product-grid{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body style="padding-top:0">
+
+<script>
+(function(){
+  const path = window.location.pathname;
+  const isActive = (href) => {
+    const clean = href.replace('.html','');
+    if(clean === '/index') return path === '/' || path === '/index.html' || path === '/index';
+    return path.includes(clean.replace('/',''));
+  };
+
+  const links = [
+    {href:'/index.html', label:'Home'},
+    {href:'/peptide-index.html', label:'Index'},
+    {href:'/cheat-sheet.html', label:'Cheat Sheet'},
+    {href:'/stacks-blends.html', label:'Stacks & Blends'},
+  ];
+
+  const tools = [
+    {href:'/peptide-tracker.html', label:'Peptide Tracker'},
+    {href:'/stack-analyzer.html', label:'Stack Analyzer'},
+    {href:'/biomarker-analysis.html', label:'Biomarker Analysis'},
+  ];
+
+  const navHTML = `
+<nav class="bl-nav" id="bl-nav">
+  <div class="bl-nav-inner">
+    <a href="/index.html" class="bl-nav-logo">
+      <span class="bl-nav-logo-main">BIO LINKED</span>
+      <span class="bl-nav-logo-sub">Peptide Solutions</span>
+    </a>
+    <div class="bl-nav-links">
+      ${links.map(l=>`<a href="${l.href}" class="bl-nav-link${isActive(l.href)?' active':''}">${l.label}</a>`).join('')}
+      <div class="bl-nav-dropdown" id="bl-dropdown">
+        <button class="bl-nav-link bl-dropdown-btn">Tools ▾</button>
+        <div class="bl-nav-dropdown-menu" id="bl-dropdown-menu">
+          ${tools.map(t=>`<a href="${t.href}" class="bl-nav-dropdown-item${isActive(t.href)?' active':''}">${t.label}</a>`).join('')}
+        </div>
+      </div>
+    </div>
+    <button class="bl-nav-mobile-btn" id="bl-mobile-btn">☰</button>
+  </div>
+  <div class="bl-nav-mobile-menu" id="bl-mobile-menu">
+    ${links.map(l=>`<a href="${l.href}" class="bl-nav-mobile-link">${l.label}</a>`).join('')}
+    <div class="bl-nav-mobile-section">Tools</div>
+    ${tools.map(t=>`<a href="${t.href}" class="bl-nav-mobile-link bl-nav-mobile-sub">${t.label}</a>`).join('')}
+  </div>
+</nav>`;
+
+  const navCSS = `<style>
+.bl-nav{background:#fff;border-bottom:1px solid #eaeaea;position:sticky;top:0;z-index:600;font-family:'Outfit',sans-serif}
+.bl-nav-inner{max-width:1200px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:56px}
+.bl-nav-logo{text-decoration:none;display:flex;flex-direction:column;line-height:1}
+.bl-nav-logo-main{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:#1a1a1a;letter-spacing:0.1em}
+.bl-nav-logo-sub{font-size:8px;color:#777;letter-spacing:0.18em;text-transform:uppercase;margin-top:2px}
+.bl-nav-links{display:flex;align-items:center;gap:2px}
+.bl-nav-link{font-size:11.5px;color:#444;text-decoration:none;padding:7px 11px;border-radius:3px;transition:all .18s;background:none;border:none;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap}
+.bl-nav-link:hover,.bl-nav-link.active{color:#9A7B2F;background:rgba(154,123,47,0.07)}
+.bl-nav-dropdown{position:relative}
+.bl-nav-dropdown-menu{display:none;position:absolute;top:calc(100% - 1px);right:0;background:#fff;border:1px solid #eaeaea;border-radius:0 0 6px 6px;box-shadow:0 8px 24px rgba(0,0,0,0.08);min-width:190px;z-index:700;padding:4px 0}
+.bl-nav-dropdown:hover .bl-nav-dropdown-menu,.bl-nav-dropdown-menu:hover{display:block}
+.bl-nav-dropdown-btn{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.bl-nav-dropdown:hover .bl-dropdown-btn{color:#9A7B2F;background:rgba(154,123,47,0.07)}
+.bl-nav-dropdown-item{display:block;padding:10px 16px;font-size:11.5px;color:#444;text-decoration:none;transition:all .15s;font-family:'Outfit',sans-serif;white-space:nowrap}
+.bl-nav-dropdown-item:hover,.bl-nav-dropdown-item.active{background:#f8f8f8;color:#9A7B2F;padding-left:20px}
+.bl-nav-mobile-btn{display:none;background:none;border:none;font-size:20px;cursor:pointer;color:#1a1a1a;padding:8px}
+.bl-nav-mobile-menu{display:none;border-top:1px solid #eaeaea;background:#fff;padding:12px 20px 20px}
+.bl-nav-mobile-menu.open{display:block}
+.bl-nav-mobile-link{display:block;padding:10px 0;font-size:13px;color:#444;text-decoration:none;border-bottom:1px solid #eaeaea;font-family:'Outfit',sans-serif}
+.bl-nav-mobile-link:last-child{border-bottom:none}
+.bl-nav-mobile-sub{padding-left:16px;font-size:12px;color:#777}
+.bl-nav-mobile-section{padding:10px 0 4px;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#9A7B2F;font-family:'Outfit',sans-serif;font-weight:600;border-bottom:1px solid #eaeaea}
+@media(max-width:768px){.bl-nav-links{display:none}.bl-nav-mobile-btn{display:block}.bl-nav-inner{padding:0 16px}}
+
+/* PRODUCT LINE */
+#tab-products{font-family:'Montserrat',sans-serif}
+#tab-products .pl-header{padding:2.5rem 0 1.5rem;border-bottom:1px solid var(--gold-border)}
+#tab-products .pl-eyebrow{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+#tab-products .pl-eyebrow::before{content:'';display:inline-block;width:20px;height:1px;background:var(--gold)}
+#tab-products .pl-h1{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,44px);font-weight:600;color:#1a1a1a;line-height:1.05}
+#tab-products .pl-h1 em{font-style:italic;color:var(--gold)}
+#tab-products .pl-sub{margin-top:6px;font-size:13px;color:#888880;font-weight:300}
+#tab-products .pl-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:1.5rem 0 0}
+#tab-products .pl-search-wrap{position:relative;flex:1;min-width:180px;max-width:320px}
+#tab-products .pl-search-wrap input{width:100%;background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:4px;padding:10px 12px 10px 34px;font-family:'Montserrat',sans-serif;font-size:13px;color:#1a1a1a;outline:none;transition:border-color .2s}
+#tab-products .pl-search-wrap input::placeholder{color:#888880}
+#tab-products .pl-search-wrap input:focus{border-color:var(--gold-border)}
+#tab-products .pl-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#888880;font-size:12px;pointer-events:none}
+#tab-products .pl-filter-btns{display:flex;gap:5px;flex-wrap:wrap}
+#tab-products .pl-fbtn{background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:3px;padding:7px 12px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#888880;cursor:pointer;transition:all .15s;white-space:nowrap}
+#tab-products .pl-fbtn:hover{border-color:var(--gold-border);color:var(--gold)}
+#tab-products .pl-fbtn.active{background:var(--gold);border-color:var(--gold);color:#ffffff}
+#tab-products .pl-results-bar{font-size:11px;color:#888880;padding:10px 0 0}
+#tab-products .pl-results-bar span{color:var(--gold);font-weight:500}
+#tab-products .pl-section{margin-top:2rem}
+#tab-products .pl-section-title{font-family:'Cormorant Garamond',serif;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:400;padding-bottom:10px;border-bottom:1px solid var(--gold-border);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+#tab-products .pl-section-title::after{content:'';flex:1;height:1px;background:var(--gold-border)}
+#tab-products .pl-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+#tab-products .pl-card,#tab-products .pl-multi-card{background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:4px;padding:16px 18px 14px;position:relative;transition:all .2s;overflow:hidden}
+#tab-products .pl-card:hover,#tab-products .pl-multi-card:hover{border-color:var(--gold-border);background:#f8f8f8}
+#tab-products .pl-card.pl-hidden,#tab-products .pl-multi-card.pl-hidden{display:none}
+#tab-products .pl-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+#tab-products .pl-card-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#1a1a1a;line-height:1.2;flex:1}
+#tab-products .pl-card-price{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold);white-space:nowrap;line-height:1}
+#tab-products .pl-card-meta{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+#tab-products .pl-card-sku{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#888880;font-weight:500}
+#tab-products .pl-card-dot{width:3px;height:3px;border-radius:50%;background:#888880}
+#tab-products .pl-card-strength{font-size:10px;font-weight:500;color:rgba(139,115,53,.8);background:rgba(139,115,53,.08);border:1px solid rgba(139,115,53,.15);border-radius:2px;padding:2px 7px}
+#tab-products .pl-card-desc{font-size:11px;color:#888880;line-height:1.65;font-weight:300}
+#tab-products .pl-multi-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:#1a1a1a;margin-bottom:5px}
+#tab-products .pl-multi-desc{font-size:11px;color:#888880;line-height:1.65;font-weight:300;margin-bottom:12px}
+#tab-products .pl-variants{display:flex;flex-direction:column;gap:5px}
+#tab-products .pl-variant-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(139,115,53,.04);border:1px solid rgba(139,115,53,.1);border-radius:3px}
+#tab-products .pl-variant-left{display:flex;align-items:center;gap:8px}
+#tab-products .pl-variant-sku{font-size:9px;color:#888880;letter-spacing:.1em;font-weight:500;text-transform:uppercase;min-width:48px}
+#tab-products .pl-variant-size{font-size:11px;color:rgba(139,115,53,.8);font-weight:500}
+#tab-products .pl-variant-price{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;color:var(--gold)}
+#tab-products .pl-supply-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#ffffff;border:1px solid rgba(0,0,0,0.10);border-radius:4px;margin-bottom:6px}
+#tab-products .pl-supply-row.pl-hidden{display:none}
+#tab-products .pl-supply-name{font-size:13px;font-weight:500;color:#1a1a1a}
+#tab-products .pl-supply-detail{font-size:10px;color:#888880;margin-top:2px}
+#tab-products .pl-supply-right{display:flex;align-items:center;gap:14px}
+#tab-products .pl-supply-size{font-size:10px;color:rgba(139,115,53,.8);background:rgba(139,115,53,.07);border:1px solid rgba(139,115,53,.12);border-radius:2px;padding:2px 7px}
+#tab-products .pl-supply-price{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--gold);min-width:44px;text-align:right}
+#tab-products .pl-no-results{display:none;text-align:center;padding:48px 20px;color:#888880}
+#tab-products .pl-no-results.show{display:block}
+#tab-products .pl-disclaimer{margin-top:2.5rem;border:1px solid rgba(139,115,53,.12);border-radius:4px;padding:14px 18px;font-size:11px;color:#888880;line-height:1.7;background:rgba(139,115,53,.02)}
+#tab-products .pl-disclaimer strong{color:rgba(139,115,53,.7)}
+@media(max-width:600px){#tab-products .pl-product-grid{grid-template-columns:1fr}}
+
+</style>`;
+
+  document.head.insertAdjacentHTML('beforeend', navCSS);
+  document.body.insertAdjacentHTML('afterbegin', navHTML);
+
+  // Mobile toggle
+  document.getElementById('bl-mobile-btn').addEventListener('click', function(){
+    const menu = document.getElementById('bl-mobile-menu');
+    menu.classList.toggle('open');
+    this.textContent = menu.classList.contains('open') ? '✕' : '☰';
+  });
+
+  // Fix dropdown - keep open when moving mouse between button and menu
+  const dropdown = document.getElementById('bl-dropdown');
+  const menu = document.getElementById('bl-dropdown-menu');
+  let closeTimer;
+  dropdown.addEventListener('mouseenter', () => { clearTimeout(closeTimer); menu.style.display='block'; });
+  dropdown.addEventListener('mouseleave', () => { closeTimer = setTimeout(() => { menu.style.display=''; }, 150); });
+  menu.addEventListener('mouseenter', () => clearTimeout(closeTimer));
+  menu.addEventListener('mouseleave', () => { closeTimer = setTimeout(() => { menu.style.display=''; }, 150); });
+
+})();
+
+</script>
+
+
+<div class="header">
+  <div class="header-logo">Bio Linked Peptide Solutions</div>
+  <h1>Humberto <em>Garza</em></h1>
+  <div class="header-sub">&#128293; Ultimate Fat Loss &amp; Vitality — A New Chapter at 50</div>
+  <div class="header-meta">
+    <div class="meta-item"><span class="meta-label">Age</span><span class="meta-value">50</span></div>
+    <div class="meta-item"><span class="meta-label">Cycle Length</span><span class="meta-value">8 Weeks</span></div>
+    <div class="meta-item"><span class="meta-label">Compounds</span><span class="meta-value">9 Total</span></div>
+    <div class="meta-item"><span class="meta-label">Start Weight</span><span class="meta-value">217 lbs</span></div>
+    <div class="meta-item"><span class="meta-label">Goal</span><span class="meta-value">195 lbs</span></div>
+    <div class="meta-item"><span class="meta-label">Prepared by</span><span class="meta-value">BioLinked</span></div>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('protocol',event)">Protocol</button>
+  <button class="nav-tab" onclick="switchTab('supplies',event)">Supplies</button>
+  <button class="nav-tab" onclick="switchTab('tracker',event)">Tracker</button>
+  <button class="nav-tab" onclick="switchTab('levels',event)">Levels</button>
+  <button class="nav-tab" onclick="switchTab('products',event)">Product Line</button>
+</div>
+
+<div class="container">
+
+<!-- PROTOCOL TAB -->
+<div id="tab-protocol" class="tab-content active">
+
+  <div class="intro-card">
+    <p>Humberto, you've built your life around performance — closing deals, hitting targets, and staying sharp in a high-pressure HVAC sales environment where slowing down isn't an option. But here's what's also true: at 50, after a kidney transplant that literally reshaped your body, your physiology has been working against the person you know yourself to be. The belly fat that settled around an asymmetrical abdomen isn't laziness — it's <strong>your body responding to years of immunosuppressants, cortisol, hormonal decline, and the metabolic aftermath of a major organ transplant.</strong> The muscle you've lost is real, and so is the drive to get it back. This protocol is built around four things you told us matter most: a flatter stomach, muscle rebuilt from the ground up, a younger-looking and feeling body, and the kind of vitality that makes you magnetic in every room you walk into. <strong>Nine compounds. Eight weeks. Built specifically around your transplant history, your cardiovascular profile, and your refusal to settle.</strong></p>
+  </div>
+
+  <div class="transplant-alert">
+    <h4>&#9888;&#65039; Critical — Kidney Transplant &amp; Medication Interactions</h4>
+    <p><strong>Humberto, please read this before starting any compound.</strong> You are on a serious immunosuppressant regimen (Tacrolimus + Mycophenolate) plus Carvedilol for cardiovascular support. These medications have narrow therapeutic windows and interact with several compounds in this protocol.</p>
+    <p><strong>Required before starting:</strong> Share this protocol with your nephrologist and cardiologist. Request bloodwork to establish baseline tacrolimus trough levels, kidney function (creatinine, eGFR), and a cardiovascular baseline. Compounds flagged with &#9888; in this protocol require extra physician oversight — do not skip this step.</p>
+    <p><strong>Key concern:</strong> Tacrolimus is nephrotoxic at elevated levels. Any compound that affects metabolism, hormone output, or fluid balance has the potential to shift tacrolimus blood levels. Monitoring trough levels during weeks 2 and 6 of this cycle is strongly recommended.</p>
+  </div>
+
+  <div class="first-injector-note">
+    <h4>&#128204; First-Time Injector — Start Here</h4>
+    <p>You noted you've never injected before — that's completely fine. Every compound in this protocol uses <strong>subcutaneous (SubQ) injections</strong> — shallow injections just under the skin, not into muscle. Use a 29–31 gauge insulin syringe, pinch skin on your abdomen or outer thigh, insert at a 45° angle, inject slowly. Nearly painless when done correctly. Rotate sites daily. You'll be comfortable with the process by week 2.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#8B7335" stroke-width="1.2"/><path d="M5.5 8.5C5.5 8.5 6.5 10.5 8 10.5C9.5 10.5 10.5 8.5 10.5 8.5" stroke="#8B7335" stroke-width="1.2" stroke-linecap="round"/><circle cx="6" cy="6.5" r="0.75" fill="#8B7335"/><circle cx="10" cy="6.5" r="0.75" fill="#8B7335"/></svg></div>
+      <div class="section-title">Your Protocol — 9 Compounds</div>
+    </div>
+    <div class="peptide-grid">
+
+      <div class="peptide-card">
+        <div class="peptide-header">
+          <div><div class="peptide-name">Retatrutide</div><div class="peptide-tagline">Triple Agonist — GLP-1 / GIP / Glucagon · Primary Fat Loss Driver</div></div>
+          <div class="peptide-price">$200</div>
+        </div>
+        <div class="peptide-body">
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">Retatrutide is the most powerful fat loss peptide available — and it's the anchor of this entire stack. It hits GLP-1, GIP, and Glucagon receptors simultaneously, attacking stubborn belly fat from three angles at once. For Humberto specifically, the glucagon component directly increases resting energy expenditure — meaning your body burns more fuel even when you're sitting at your desk between calls. The GLP-1 component quietly suppresses appetite without you having to think about it. The belly fat that accumulated post-transplant, including around the asymmetrical abdomen, is exactly what Retatrutide's visceral fat targeting is designed to address.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 30 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">1 mg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">3–4× per week</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">AM</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">10 units (0.1 mL)</div></div>
+            </div>
+          </div>
+          <div><div class="peptide-section-label">Reconstitution — 30 mg vial + 3 mL BAC water</div>
+            <ol class="recon-steps">
+              <li>Add 3 mL BAC water to the 30 mg vial → concentration = <strong>10 mg/mL</strong></li>
+              <li>Run water slowly down the vial wall — never squirt directly onto powder</li>
+              <li>Gently swirl until dissolved — do not shake</li>
+              <li>Draw <strong>10 units (0.1 mL) = 1 mg dose</strong></li>
+              <li>Each vial = 30 doses at 1 mg. 2 vials = 60 doses — covers full 8-week cycle at 4×/week.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card">
+        <div class="peptide-header">
+          <div><div class="peptide-name">Tirzepatide</div><div class="peptide-tagline">Dual GLP-1 / GIP Agonist · Insulin Sensitivity &amp; Appetite Control</div></div>
+          <div class="peptide-price">$100</div>
+        </div>
+        <div class="peptide-body">
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">Tirzepatide runs alongside Retatrutide as a complementary GLP-1/GIP agonist — hitting the same receptors from a slightly different molecular angle for enhanced synergy. For Humberto, the insulin sensitizing effect is particularly valuable: immunosuppressants like Tacrolimus are well-documented to cause insulin resistance and post-transplant diabetes. Tirzepatide directly counteracts this metabolic consequence of your medications, helping your body process nutrients more efficiently and store less as fat.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 10 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">1 mg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">3× per week</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">AM</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">20 units (0.2 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card">
+        <div class="peptide-header">
+          <div><div class="peptide-name">MOTS-C</div><div class="peptide-tagline">Mitochondrial &amp; Metabolic Reset — Cellular Energy Engine</div></div>
+          <div class="peptide-price">$190</div>
+        </div>
+        <div class="peptide-body">
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">MOTS-C is a mitochondria-derived peptide that activates AMPK — the master metabolic switch that governs cellular energy production. The combination of Tacrolimus, Carvedilol, and years of post-transplant physiological adaptation has suppressed your mitochondrial efficiency significantly. MOTS-C resets this at the root level, amplifying every other fat loss compound in your stack. Critically for your kidney, MOTS-C has been studied for renal protective effects — making it one of the safest choices in this stack for your specific profile.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 40 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">3 mg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">5 on / 2 off (Mon–Fri)</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">AM fasted</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">10 units (0.1 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card flagged">
+        <div class="peptide-header">
+          <div><div class="peptide-name">Epitalon</div><div class="peptide-tagline">Telomerase Activation &amp; Longevity — Anti-Aging at the Cellular Level</div><div class="flag-badge">&#9888; Physician Review Recommended</div></div>
+          <div class="peptide-price">$100</div>
+        </div>
+        <div class="peptide-body">
+          <div class="compound-flag"><h5>&#9888; Transplant Patient Flag</h5><p>Epitalon activates the pineal gland and has immunomodulatory properties. In transplant patients on Tacrolimus and Mycophenolate, any compound that affects immune system regulation warrants physician review before use. <strong>Discuss with your nephrologist before starting this compound specifically.</strong></p></div>
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">Epitalon activates telomerase, the enzyme that lengthens telomeres and slows cellular aging. It also regulates melatonin and circadian rhythm, directly improving poor sleep quality. Better sleep means better cortisol regulation, better muscle recovery, and faster fat loss. This is a 20-day course within the 8-week cycle.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 20 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">2 mg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">Every day × 20 days</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">PM</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">20 units (0.2 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card">
+        <div class="peptide-header">
+          <div><div class="peptide-name">Glutathione</div><div class="peptide-tagline">Master Antioxidant — Kidney Protection &amp; Cellular Defense</div></div>
+          <div class="peptide-price">$110</div>
+        </div>
+        <div class="peptide-body">
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">Glutathione is arguably the safest and most beneficial compound in this entire stack for a kidney transplant patient. Injectable Glutathione delivers near-100% bioavailability and actively supports the liver's detoxification of your medications, reduces oxidative damage to renal tissue, and brightens skin — directly supporting the "look younger" goal. This one genuinely helps protect your kidney while everything else in the stack does its job.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 1500 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">600 mg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">Weekly</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">AM</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">40 units (0.4 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card flagged">
+        <div class="peptide-header">
+          <div><div class="peptide-name">PT-141</div><div class="peptide-tagline">Central Desire &amp; Sexual Health — Bremelanotide</div><div class="flag-badge">&#9888; Cardiovascular Caution</div></div>
+          <div class="peptide-price">$110</div>
+        </div>
+        <div class="peptide-body">
+          <div class="compound-flag"><h5>&#9888; Carvedilol Interaction Flag</h5><p>PT-141 can transiently increase blood pressure. <strong>Start at 250 mcg for your first 1–2 uses and monitor blood pressure before and 1 hour after dosing.</strong></p></div>
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">PT-141 is FDA-approved Bremelanotide — it works centrally via melanocortin receptors to activate sexual desire and arousal at the neurological level. As-needed dosing, 30–60 minutes before activity.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 10 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">500 mcg (start 250)</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">As needed</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">30–60 min before</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">10 units (0.1 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card flagged">
+        <div class="peptide-header">
+          <div><div class="peptide-name">Kisspeptin-10</div><div class="peptide-tagline">Hormonal Axis Activation — Natural Testosterone Support</div><div class="flag-badge">&#9888; Physician Awareness Recommended</div></div>
+          <div class="peptide-price">$110</div>
+        </div>
+        <div class="peptide-body">
+          <div class="compound-flag"><h5>&#9888; Transplant + Hormonal Axis Flag</h5><p>Kisspeptin activates the HPG axis. <strong>Inform your nephrologist that you are using a hormonal axis peptide.</strong></p></div>
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">Tacrolimus is a well-documented cause of testosterone suppression in male transplant patients. Kisspeptin-10 is the upstream signal that triggers the entire testosterone production cascade naturally, without synthetic hormones. Taken nightly before bed, it aligns with the body's natural LH pulse timing.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 5 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">125 mcg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">Every day</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">1 hr before bed</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">5 units (0.05 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card flagged">
+        <div class="peptide-header">
+          <div><div class="peptide-name">Tesamorelin</div><div class="peptide-tagline">FDA-Approved GHRH — Visceral Fat Reduction &amp; GH Optimization</div><div class="flag-badge">&#9888; Monitor Kidney Function</div></div>
+          <div class="peptide-price">$110</div>
+        </div>
+        <div class="peptide-body">
+          <div class="compound-flag"><h5>&#9888; Kidney Transplant + GH Peptide Flag</h5><p><strong>Monitor for signs of fluid retention, and confirm eGFR and creatinine are stable at week 4 bloodwork.</strong></p></div>
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">Tesamorelin is FDA-approved and specifically validated for visceral (belly) fat reduction — making it the most clinically validated choice for Humberto's primary aesthetic concern. It works by stimulating natural GH pulses from the pituitary, directly targeting visceral adipose tissue.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 10 mg</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">1 mg</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">5 on / 2 off</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">AM then AM+PM</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">20 units (0.2 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="peptide-card flagged">
+        <div class="peptide-header">
+          <div><div class="peptide-name">HGH (Somatropin)</div><div class="peptide-tagline">Direct Growth Hormone — Muscle Rebuilding &amp; Body Recomposition</div><div class="flag-badge">&#9888; Nephrologist Clearance Required</div></div>
+          <div class="peptide-price">$150</div>
+        </div>
+        <div class="peptide-body">
+          <div class="compound-flag"><h5>&#9888; Highest Priority Flag — Kidney Transplant + HGH</h5><p><strong>This compound should not be started without explicit nephrologist clearance.</strong> HGH increases glomerular filtration rate and can cause hyperfiltration stress on a transplant kidney.</p></div>
+          <div><div class="peptide-section-label">Why it's in your protocol</div><div class="peptide-text">HGH is the most direct tool for rebuilding the muscle mass Humberto has lost. GH drives protein synthesis, preferentially burns fat as fuel, supports collagen production, and dramatically improves sleep quality and recovery. At 1 IU per dose, this is a conservative, anti-aging level dose — not a bodybuilder protocol.</div></div>
+          <div><div class="peptide-section-label">Dosage &amp; schedule</div>
+            <div class="peptide-details">
+              <div class="detail-box"><div class="label">Vials</div><div class="value">2 × 15 IU</div></div>
+              <div class="detail-box"><div class="label">Dose</div><div class="value">1 IU</div></div>
+              <div class="detail-box"><div class="label">Schedule</div><div class="value">Mon / Wed / Fri</div></div>
+              <div class="detail-box"><div class="label">Timing</div><div class="value">AM fasted</div></div>
+              <div class="detail-box"><div class="label">Route</div><div class="value">SubQ injection</div></div>
+              <div class="detail-box"><div class="label">Draw</div><div class="value">20 units (0.2 mL)</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 8-WEEK CYCLE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1" stroke="#8B7335" stroke-width="1.2"/><path d="M5 1.5V4M11 1.5V4" stroke="#8B7335" stroke-width="1.2" stroke-linecap="round"/><path d="M2 6.5H14" stroke="#8B7335" stroke-width="0.8"/></svg></div>
+      <div class="section-title">8-Week Cycle Overview</div>
+    </div>
+    <div class="week-grid">
+      <div class="week-cell header">Weeks</div><div class="week-cell header">Phase</div><div class="week-cell header">Focus</div><div class="week-cell header">Notes</div>
+      <div class="week-cell phase-ramp"><div class="wk">Weeks 1–2</div></div><div class="week-cell phase-ramp"><div class="phase">Ramp-Up</div></div><div class="week-cell phase-ramp"><div class="note">Establish baseline</div></div><div class="week-cell phase-ramp"><div class="note">Reta + Tirz + MOTS-C + Epitalon + Glutathione. Tesamorelin AM only. Hold HGH pending clearance.</div></div>
+      <div class="week-cell phase-full"><div class="wk">Weeks 3–6</div></div><div class="week-cell phase-full"><div class="phase">Full Protocol</div></div><div class="week-cell phase-full"><div class="note">Peak window</div></div><div class="week-cell phase-full"><div class="note">All 9 compounds running. Add HGH if physician cleared. Tesamorelin AM+PM. Visceral fat mobilizing rapidly.</div></div>
+      <div class="week-cell phase-taper"><div class="wk">Weeks 7–8</div></div><div class="week-cell phase-taper"><div class="phase">Consolidation</div></div><div class="week-cell phase-taper"><div class="note">Lock in results</div></div><div class="week-cell phase-taper"><div class="note">Assess fat loss, muscle definition, energy. Run bloodwork week 8: tacrolimus trough, creatinine, eGFR, testosterone.</div></div>
+    </div>
+  </div>
+
+  <!-- STORAGE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="3" y="2" width="10" height="12" rx="1" stroke="#8B7335" stroke-width="1.2"/><path d="M6 6H10M6 9H8" stroke="#8B7335" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="section-title">Storage &amp; Handling</div>
+    </div>
+    <div class="storage-grid">
+      <div class="storage-card"><h4>Powder vials (before reconstitution)</h4><p>Refrigerate all lyophilized vials at 36–46°F (2–8°C). Keep from light and moisture. Do not freeze. Shelf life 12–24 months unopened.</p></div>
+      <div class="storage-card"><h4>After reconstitution</h4><p>Refrigerate immediately. Use within 30 days (HGH within 21 days). Never freeze. Fresh syringe for every draw — critical with immunosuppression.</p></div>
+      <div class="storage-card"><h4>Bacteriostatic water</h4><p>Use BAC water for all compounds — the benzyl alcohol preservative is essential for multi-draw vials. Order at least 6 BAC vials for this 9-compound stack.</p></div>
+      <div class="storage-card"><h4>Injection hygiene — extra important for transplant patients</h4><p>Always wipe vial stopper and injection site with alcohol prep pad. Let air dry 10 seconds. Never reuse syringes. As an immunosuppressed patient, sterile technique is your single most important habit.</p></div>
+    </div>
+  </div>
+
+  <!-- PRICING TEASER -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#8B7335" stroke-width="1.2"/><path d="M8 5V5.5M8 10.5V11M6.5 7C6.5 6.17 7.17 5.5 8 5.5H8.5C9.33 5.5 10 6.17 10 7C10 7.83 9.33 8.5 8.5 8.5H7.5C6.67 8.5 6 9.17 6 10C6 10.83 6.67 11.5 7.5 11.5H8C8.83 11.5 9.5 10.83 9.5 10" stroke="#8B7335" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="section-title">Protocol Investment — 5 Levels</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      <div style="background:#ffffff;border:1px solid var(--gold-border);border-top:2px solid var(--gold);border-radius:2px;padding:1.25rem 1rem;text-align:center;cursor:pointer;" onclick="switchTab('levels',null)"><div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;">Level 1</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--white);font-weight:600;margin-bottom:4px;">$1,180</div><div style="font-size:10px;color:var(--text-muted);">Full Stack · All 9</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:1.25rem 1rem;text-align:center;cursor:pointer;" onclick="switchTab('levels',null)"><div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;">Level 2</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--white);font-weight:600;margin-bottom:4px;">$860</div><div style="font-size:10px;color:var(--text-muted);">Core Stack · 6</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:1.25rem 1rem;text-align:center;cursor:pointer;" onclick="switchTab('levels',null)"><div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;">Level 3</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--white);font-weight:600;margin-bottom:4px;">$710</div><div style="font-size:10px;color:var(--text-muted);">Starter · 5</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:1.25rem 1rem;text-align:center;cursor:pointer;" onclick="switchTab('levels',null)"><div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;">Level 4</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--white);font-weight:600;margin-bottom:4px;">$490</div><div style="font-size:10px;color:var(--text-muted);">Metabolic Core · 3</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:1.25rem 1rem;text-align:center;cursor:pointer;" onclick="switchTab('levels',null)"><div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;">Level 5</div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--white);font-weight:600;margin-bottom:4px;">$390</div><div style="font-size:10px;color:var(--text-muted);">Kickstart · 2</div></div>
+    </div>
+    <button onclick="switchTab('levels',null)" style="width:100%;padding:1rem;background:var(--gold-dim);border:1px solid var(--gold-border);color:var(--gold);font-family:'Montserrat',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;border-radius:2px;">View All Pricing Levels &rarr;</button>
+  </div>
+
+  <div class="venmo-section">
+    <h3>Ready to <em>Order?</em></h3>
+    <p>Send payment via Venmo and your protocol ships within 24–48 hours. Include your name and level in the note.</p>
+    <a href="https://venmo.com/micahp20" class="venmo-btn">Pay on Venmo</a>
+    <span class="venmo-handle">@micahp20</span>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Important Notice:</strong> This protocol has been prepared by BioLinked Solutions for educational and informational purposes only. It does not constitute medical advice, diagnosis, or treatment. <strong>Humberto — given your kidney transplant history and current immunosuppressant regimen, physician review of this protocol before beginning is not optional — it is essential for your safety.</strong>
+  </div>
+
+</div><!-- /tab-protocol -->
+
+<!-- SUPPLIES TAB -->
+<div id="tab-supplies" class="tab-content">
+  <div class="section" style="margin-top:2rem;">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><path d="M2 3h12l-1 9H3L2 3Z" stroke="#8B7335" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 3V2a1 1 0 011-1h4a1 1 0 011 1v1" stroke="#8B7335" stroke-width="1.2"/></svg></div>
+      <div class="section-title">Supplies — Order Before Day 1</div>
+    </div>
+    <div style="background:rgba(224,92,92,0.07);border:1px solid rgba(224,92,92,0.2);border-left:3px solid #e05c5c;border-radius:2px;padding:0.875rem 1.25rem;margin-top:1rem;margin-bottom:0.5rem;font-size:12px;color:rgba(224,92,92,0.8);line-height:1.65;">
+      <strong style="color:#e05c5c;">⚠ Transplant Patient Priority:</strong> As an immunosuppressed patient, sterile injection technique is your single most important safety habit. Never reuse syringes. Always wipe vial stoppers and injection sites with alcohol.
+    </div>
+    <div class="intro-card" style="margin-top:0.75rem;"><p>Everything you need to run this protocol safely. With 9 compounds and immunosuppressant medications, <strong>sterile technique is your most important habit</strong>. Order all supplies before starting.</p></div>
+    <div class="peptide-grid" style="margin-top:1.5rem;">
+      <div class="supply-card"><div class="supply-hdr"><div><div class="supply-name">Item 1 — Insulin Syringes</div><div class="supply-sub">29–31 Gauge · 1 mL · Never reuse</div></div><a href="https://a.co/d/04JCzBqF" target="_blank" class="order-btn">Order →</a></div><div class="supply-body"><div class="supply-text">One fresh syringe per injection — never reuse, especially with immunosuppression. 29–31 gauge is ultra-fine and nearly painless for SubQ. Buy a 200-pack for a 9-compound protocol.</div></div></div>
+      <div class="supply-card"><div class="supply-hdr"><div><div class="supply-name">Item 2 — Bacteriostatic Water (BAC Water)</div><div class="supply-sub">30 mL Sterile Glass Vials · Order at least 6</div></div><a href="https://www.amazon.com/30-Premium-Glass-Vials-Pack/dp/B0FH2C4JM8/" target="_blank" class="order-btn">Order →</a></div><div class="supply-body"><div class="supply-text">Required to reconstitute all powder vials. Order at least 6 vials — one per compound with spares.</div></div></div>
+      <div class="supply-card"><div class="supply-hdr"><div><div class="supply-name">Item 3 — Alcohol Prep Pads</div><div class="supply-sub">70% Isopropyl · Sterile · 200-Pack</div></div><a href="https://a.co/d/0fnbd8VV" target="_blank" class="order-btn">Order →</a></div><div class="supply-body"><div class="supply-text">Wipe every vial stopper before drawing. Wipe injection site before every injection. Let dry 10 seconds before injecting.</div></div></div>
+      <div class="supply-card"><div class="supply-hdr"><div><div class="supply-name">Item 4 — Sharps Container</div><div class="supply-sub">FDA-Cleared · Puncture-Proof · 2 Quart</div></div><a href="https://a.co/d/0jhnMLPg" target="_blank" class="order-btn">Order →</a></div><div class="supply-body"><div class="supply-text">With 9 compounds you'll accumulate 150–200 used syringes over 8 weeks. Drop off free at any CVS or Walgreens when full.</div></div></div>
+      <div class="supply-card"><div class="supply-hdr"><div><div class="supply-name">Item 5 — Peptide Storage Container</div><div class="supply-sub">Insulated Cold Storage · Organize all 9 vials</div></div><a href="https://a.co/d/07HthwLz" target="_blank" class="order-btn">Order →</a></div><div class="supply-body"><div class="supply-text">9 active vials need to stay refrigerated, organized, and labeled. Label each vial with a marker.</div></div></div>
+    </div>
+    <div class="checklist-wrap">
+      <div class="checklist-title">Quick Order Checklist</div>
+      <div class="checklist-row"><span>1 — Insulin Syringes (29–31G · 1 mL · 200-pack)</span><a href="https://a.co/d/04JCzBqF" target="_blank" class="checklist-link">Order →</a></div>
+      <div class="checklist-row"><span>2 — BAC Water (30 mL sterile glass vials · order 6)</span><a href="https://www.amazon.com/30-Premium-Glass-Vials-Pack/dp/B0FH2C4JM8/" target="_blank" class="checklist-link">Order →</a></div>
+      <div class="checklist-row"><span>3 — Alcohol Prep Pads (70% IPA · 200-pack)</span><a href="https://a.co/d/0fnbd8VV" target="_blank" class="checklist-link">Order →</a></div>
+      <div class="checklist-row"><span>4 — Sharps Container (2 quart · FDA-cleared)</span><a href="https://a.co/d/0jhnMLPg" target="_blank" class="checklist-link">Order →</a></div>
+      <div class="checklist-row"><span>5 — Peptide Storage Container</span><a href="https://a.co/d/07HthwLz" target="_blank" class="checklist-link">Order →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- TRACKER TAB -->
+<div id="tab-tracker" class="tab-content">
+  <div class="section" style="margin-top:2rem;">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="#8B7335" stroke-width="1.2"/><path d="M5 8L7 10L11 6" stroke="#8B7335" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="section-title">Daily Dose Tracker — 8-Week Cycle</div>
+    </div>
+    <div style="background:rgba(224,92,92,0.07);border:1px solid rgba(224,92,92,0.2);border-left:3px solid #e05c5c;border-radius:2px;padding:0.875rem 1.25rem;margin-bottom:1.25rem;font-size:12px;color:rgba(224,92,92,0.8);line-height:1.65;">
+      <strong style="color:#e05c5c;">⚠ Transplant Reminders:</strong> Monitor BP before &amp; after PT-141 first use. Check creatinine/eGFR at weeks 2 &amp; 6. Report urine changes to nephrologist immediately.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:1.5rem;">
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:3px;">Retatrutide</div><div style="font-size:11px;color:var(--text-muted);">1mg · 10u · AM · Mon–Sun</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:3px;">Tirzepatide</div><div style="font-size:11px;color:var(--text-muted);">1mg · 20u · AM · Mon/Wed/Fri</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:3px;">MOTS-C</div><div style="font-size:11px;color:var(--text-muted);">3mg · 23u · AM fasted · Mon–Fri</div></div>
+      <div style="background:#ffffff;border:1px solid rgba(224,138,42,0.3);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:3px;">Epitalon ⚠</div><div style="font-size:11px;color:var(--text-muted);">2mg · 20u · PM · Days 1–20</div></div>
+      <div style="background:#ffffff;border:1px solid var(--border);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:3px;">Glutathione</div><div style="font-size:11px;color:var(--text-muted);">600mg · 40u · AM · Sunday</div></div>
+      <div style="background:#ffffff;border:1px solid rgba(224,138,42,0.3);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:3px;">PT-141 ⚠</div><div style="font-size:11px;color:var(--text-muted);">500mcg · 10u · As needed</div></div>
+      <div style="background:#ffffff;border:1px solid rgba(224,138,42,0.3);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:3px;">Kisspeptin ⚠</div><div style="font-size:11px;color:var(--text-muted);">125mcg · 5u · Bedtime · Daily</div></div>
+      <div style="background:#ffffff;border:1px solid rgba(224,138,42,0.3);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:3px;">Tesamorelin ⚠</div><div style="font-size:11px;color:var(--text-muted);">1mg · 20u · AM+PM · Mon–Fri</div></div>
+      <div style="background:#ffffff;border:1px solid rgba(224,138,42,0.3);border-radius:2px;padding:0.75rem;"><div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);font-weight:600;margin-bottom:3px;">HGH ⚠</div><div style="font-size:11px;color:var(--text-muted);">1IU · 20u · AM fasted · MWF</div></div>
+    </div>
+    <div class="cycle-start-row">
+      <label>Cycle Start Date</label>
+      <input type="date" id="cycleStartDate" onchange="setCycleStart(this.value)">
+      <span class="save-badge" id="saveBadge">Saved ✓</span>
+    </div>
+    <div class="tracker-top">
+      <div class="tracker-stat"><div class="ts-label">Cycle Progress</div><div class="ts-value" id="statWeek">—</div><div class="ts-sub" id="statDay">Set start date above</div></div>
+      <div class="tracker-stat"><div class="ts-label">Doses This Week</div><div class="ts-value" id="statDoses">0</div><div class="ts-sub">logged</div></div>
+      <div class="tracker-stat"><div class="ts-label">Cycle Complete</div><div class="ts-value" id="statPct">0%</div><div class="ts-sub">overall</div></div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-label"><span>8-Week Cycle</span><span id="progressLabel">0 / 56 days</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <div class="week-selector">
+      <button class="week-nav-btn" onclick="changeWeek(-1)">&#8249;</button>
+      <div class="week-label" id="weekLabel">Week 1</div>
+      <button class="week-nav-btn" onclick="changeWeek(1)">&#8250;</button>
+    </div>
+    <div id="trackerGrid"></div>
+    <div class="notes-area">
+      <div class="notes-label">Weekly Notes — Weight, energy, appetite, BP readings, how you feel</div>
+      <textarea class="notes-input" id="weekNotes" placeholder="e.g. Down 3 lbs. Energy up. BP stable at 118/74 after PT-141. Sleeping much better since week 2..." oninput="saveNotes()"></textarea>
+    </div>
+    <div class="tracker-actions">
+      <button class="action-btn" onclick="markAllToday()">&#10003; Mark All Today</button>
+      <button class="action-btn" onclick="clearWeek()">Clear This Week</button>
+      <button class="action-btn primary" onclick="downloadTracker()">&#8675; Download for iOS</button>
+    </div>
+    <div class="ios-download-banner">
+      <div class="ios-banner-text"><strong>Save to iPhone</strong> — Tap Download for iOS, open in Safari, tap Share → Add to Home Screen. Dose logs save locally to your device.</div>
+    </div>
+  </div>
+</div>
+
+<!-- LEVELS TAB -->
+<div id="tab-levels" class="tab-content">
+  <div class="section" style="margin-top:2rem;">
+    <div class="section-header">
+      <div class="section-icon"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#8B7335" stroke-width="1.2"/><path d="M8 5V5.5M8 10.5V11M6.5 7C6.5 6.17 7.17 5.5 8 5.5H8.5C9.33 5.5 10 6.17 10 7C10 7.83 9.33 8.5 8.5 8.5H7.5C6.67 8.5 6 9.17 6 10C6 10.83 6.67 11.5 7.5 11.5H8C8.83 11.5 9.5 10.83 9.5 10" stroke="#8B7335" stroke-width="1.2" stroke-linecap="round"/></svg></div>
+      <div class="section-title">Protocol Investment — Choose Your Level</div>
+    </div>
+    <div class="intro-card" style="margin-top:1rem;">
+      <p>Five levels designed for different starting points and comfort with physician conversations. <strong>Levels 4 and 5 have zero flagged compounds</strong> — the safest entry points for your transplant history. You can always upgrade to a higher level in cycle 2 once your nephrologist has reviewed your baseline.</p>
+    </div>
+
+    <div style="display:flex;border:1px solid var(--gold-border);border-radius:2px 2px 0 0;overflow:hidden;margin-top:2rem;flex-wrap:wrap;">
+      <button onclick="showLevel(1,this)" id="ltab1" style="flex:1;min-width:80px;padding:1rem 0.5rem;background:#ffffff;border:none;border-right:1px solid var(--gold-border);cursor:pointer;text-align:center;">
+        <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;display:block;color:var(--gold);margin-bottom:3px;font-family:Montserrat,sans-serif;font-weight:600;">Level 1</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);display:block;">Full Stack</span>
+        <span style="font-size:10px;display:block;color:var(--text-muted);margin-top:2px;font-family:Montserrat,sans-serif;">All 9 · $1,180</span>
+      </button>
+      <button onclick="showLevel(2,this)" id="ltab2" style="flex:1;min-width:80px;padding:1rem 0.5rem;background:#f0f0f0;border:none;border-right:1px solid var(--gold-border);cursor:pointer;text-align:center;">
+        <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;display:block;color:var(--gold);margin-bottom:3px;font-family:Montserrat,sans-serif;font-weight:600;">Level 2</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);display:block;">Core Stack</span>
+        <span style="font-size:10px;display:block;color:var(--text-muted);margin-top:2px;font-family:Montserrat,sans-serif;">6 compounds · $860</span>
+      </button>
+      <button onclick="showLevel(3,this)" id="ltab3" style="flex:1;min-width:80px;padding:1rem 0.5rem;background:#f0f0f0;border:none;border-right:1px solid var(--gold-border);cursor:pointer;text-align:center;">
+        <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;display:block;color:var(--gold);margin-bottom:3px;font-family:Montserrat,sans-serif;font-weight:600;">Level 3</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);display:block;">Starter</span>
+        <span style="font-size:10px;display:block;color:var(--text-muted);margin-top:2px;font-family:Montserrat,sans-serif;">5 compounds · $710</span>
+      </button>
+      <button onclick="showLevel(4,this)" id="ltab4" style="flex:1;min-width:80px;padding:1rem 0.5rem;background:#f0f0f0;border:none;border-right:1px solid var(--gold-border);cursor:pointer;text-align:center;">
+        <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;display:block;color:var(--gold);margin-bottom:3px;font-family:Montserrat,sans-serif;font-weight:600;">Level 4 ★</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);display:block;">Metabolic</span>
+        <span style="font-size:10px;display:block;color:var(--text-muted);margin-top:2px;font-family:Montserrat,sans-serif;">Reta+MOTS-C+5-Amino · $490</span>
+      </button>
+      <button onclick="showLevel(5,this)" id="ltab5" style="flex:1;min-width:80px;padding:1rem 0.5rem;background:#f0f0f0;border:none;cursor:pointer;text-align:center;">
+        <span style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;display:block;color:var(--gold);margin-bottom:3px;font-family:Montserrat,sans-serif;font-weight:600;">Level 5</span>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);display:block;">Kickstart</span>
+        <span style="font-size:10px;display:block;color:var(--text-muted);margin-top:2px;font-family:Montserrat,sans-serif;">Reta + MOTS-C · $390</span>
+      </button>
+    </div>
+
+    <div id="level1" class="price-table" style="border-top:none;border-radius:0 0 2px 2px;">
+      <div style="background:rgba(139,115,53,0.06);padding:0.875rem 1.75rem;border-bottom:1px solid var(--border);font-size:13px;color:#6a5a30;line-height:1.7;font-weight:300;">Maximum results — all 9 compounds working in full synergy. Physician clearance required for flagged compounds.</div>
+      <div class="price-row"><div><div class="item">Retatrutide</div><div class="qty">2 × 30mg · $100/vial · 3–4× per week</div></div><div class="amt">$200</div></div>
+      <div class="price-row"><div><div class="item">Tirzepatide</div><div class="qty">2 × 10mg · $50/vial · 3× per week</div></div><div class="amt">$100</div></div>
+      <div class="price-row"><div><div class="item">MOTS-C</div><div class="qty">2 × 40mg · $95/vial · 5 on / 2 off</div></div><div class="amt">$190</div></div>
+      <div class="price-row"><div><div class="item">Epitalon ⚠</div><div class="qty">2 × 20mg · $50/vial · 20-day course</div></div><div class="amt">$100</div></div>
+      <div class="price-row"><div><div class="item">Glutathione</div><div class="qty">2 × 1500mg · $55/vial · Weekly</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">PT-141 ⚠</div><div class="qty">2 × 10mg · $55/vial · As needed</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">Kisspeptin ⚠</div><div class="qty">2 × 5mg · $55/vial · Daily before bed</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">Tesamorelin ⚠</div><div class="qty">2 × 10mg · $55/vial · 5 on / 2 off AM+PM</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">HGH (Somatropin) ⚠</div><div class="qty">2 × 15 IU · $75/vial · Mon/Wed/Fri</div></div><div class="amt">$150</div></div>
+      <div class="price-row total"><div><div class="item">Total — Level 1 Full Stack</div><div class="qty">All 9 compounds · 8-week cycle</div></div><div class="amt">$1,180</div></div>
+    </div>
+    <div id="level2" class="price-table" style="display:none;border-top:none;border-radius:0 0 2px 2px;">
+      <div style="background:rgba(139,115,53,0.06);padding:0.875rem 1.75rem;border-bottom:1px solid var(--border);font-size:13px;color:#6a5a30;line-height:1.7;font-weight:300;">Core fat loss and metabolic stack — removes PT-141, Kisspeptin, and Epitalon.</div>
+      <div class="price-row"><div><div class="item">Retatrutide</div><div class="qty">2 × 30mg · $100/vial</div></div><div class="amt">$200</div></div>
+      <div class="price-row"><div><div class="item">Tirzepatide</div><div class="qty">2 × 10mg · $50/vial</div></div><div class="amt">$100</div></div>
+      <div class="price-row"><div><div class="item">MOTS-C</div><div class="qty">2 × 40mg · $95/vial</div></div><div class="amt">$190</div></div>
+      <div class="price-row"><div><div class="item">Glutathione</div><div class="qty">2 × 1500mg · $55/vial</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">Tesamorelin ⚠</div><div class="qty">2 × 10mg · $55/vial</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">HGH ⚠</div><div class="qty">2 × 15 IU · $75/vial</div></div><div class="amt">$150</div></div>
+      <div class="price-row" style="opacity:0.3;"><div><div class="item" style="text-decoration:line-through;color:var(--text-muted);">PT-141 · Kisspeptin · Epitalon</div><div class="qty">Not included</div></div><div class="amt" style="color:var(--text-muted);">—</div></div>
+      <div class="price-row total"><div><div class="item">Total — Level 2 Core Stack</div><div class="qty">6 compounds · 8-week cycle</div></div><div class="amt">$860</div></div>
+    </div>
+    <div id="level3" class="price-table" style="display:none;border-top:none;border-radius:0 0 2px 2px;">
+      <div style="background:rgba(139,115,53,0.06);padding:0.875rem 1.75rem;border-bottom:1px solid var(--border);font-size:13px;color:#6a5a30;line-height:1.7;font-weight:300;">The safest starting stack for a transplant patient — focused on fat loss, metabolic reset, and kidney support.</div>
+      <div class="price-row"><div><div class="item">Retatrutide</div><div class="qty">2 × 30mg · $100/vial</div></div><div class="amt">$200</div></div>
+      <div class="price-row"><div><div class="item">Tirzepatide</div><div class="qty">2 × 10mg · $50/vial</div></div><div class="amt">$100</div></div>
+      <div class="price-row"><div><div class="item">MOTS-C</div><div class="qty">2 × 40mg · $95/vial</div></div><div class="amt">$190</div></div>
+      <div class="price-row"><div><div class="item">Glutathione</div><div class="qty">2 × 1500mg · $55/vial</div></div><div class="amt">$110</div></div>
+      <div class="price-row"><div><div class="item">Tesamorelin ⚠</div><div class="qty">2 × 10mg · $55/vial</div></div><div class="amt">$110</div></div>
+      <div class="price-row" style="opacity:0.3;"><div><div class="item" style="text-decoration:line-through;color:var(--text-muted);">HGH · PT-141 · Kisspeptin · Epitalon</div><div class="qty">Not included</div></div><div class="amt" style="color:var(--text-muted);">—</div></div>
+      <div class="price-row total"><div><div class="item">Total — Level 3 Starter</div><div class="qty">5 compounds · 8-week cycle</div></div><div class="amt">$710</div></div>
+    </div>
+    <div id="level4" class="price-table" style="display:none;border-top:none;border-radius:0 0 2px 2px;">
+      <div style="background:rgba(139,115,53,0.06);padding:0.875rem 1.75rem;border-bottom:1px solid var(--border);font-size:13px;color:#6a5a30;line-height:1.7;font-weight:300;">Retatrutide + MOTS-C + 5-Amino-1MQ — precision metabolic triple stack with zero flagged compounds. <strong style="color:var(--gold);">5-Amino-1MQ is the hidden multiplier:</strong> it inhibits NNMT, the enzyme that depletes your NAD+ reserves. Tacrolimus suppresses mitochondrial NAD+ — 5-Amino-1MQ directly restores the NAD+ pool.</div>
+      <div class="price-row"><div><div class="item">Retatrutide</div><div class="qty">2 × 30mg · $100/vial · 3–4× per week · Primary fat mobilizer</div></div><div class="amt">$200</div></div>
+      <div class="price-row"><div><div class="item">MOTS-C</div><div class="qty">4 × 10mg · $47.50/vial · Mon–Fri · AMPK activation</div></div><div class="amt">$190</div></div>
+      <div class="price-row"><div><div class="item">5-Amino-1MQ</div><div class="qty">4 × 10mg · $25/vial · Daily · NNMT inhibitor — NAD+ restoration</div></div><div class="amt">$100</div></div>
+      <div class="price-row" style="opacity:0.3;"><div><div class="item" style="text-decoration:line-through;color:var(--text-muted);">Tirzepatide · Epitalon · Glutathione · PT-141 · Kisspeptin · Tesamorelin · HGH</div><div class="qty">Not included — can be added in cycle 2</div></div><div class="amt" style="color:var(--text-muted);">—</div></div>
+      <div class="price-row total"><div><div class="item">Total — Level 4 Metabolic Core</div><div class="qty">Reta + MOTS-C + 5-Amino-1MQ · No flagged compounds</div></div><div class="amt">$490</div></div>
+    </div>
+    <div id="level5" class="price-table" style="display:none;border-top:none;border-radius:0 0 2px 2px;">
+      <div style="background:rgba(139,115,53,0.06);padding:0.875rem 1.75rem;border-bottom:1px solid var(--border);font-size:13px;color:#6a5a30;line-height:1.7;font-weight:300;">Reta opens the fat cells. MOTS-C burns what comes out. The essential two-compound fat loss foundation.</div>
+      <div class="price-row"><div><div class="item">Retatrutide</div><div class="qty">2 × 30mg · $100/vial · 3–4× per week</div></div><div class="amt">$200</div></div>
+      <div class="price-row"><div><div class="item">MOTS-C</div><div class="qty">2 × 40mg · $95/vial · Mon–Fri</div></div><div class="amt">$190</div></div>
+      <div class="price-row" style="opacity:0.3;"><div><div class="item" style="text-decoration:line-through;color:var(--text-muted);">5-Amino-1MQ · Tirzepatide · Others</div><div class="qty">Not included — build from here</div></div><div class="amt" style="color:var(--text-muted);">—</div></div>
+      <div class="price-row total"><div><div class="item">Total — Level 5 Kickstart</div><div class="qty">Reta + MOTS-C · Essential fat loss foundation</div></div><div class="amt">$390</div></div>
+    </div>
+
+    <script>
+    function showLevel(n,btn){
+      ["level1","level2","level3","level4","level5"].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display="none";});
+      ["ltab1","ltab2","ltab3","ltab4","ltab5"].forEach(function(id){var el=document.getElementById(id);if(el)el.style.background="#f0f0f0";});
+      var target=document.getElementById("level"+n);if(target)target.style.display="block";
+      if(btn)btn.style.background="#ffffff";
+      if(target)target.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    </script>
+
+    <div class="venmo-section" style="margin-top:2.5rem;">
+      <h3>Ready to <em>Order?</em></h3>
+      <p>Select your level above, then send payment via Venmo. Include your name and level number in the note.</p>
+      <a href="https://venmo.com/micahp20" class="venmo-btn">Pay on Venmo</a>
+      <span class="venmo-handle">@micahp20</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- PRODUCT LINE TAB -->
+<div id="tab-products" class="tab-content">
+  <div class="pl-header">
+    <div class="pl-eyebrow">Bio Linked Peptide Solutions</div>
+    <div class="pl-h1">Product <em>Line</em></div>
+    <p class="pl-sub">Research-grade peptides and compounds. Precisely dosed, professionally sourced.</p>
+  </div>
+  <div class="pl-controls">
+    <div class="pl-search-wrap"><span class="pl-search-icon">&#128269;</span><input type="text" id="plSearch" placeholder="Search products&hellip;" oninput="plApplyFilters()"></div>
+    <div class="pl-filter-btns">
+      <button class="pl-fbtn active" onclick="plSetFilter(this,'all')">All</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'weight')">GLP-1 / Weight</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'healing')">Healing</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'hormone')">GH / Hormone</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'neuro')">Cognitive</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'energy')">Energy / NAD</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'sexual')">Sexual Health</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'cosmetic')">Skin &amp; Hair</button>
+      <button class="pl-fbtn" onclick="plSetFilter(this,'supplies')">Supplies</button>
+    </div>
+  </div>
+  <div class="pl-results-bar"><div id="plResultsInfo"></div></div>
+  <div class="pl-no-results" id="plNoResults"><p>No products found.</p></div>
+  <div class="pl-section" data-plsec="weight"><div class="pl-section-title">GLP-1 &amp; Weight Management</div><div class="pl-product-grid">
+    <div class="pl-multi-card" data-plcat="weight" data-plname="tirzepatide glp1 gip"><div class="pl-multi-name">Tirzepatide</div><div class="pl-multi-desc">Dual GIP/GLP-1 agonist. FDA-approved. 15–22% body weight reduction in trials.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">TR10</span><span class="pl-variant-size">10mg vial</span></div><span class="pl-variant-price">$60</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">TR20</span><span class="pl-variant-size">20mg vial</span></div><span class="pl-variant-price">$90</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">TR30</span><span class="pl-variant-size">30mg vial</span></div><span class="pl-variant-price">$130</span></div></div></div>
+    <div class="pl-multi-card" data-plcat="weight" data-plname="retatrutide triple agonist fat loss"><div class="pl-multi-name">Retatrutide</div><div class="pl-multi-desc">Next-gen triple agonist (GLP-1 + GIP + Glucagon). Up to 24% weight loss in trials.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">RT10</span><span class="pl-variant-size">10mg vial</span></div><span class="pl-variant-price">$45</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">RT20</span><span class="pl-variant-size">20mg vial</span></div><span class="pl-variant-price">$90</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">RT30</span><span class="pl-variant-size">30mg vial</span></div><span class="pl-variant-price">$150</span></div></div></div>
+    <div class="pl-card" data-plcat="weight" data-plname="aod9604 lipolysis fat"><div class="pl-card-top"><div class="pl-card-name">AOD-9604</div><div class="pl-card-price">$45</div></div><div class="pl-card-meta"><span class="pl-card-sku">5AD</span><span class="pl-card-dot"></span><span class="pl-card-strength">5mg vial</span></div><div class="pl-card-desc">hGH fragment targeting lipolysis without affecting blood sugar or IGF-1.</div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="healing"><div class="pl-section-title">Healing &amp; Recovery</div><div class="pl-product-grid">
+    <div class="pl-multi-card" data-plcat="healing" data-plname="bpc157 regenerative tissue repair"><div class="pl-multi-name">BPC-157</div><div class="pl-multi-desc">Gold standard regenerative peptide for muscle, tendon, ligament, gut, and nerve.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">BC5</span><span class="pl-variant-size">5mg vial</span></div><span class="pl-variant-price">$20</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">BC10</span><span class="pl-variant-size">10mg vial</span></div><span class="pl-variant-price">$40</span></div></div></div>
+    <div class="pl-card" data-plcat="healing" data-plname="tb500 thymosin collagen"><div class="pl-card-top"><div class="pl-card-name">TB-500</div><div class="pl-card-price">$23</div></div><div class="pl-card-meta"><span class="pl-card-sku">BT5</span><span class="pl-card-dot"></span><span class="pl-card-strength">5mg vial</span></div><div class="pl-card-desc">Thymosin Beta-4. Drives cell migration, angiogenesis, and collagen synthesis.</div></div>
+    <div class="pl-card" data-plcat="healing energy" data-plname="ss31 elamipretide mitochondrial"><div class="pl-card-top"><div class="pl-card-name">SS-31</div><div class="pl-card-price">$45</div></div><div class="pl-card-meta"><span class="pl-card-sku">2S10</span><span class="pl-card-dot"></span><span class="pl-card-strength">10mg vial</span></div><div class="pl-card-desc">Elamipretide — inner mitochondrial membrane repair. Restores ATP synthesis.</div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="hormone"><div class="pl-section-title">Growth Hormone &amp; Hormone Regulation</div><div class="pl-product-grid">
+    <div class="pl-multi-card" data-plcat="hormone" data-plname="hgh somatropin growth hormone"><div class="pl-multi-name">HGH (Somatropin)</div><div class="pl-multi-desc">Bioidentical recombinant human growth hormone. Protein synthesis, fat burning, tissue repair.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">H10</span><span class="pl-variant-size">10 IU vial</span></div><span class="pl-variant-price">$150</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">H15</span><span class="pl-variant-size">15 IU vial</span></div><span class="pl-variant-price">$200</span></div></div></div>
+    <div class="pl-card" data-plcat="hormone" data-plname="ipamorelin ghrp growth hormone"><div class="pl-card-top"><div class="pl-card-name">Ipamorelin</div><div class="pl-card-price">$40</div></div><div class="pl-card-meta"><span class="pl-card-sku">IP10</span><span class="pl-card-dot"></span><span class="pl-card-strength">10mg vial</span></div><div class="pl-card-desc">Cleanest GHRP — GH pulses without cortisol or prolactin elevation.</div></div>
+    <div class="pl-card" data-plcat="hormone weight" data-plname="tesamorelin visceral fat ghrh"><div class="pl-card-top"><div class="pl-card-name">Tesamorelin</div><div class="pl-card-price">$55</div></div><div class="pl-card-meta"><span class="pl-card-sku">TSM10</span><span class="pl-card-dot"></span><span class="pl-card-strength">10mg vial</span></div><div class="pl-card-desc">FDA-approved GHRH. Clinically proven for visceral fat reduction and lean mass preservation.</div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="neuro"><div class="pl-section-title">Cognitive &amp; Neuroprotection</div><div class="pl-product-grid">
+    <div class="pl-card" data-plcat="neuro" data-plname="semax bdnf cognitive nootropic"><div class="pl-card-top"><div class="pl-card-name">Semax</div><div class="pl-card-price">$45</div></div><div class="pl-card-meta"><span class="pl-card-sku">XA10</span><span class="pl-card-dot"></span><span class="pl-card-strength">10mg vial</span></div><div class="pl-card-desc">ACTH nootropic. Boosts BDNF/NGF and enhances focus and neuroprotection.</div></div>
+    <div class="pl-card" data-plcat="neuro" data-plname="selank anxiety nootropic bdnf"><div class="pl-card-top"><div class="pl-card-name">Selank</div><div class="pl-card-price">$45</div></div><div class="pl-card-meta"><span class="pl-card-sku">SK10</span><span class="pl-card-dot"></span><span class="pl-card-strength">10mg vial</span></div><div class="pl-card-desc">Anxiolytic nootropic — no sedation or dependency. Elevates BDNF and reduces anxiety.</div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="energy"><div class="pl-section-title">Energy, NAD &amp; Metabolic</div><div class="pl-product-grid">
+    <div class="pl-card" data-plcat="energy" data-plname="nad+ nicotinamide anti-aging sirtuin"><div class="pl-card-top"><div class="pl-card-name">NAD+</div><div class="pl-card-price">$65</div></div><div class="pl-card-meta"><span class="pl-card-sku">NJ500</span><span class="pl-card-dot"></span><span class="pl-card-strength">500mg vial</span></div><div class="pl-card-desc">Universal coenzyme of cellular energy and DNA repair. Restores mitochondrial function.</div></div>
+    <div class="pl-multi-card" data-plcat="energy" data-plname="glutathione antioxidant detox"><div class="pl-multi-name">Glutathione</div><div class="pl-multi-desc">Master antioxidant. Liver detoxification, immune defense, mitochondrial integrity, skin brightening.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">GTT600</span><span class="pl-variant-size">600mg vial</span></div><span class="pl-variant-price">$28</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">GTT1500</span><span class="pl-variant-size">1,500mg vial</span></div><span class="pl-variant-price">$40</span></div></div></div>
+    <div class="pl-multi-card" data-plcat="energy" data-plname="mots-c mitochondrial ampk metabolic"><div class="pl-multi-name">MOTS-c</div><div class="pl-multi-desc">Mitochondrial peptide activating AMPK for fat oxidation and metabolic resilience.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">MS10</span><span class="pl-variant-size">10mg vial</span></div><span class="pl-variant-price">$35</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">MS40</span><span class="pl-variant-size">40mg vial</span></div><span class="pl-variant-price">$140</span></div></div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="sexual"><div class="pl-section-title">Sexual Health</div><div class="pl-product-grid">
+    <div class="pl-card" data-plcat="sexual" data-plname="pt141 bremelanotide libido desire"><div class="pl-card-top"><div class="pl-card-name">PT-141</div><div class="pl-card-price">$28</div></div><div class="pl-card-meta"><span class="pl-card-sku">P41</span><span class="pl-card-dot"></span><span class="pl-card-strength">10mg vial</span></div><div class="pl-card-desc">FDA-approved Bremelanotide. Central MC3R/MC4R activation for desire and arousal.</div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="cosmetic"><div class="pl-section-title">Skin &amp; Hair</div><div class="pl-product-grid">
+    <div class="pl-multi-card" data-plcat="cosmetic healing" data-plname="ghk-cu copper peptide collagen skin"><div class="pl-multi-name">GHK-Cu</div><div class="pl-multi-desc">Gold standard copper peptide. Collagen/elastin synthesis, hair follicle health, oxidative damage repair.</div><div class="pl-variants"><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">CU50</span><span class="pl-variant-size">50mg vial</span></div><span class="pl-variant-price">$30</span></div><div class="pl-variant-row"><div class="pl-variant-left"><span class="pl-variant-sku">CU100</span><span class="pl-variant-size">100mg vial</span></div><span class="pl-variant-price">$60</span></div></div></div>
+  </div></div>
+  <div class="pl-section" data-plsec="supplies"><div class="pl-section-title">Supplies &amp; Accessories</div>
+    <div class="pl-supply-row" data-plcat="supplies" data-plname="bacteriostatic water bac reconstitution"><div><div class="pl-supply-name">Bacteriostatic Water</div><div class="pl-supply-detail">Sterile water with preservative for peptide reconstitution</div></div><div class="pl-supply-right"><span class="pl-supply-size">3mL</span><span class="pl-supply-price">$4</span></div></div>
+    <div class="pl-supply-row" data-plcat="supplies" data-plname="bacteriostatic water bac reconstitution"><div><div class="pl-supply-name">Bacteriostatic Water</div><div class="pl-supply-detail">Sterile water with preservative for peptide reconstitution</div></div><div class="pl-supply-right"><span class="pl-supply-size">10mL</span><span class="pl-supply-price">$6</span></div></div>
+  </div>
+  <div class="pl-disclaimer"><strong>Research Use Only.</strong> All products for research and educational purposes only. Not FDA-approved for human use unless stated. Consult a qualified healthcare provider before beginning any peptide protocol.</div>
+</div>
+
+
+</div><!-- /container -->
+
+<div class="footer">
+  Prepared by <strong>Bio Linked Peptide Solutions</strong> &nbsp;&middot;&nbsp; Personalized Protocol for Humberto Garza &nbsp;&middot;&nbsp; 8-Week Fat Loss &amp; Vitality Cycle
+</div>
+
+<script>
+const COMPOUNDS = [
+  {id:'reta',  name:'Retatrutide',  sub:'1mg · 10u · AM',            days:[1,2,3,4,5,0], prn:false},
+  {id:'tirz',  name:'Tirzepatide',  sub:'1mg · 20u · AM',            days:[1,3,5],        prn:false},
+  {id:'motsc', name:'MOTS-C',       sub:'3mg · 23u · AM fasted',     days:[1,2,3,4,5],    prn:false},
+  {id:'epita', name:'Epitalon',     sub:'2mg · 20u · PM (days 1–20)',days:[0,1,2,3,4,5,6],prn:false},
+  {id:'glut',  name:'Glutathione',  sub:'600mg · 40u · AM',          days:[0],             prn:false},
+  {id:'pt141', name:'PT-141 ⚠',    sub:'500mcg · 10u · as needed',  days:[],              prn:true},
+  {id:'kiss',  name:'Kisspeptin ⚠', sub:'125mcg · 5u · bedtime',    days:[0,1,2,3,4,5,6],prn:false},
+  {id:'tesa',  name:'Tesamorelin ⚠',sub:'1mg · 20u · AM+PM',        days:[1,2,3,4,5],    prn:false},
+  {id:'hgh',   name:'HGH ⚠',       sub:'1IU · 20u · AM fasted',    days:[1,3,5],         prn:false},
+];
+const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const TOTAL_WEEKS=8,TOTAL_DAYS=56;
+let currentWeek=1,state={},cycleStartDate=null;
+
+function loadState(){try{const s=localStorage.getItem('humbertoProtocolState');if(s)state=JSON.parse(s);}catch(e){}try{const d=localStorage.getItem('humbertoCycleStart');if(d){cycleStartDate=new Date(d);document.getElementById('cycleStartDate').value=d;}}catch(e){}updateStats();}
+function saveState(){try{localStorage.setItem('humbertoProtocolState',JSON.stringify(state));const b=document.getElementById('saveBadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1500);}catch(e){}}
+function saveNotes(){if(!state[currentWeek])state[currentWeek]={};state[currentWeek].__notes=document.getElementById('weekNotes').value;saveState();}
+function setCycleStart(val){cycleStartDate=val?new Date(val):null;try{localStorage.setItem('humbertoCycleStart',val);}catch(e){}updateStats();const b=document.getElementById('saveBadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1500);}
+function isScheduled(c,dow){return c.days.includes(dow);}
+function isDoseTaken(w,cid,di){return!!(state[w]&&state[w][cid]&&state[w][cid][di]);}
+function toggleDose(w,cid,di){if(!state[w])state[w]={};if(!state[w][cid])state[w][cid]={};state[w][cid][di]=!state[w][cid][di];saveState();renderGrid();updateStats();}
+
+function renderGrid(){
+  const container=document.getElementById('trackerGrid');
+  const weekDates=getWeekDates(currentWeek);
+  let html='';
+  html+='<div class="day-header-row"><div></div><div class="day-headers-inner">';
+  for(let d=0;d<7;d++){const dayName=DAY_NAMES[(d+1)%7];const dateStr=weekDates?weekDates[d].getDate():'';const allRest=COMPOUNDS.filter(c=>!c.prn).every(c=>!isScheduled(c,(d+1)%7));html+='<div class="day-header'+(allRest?' rest-day':'')+'">' +dayName+(dateStr?'<br><span style="font-size:9px;font-weight:300;color:#888">'+dateStr+'</span>':'')+'</div>';}
+  html+='</div></div>';
+  COMPOUNDS.forEach(c=>{
+    html+='<div class="tracker-grid-wrap"><div class="tracker-compound-label"><div class="compound-badge">'+c.name+'<span>'+c.sub+'</span></div></div><div class="day-row">';
+    for(let d=0;d<7;d++){const dow=(d+1)%7;const taken=isDoseTaken(currentWeek,c.id,d);if(c.prn){html+='<div class="dose-cell prn'+(taken?' taken':'')+'" onclick="toggleDose('+currentWeek+',\''+c.id+'\','+d+')"></div>';}else if(!isScheduled(c,dow)){html+='<div class="dose-cell rest"></div>';}else if(taken){html+='<div class="dose-cell scheduled taken" onclick="toggleDose('+currentWeek+',\''+c.id+'\','+d+')"></div>';}else{html+='<div class="dose-cell scheduled" onclick="toggleDose('+currentWeek+',\''+c.id+'\','+d+')"></div>';}}
+    html+='</div></div>';
+  });
+  container.innerHTML=html;
+  document.getElementById('weekNotes').value=state[currentWeek]&&state[currentWeek].__notes?state[currentWeek].__notes:'';
+  document.getElementById('weekLabel').textContent='Week '+currentWeek;
+}
+
+function getWeekDates(w){if(!cycleStartDate)return null;const start=new Date(cycleStartDate);start.setDate(start.getDate()+(w-1)*7);const dates=[];for(let i=0;i<7;i++){const d=new Date(start);d.setDate(d.getDate()+i);dates.push(d);}return dates;}
+function changeWeek(delta){const n=currentWeek+delta;if(n<1||n>TOTAL_WEEKS)return;currentWeek=n;renderGrid();}
+function markAllToday(){const dow=new Date().getDay();let di=-1;for(let d=0;d<7;d++){if((d+1)%7===dow){di=d;break;}}if(di<0)return;if(!state[currentWeek])state[currentWeek]={};COMPOUNDS.forEach(c=>{if(c.prn)return;if(isScheduled(c,dow)){if(!state[currentWeek][c.id])state[currentWeek][c.id]={};state[currentWeek][c.id][di]=true;}});saveState();renderGrid();updateStats();}
+function clearWeek(){if(!confirm('Clear all dose logs for Week '+currentWeek+'?'))return;const notes=state[currentWeek]&&state[currentWeek].__notes;state[currentWeek]={};if(notes)state[currentWeek].__notes=notes;saveState();renderGrid();updateStats();}
+function updateStats(){let weekText='Week '+currentWeek,dayText='of 8-week cycle';if(cycleStartDate){const now=new Date();const diff=Math.floor((now-cycleStartDate)/86400000);const cw=Math.min(TOTAL_WEEKS,Math.max(1,Math.floor(diff/7)+1));weekText='Week '+cw;dayText='Day '+Math.min(diff+1,TOTAL_DAYS)+' of '+TOTAL_DAYS;if(currentWeek===1&&cw>1)currentWeek=cw;const pct=Math.min(100,Math.round((diff/TOTAL_DAYS)*100));document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressLabel').textContent=Math.min(diff+1,TOTAL_DAYS)+' / '+TOTAL_DAYS+' days';document.getElementById('statPct').textContent=pct+'%';}document.getElementById('statWeek').textContent=weekText;document.getElementById('statDay').textContent=dayText;let dc=0,sc=0;for(let d=0;d<7;d++){const dow=(d+1)%7;COMPOUNDS.filter(c=>!c.prn).forEach(c=>{if(isScheduled(c,dow)){sc++;if(isDoseTaken(currentWeek,c.id,d))dc++;}});}document.getElementById('statDoses').textContent=dc+'/'+sc;}
+
+function switchTab(tab,event){
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
+  const tabEl=document.getElementById('tab-'+tab);if(tabEl)tabEl.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(function(t){const tn=t.getAttribute('onclick')||'';if(tn.indexOf("'"+tab+"'")!==-1)t.classList.add('active');});
+  if(tab==='tracker'){renderGrid();updateStats();}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function downloadTracker(){alert('Download feature: save this page as an HTML file and open in Safari on iPhone.');}
+
+loadState();
+renderGrid();
+
+// PRODUCT LINE
+let plActiveFilter = 'all';
+function plSetFilter(btn,cat){document.querySelectorAll('.pl-fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');plActiveFilter=cat;plApplyFilters();}
+function plApplyFilters(){const q=(document.getElementById('plSearch').value||'').toLowerCase().trim();const items=document.querySelectorAll('.pl-card,.pl-multi-card,.pl-supply-row');let v=0;items.forEach(item=>{const catOk=plActiveFilter==='all'||(item.dataset.plcat||'').includes(plActiveFilter);const srchOk=!q||(item.dataset.plname||'').includes(q)||item.textContent.toLowerCase().includes(q);item.classList.toggle('pl-hidden',!(catOk&&srchOk));if(catOk&&srchOk)v++;});document.querySelectorAll('[data-plsec]').forEach(sec=>{const vis=sec.querySelectorAll('.pl-card:not(.pl-hidden),.pl-multi-card:not(.pl-hidden),.pl-supply-row:not(.pl-hidden)').length;sec.style.display=vis===0?'none':'';});const ri=document.getElementById('plResultsInfo');if(ri)ri.innerHTML='Showing <span>'+v+'</span> of '+items.length+' products';const nr=document.getElementById('plNoResults');if(nr)nr.classList.toggle('show',v===0);}
+
+</script>
+</body>
+</html>
