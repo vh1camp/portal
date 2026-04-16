@@ -509,6 +509,10 @@ if('serviceWorker' in navigator){
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span>My Profile</span>
     </button>
+    <button class="more-item" id="cb-clinicians" onclick="cView('clinicians');closeMoreC()" type="button">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clinicians
+    </button>
     <button class="more-item" id="cb-campinfo" onclick="cView('campinfo');closeMoreC()" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
       <span>Camp Info</span>
@@ -516,6 +520,15 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 <div class="view on" id="cv-home">
+<div id="campAnnouncement" style="display:none;background:linear-gradient(135deg,#1a0800,#2a1000);border:1px solid var(--orb);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <span style="font-size:20px;flex-shrink:0">📢</span>
+    <div style="flex:1">
+      <div style="font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.1em;color:var(--or);margin-bottom:4px">ANNOUNCEMENT</div>
+      <div style="font-size:13px;color:#f0f0eb;line-height:1.6" id="campAnnouncementText"></div>
+    </div>
+  </div>
+</div>
 <div class="card stripe" style="padding:16px;margin-bottom:12px">
 <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);margin-bottom:3px">Welcome back</div>
 <div style="font-family:'Oswald',sans-serif;font-size:36px;color:var(--white)" id="cwname"></div>
@@ -545,6 +558,10 @@ if('serviceWorker' in navigator){
 <div class="view" id="cv-schedule">
 <div class="stitle" style="margin-bottom:14px">MY <span>SCHEDULE</span></div>
 <div id="cvSchContent"><div class="schedule-empty"><div class="schedule-empty-txt">Schedule Coming Soon</div><div class="schedule-empty-sub">Your schedule will appear here once published by the director.</div></div></div>
+</div>
+<div class="view" id="cv-clinicians">
+<div class="stitle" style="margin-bottom:14px">CAMP <span>CLINICIANS</span></div>
+<div id="cvClinicianGrid" style="display:flex;flex-direction:column;gap:12px"></div>
 </div>
 <div class="view" id="cv-campinfo">
 <div class="stitle">CAMP <span>INFO</span></div>
@@ -612,10 +629,21 @@ if('serviceWorker' in navigator){
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span>My Profile</span>
     </button>
+    <button class="more-item" id="sb-clinicians" onclick="sView('clinicians');closeMoreS()" type="button">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clinicians
+    </button>
     <button class="more-item" id="sb-campinfo" onclick="sView('campinfo');closeMoreS()" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
       <span>Camp Info</span>
     </button>
+  </div>
+</div>
+<div id="staffAnnouncement" style="display:none;background:linear-gradient(135deg,#1a0800,#2a1000);border:1px solid var(--orb);border-radius:var(--r);padding:14px 16px;margin:12px 0" class="staff-announce-bar">
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <span style="font-size:18px;flex-shrink:0">📢</span>
+    <div><div style="font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:.1em;color:var(--or);margin-bottom:3px">ANNOUNCEMENT</div>
+    <div style="font-size:12px;color:#f0f0eb;line-height:1.6" id="staffAnnouncementText"></div></div>
   </div>
 </div>
 <div class="view on" id="sv-evaluate">
@@ -661,6 +689,10 @@ if('serviceWorker' in navigator){
 <div class="stitle">CAMP <span>INFO</span></div>
 <div id="svCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
 <div id="svCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
+</div>
+<div class="view" id="sv-clinicians">
+<div class="stitle" style="margin-bottom:14px">CAMP <span>CLINICIANS</span></div>
+<div id="svClinicianGrid" style="display:flex;flex-direction:column;gap:12px"></div>
 </div>
 <div class="view" id="sv-myprofile">
 <div class="stitle">MY <span>PROFILE</span></div>
@@ -722,9 +754,17 @@ if('serviceWorker' in navigator){
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Schedule
     </button>
+    <button class="admin-more-item" id="atab-dailyview" onclick="aTabMore('dailyview')" type="button">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Daily View
+    </button>
     <button class="admin-more-item" id="atab-campinfo" onclick="aTabMore('campinfo')" type="button">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Camp Info
+    </button>
+    <button class="admin-more-item" id="atab-evaltracker" onclick="aTabMore('evaltracker')" type="button">
+      <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Eval Tracker
     </button>
     <button class="admin-more-item" id="atab-emailblast" onclick="aTabMore('emailblast')" type="button">
       <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -803,6 +843,8 @@ if('serviceWorker' in navigator){
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
 <div class="stitle" style="margin:0">OFFICIAL <span>RANKINGS</span></div>
 <button class="btn bor bsm" onclick="renderAdminRankings()" type="button">🔄 Refresh</button>
+<button class="btn bor bsm" onclick="generateAllReports()" type="button" style="background:var(--or);color:#000;border-color:var(--or)">📄 Export All Reports</button>
+<button class="btn bor bsm" onclick="generateCamperReport(null,'prompt')" type="button">📄 Single Report</button>
 </div>
 <div class="fchips" id="rankFilter"></div>
 <div id="arankcon"></div>
@@ -874,6 +916,19 @@ if('serviceWorker' in navigator){
 </div>
 </div>
 </div>
+<div class="tc" id="at-dailyview">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+  <div class="stitle" style="margin:0">DAILY <span>VIEW</span></div>
+  <div style="display:flex;gap:6px">
+    <button class="btn bsec bsm" onclick="setDailyDay('Thursday June 18, 2026',this)" id="dvd1" style="background:var(--or);color:#000">Thu 6/18</button>
+    <button class="btn bsec bsm" onclick="setDailyDay('Friday June 19, 2026',this)" id="dvd2">Fri 6/19</button>
+    <button class="btn bsec bsm" onclick="setDailyDay('Saturday June 20, 2026',this)" id="dvd3">Sat 6/20</button>
+  </div>
+</div>
+<div id="dvDayLabel" style="font-size:11px;color:var(--tx3);margin-bottom:12px;letter-spacing:.08em;text-transform:uppercase">Thursday June 18, 2026</div>
+<div id="dvContent"><div class="empty"><span class="ei">📅</span><div class="et">No Schedule Yet</div></div></div>
+</div>
+
 <div class="tc" id="at-campinfo">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
   <div class="stitle" style="margin:0">CAMP <span>INFO</span></div>
@@ -890,6 +945,19 @@ if('serviceWorker' in navigator){
   <div id="campInfoEmailStatus" style="margin-top:8px;font-size:12px;color:var(--tx2)"></div>
 </div>
 </div>
+<div class="tc" id="at-dailyview">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+  <div class="stitle" style="margin:0">DAILY <span>VIEW</span></div>
+  <div style="display:flex;gap:6px">
+    <button class="btn bsec bsm" onclick="setDailyDay('Thursday June 18, 2026',this)" id="dvd1" style="background:var(--or);color:#000">Thu 6/18</button>
+    <button class="btn bsec bsm" onclick="setDailyDay('Friday June 19, 2026',this)" id="dvd2">Fri 6/19</button>
+    <button class="btn bsec bsm" onclick="setDailyDay('Saturday June 20, 2026',this)" id="dvd3">Sat 6/20</button>
+  </div>
+</div>
+<div id="dvDayLabel" style="font-size:11px;color:var(--tx3);margin-bottom:12px;letter-spacing:.08em;text-transform:uppercase">Thursday June 18, 2026</div>
+<div id="dvContent"><div class="empty"><span class="ei">📅</span><div class="et">No Schedule Yet</div></div></div>
+</div>
+
 <div class="tc" id="at-campinfo">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
   <div class="stitle" style="margin:0">CAMP <span>INFO</span></div>
@@ -906,6 +974,23 @@ if('serviceWorker' in navigator){
   <div id="campInfoEmailStatus" style="margin-top:8px;font-size:12px;color:var(--tx2)"></div>
 </div>
 </div>
+<div class="tc" id="at-evaltracker">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+  <div class="stitle" style="margin:0">EVAL <span>TRACKER</span></div>
+  <button class="btn bor bsm" onclick="renderEvalTracker()" type="button">🔄 Refresh</button>
+</div>
+<div id="etSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+<div style="margin-bottom:10px">
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <button class="fchip on" id="etf-all" onclick="setEvalFilter('all',this)">All Campers</button>
+    <button class="fchip" id="etf-none" onclick="setEvalFilter('none',this)">Not Evaluated</button>
+    <button class="fchip" id="etf-partial" onclick="setEvalFilter('partial',this)">Partially Evaluated</button>
+    <button class="fchip" id="etf-complete" onclick="setEvalFilter('complete',this)">Fully Evaluated</button>
+  </div>
+</div>
+<div id="etContent"></div>
+</div>
+
 <div class="tc" id="at-emailblast">
 <div class="stitle" style="margin-bottom:14px">EMAIL <span>BLAST</span></div>
 
@@ -965,6 +1050,13 @@ if('serviceWorker' in navigator){
 <div>
 <div class="stitle" style="margin-bottom:10px">APP <span>CONTROLS</span></div>
 <div class="card" style="padding:15px;margin-bottom:14px">
+<div style="margin-bottom:12px">
+  <label class="flabel">📢 Announcement Banner</label>
+  <textarea class="finput" id="announcementText" placeholder="Leave blank to hide banner..." style="min-height:70px;resize:vertical;margin-bottom:6px" oninput="previewAnnouncement(this.value)"></textarea>
+  <button class="btn bor bsm" style="width:100%;justify-content:center;padding:10px" onclick="saveAnnouncement()" type="button">SAVE ANNOUNCEMENT</button>
+  <div style="font-size:11px;color:var(--tx3);margin-top:5px">Appears at the top of every camper and staff screen. Clear text to hide.</div>
+</div>
+<div style="height:1px;background:var(--b2);margin-bottom:12px"></div>
 <div class="trow"><div><div style="font-size:13px;color:var(--tx)">Evaluations Open</div><div style="font-size:11px;color:var(--tx3)">Staff can submit scores</div></div><label class="toggle"><input type="checkbox" id="tEvals" checked onchange="saveSetting('evals_open',this.checked)"><span class="tslider"></span></label></div>
 <div class="trow"><div><div style="font-size:13px;color:var(--tx)">Results Released</div><div style="font-size:11px;color:var(--tx3)">Campers see final scores</div></div><label class="toggle"><input type="checkbox" id="tResults" onchange="saveSetting('results_released',this.checked)"><span class="tslider"></span></label></div>
 </div>
@@ -1541,7 +1633,7 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')">Edit</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">Del</button></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">Del</button></td>`;
     tbody.appendChild(tr);
   });
   // Keep arrow in sync
@@ -2962,6 +3054,186 @@ function closeMoreS(){
 }
 
 // ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// FEATURE 1: ANNOUNCEMENT BANNER
+// ═══════════════════════════════════════════════════════
+function loadAnnouncement(){
+  const text = settings['announcement'] || '';
+  const camperEl = document.getElementById('campAnnouncement');
+  const camperTxt = document.getElementById('campAnnouncementText');
+  const staffEl = document.getElementById('staffAnnouncement');
+  const staffTxt = document.getElementById('staffAnnouncementText');
+  const adminInput = document.getElementById('announcementText');
+  if(adminInput) adminInput.value = text;
+  if(camperEl && camperTxt){ camperEl.style.display = text ? '' : 'none'; camperTxt.textContent = text; }
+  if(staffEl && staffTxt){ staffEl.style.display = text ? '' : 'none'; staffTxt.textContent = text; }
+}
+async function saveAnnouncement(){
+  const text = document.getElementById('announcementText')?.value?.trim() || '';
+  try{
+    const existing = await supa('settings','GET',null,'?key=eq.announcement');
+    if(existing && existing.length > 0){ await supa('settings','PATCH',{value:text},'?key=eq.announcement'); }
+    else { await supa('settings','POST',{key:'announcement',value:text}); }
+    settings['announcement'] = text;
+    loadAnnouncement();
+    toast(text ? '📢 Announcement saved & live' : '✅ Announcement cleared');
+  }catch(e){ toast('Error saving announcement',true); }
+}
+
+// ═══════════════════════════════════════════════════════
+// FEATURE 2: DAILY SCHEDULE VIEW
+// ═══════════════════════════════════════════════════════
+let _dailyViewDay = 'Thursday June 18, 2026';
+function setDailyDay(day, btn){
+  _dailyViewDay = day;
+  ['dvd1','dvd2','dvd3'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.style.background=''; el.style.color=''; }
+  });
+  if(btn){ btn.style.background='var(--or)'; btn.style.color='#000'; }
+  const lbl = document.getElementById('dvDayLabel');
+  if(lbl) lbl.textContent = day;
+  renderDailyView();
+}
+function renderDailyView(){
+  const con = document.getElementById('dvContent');
+  if(!con) return;
+  const daySlots = scheduleData
+    .filter(s => s.day === _dailyViewDay)
+    .sort((a,b) => timeToMinutes(a.time_slot) - timeToMinutes(b.time_slot));
+  if(!daySlots.length){
+    con.innerHTML='<div class="empty"><span class="ei">📅</span><div class="et">No Games Scheduled</div><div class="es">Add slots in the Schedule Builder</div></div>';
+    return;
+  }
+  const byTime = {};
+  daySlots.forEach(s=>{ if(!byTime[s.time_slot]) byTime[s.time_slot]=[]; byTime[s.time_slot].push(s); });
+  let html = '';
+  Object.keys(byTime).sort((a,b)=>timeToMinutes(a)-timeToMinutes(b)).forEach(time=>{
+    const slots = byTime[time];
+    html += '<div style="margin-bottom:18px"><div style="font-family:\'Oswald\',sans-serif;font-size:14px;letter-spacing:.08em;color:var(--or);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--orb)">'+time+' <span style="font-size:11px;color:var(--tx3);font-family:\'Source Sans 3\',sans-serif;letter-spacing:0">'+slots.length+' game'+(slots.length!==1?'s':'')+'</span></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">';
+    slots.forEach(s=>{
+      const c1 = campers.find(x=>x.id===s.camper_1_id);
+      const c2 = campers.find(x=>x.id===s.camper_2_id);
+      const c3 = campers.find(x=>x.id===s.camper_3_id);
+      const cl = clinicians.find(x=>x.id===s.clinician_id);
+      const clName = cl ? (cl.name||cl.first_name+' '+cl.last_name) : '—';
+      const evals1 = c1 ? evaluations.filter(e=>e.camper_id===c1.id).length : 0;
+      const evals2 = c2 ? evaluations.filter(e=>e.camper_id===c2.id).length : 0;
+      html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px"><div style="font-family:\'Oswald\',sans-serif;font-size:16px;color:var(--or);margin-bottom:6px">'+s.court+'</div>'+(c1?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c1.first_name+' '+c1.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals1+' eval'+(evals1!==1?'s':'')+'</span></div>':'')+(c2?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c2.first_name+' '+c2.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals2+' eval'+(evals2!==1?'s':'')+'</span></div>':'')+(c3?'<div style="font-size:12px;color:var(--tx3)">'+c3.first_name+' '+c3.last_name+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--b2)">Clinician: '+clName+'</div></div>';
+    });
+    html += '</div></div>';
+  });
+  con.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// FEATURE 3: EVAL COMPLETION TRACKER
+// ═══════════════════════════════════════════════════════
+let _evalFilter = 'all';
+function setEvalFilter(filter, btn){
+  _evalFilter = filter;
+  document.querySelectorAll('[id^="etf-"]').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  renderEvalTracker();
+}
+function renderEvalTracker(){
+  const sumCon = document.getElementById('etSummary');
+  const con = document.getElementById('etContent');
+  if(!con) return;
+  const total = campers.length;
+  const evaluated = campers.filter(c=>evaluations.some(e=>e.camper_id===c.id)).length;
+  const noEval = total - evaluated;
+  if(sumCon){
+    sumCon.innerHTML =
+      '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--grn)">'+evaluated+'</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Evaluated</div></div>'+
+      '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--or)">'+noEval+'</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Not Evaluated</div></div>'+
+      '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--or)">'+(total?Math.round(evaluated/total*100):0)+'%</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Complete</div></div>';
+  }
+  let list = [...campers].sort((a,b)=>(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
+  if(_evalFilter==='none') list = list.filter(c=>!evaluations.some(e=>e.camper_id===c.id));
+  if(_evalFilter==='partial') list = list.filter(c=>{ const n=evaluations.filter(e=>e.camper_id===c.id).length; return n>0&&n<2; });
+  if(_evalFilter==='complete') list = list.filter(c=>evaluations.filter(e=>e.camper_id===c.id).length>=2);
+  if(!list.length){ con.innerHTML='<div class="empty"><span class="ei">✅</span><div class="et">All Good</div></div>'; return; }
+  con.innerHTML = list.map(c=>{
+    const evs = evaluations.filter(e=>e.camper_id===c.id);
+    const n = evs.length;
+    const avg = n ? (evs.map(e=>e.overall_score||0).reduce((a,b)=>a+b,0)/n).toFixed(1) : '—';
+    const clinNames = [...new Set(evs.map(e=>e.clinician_name).filter(Boolean))];
+    const pct = Math.min(100, Math.round(n/3*100));
+    const barColor = n===0?'var(--red2)':n<2?'var(--or)':'var(--grn)';
+    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:600;color:var(--tx)">'+c.first_name+' '+c.last_name+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.city||'')+(c.state?', '+c.state:'')+'</div></div><div style="text-align:right"><div style="font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+avg+'</div><div style="font-size:10px;color:var(--tx3)">'+n+' eval'+(n!==1?'s':'')+'</div></div></div><div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'+(clinNames.length?'<div style="font-size:10px;color:var(--tx3)">By: '+clinNames.join(', ')+'</div>':'<div style="font-size:10px;color:var(--red2)">⚠ No evaluations yet</div>')+'</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FEATURE 4: CLINICIANS PAGE
+// ═══════════════════════════════════════════════════════
+function renderCliniciansPage(containerId){
+  const con = document.getElementById(containerId);
+  if(!con) return;
+  const list = [...clinicians].sort((a,b)=>{
+    const an = a.name||(a.first_name||'')+' '+(a.last_name||'');
+    const bn = b.name||(b.first_name||'')+' '+(b.last_name||'');
+    return an.localeCompare(bn);
+  });
+  if(!list.length){ con.innerHTML='<div class="empty"><span class="ei">👥</span><div class="et">No Clinicians Yet</div></div>'; return; }
+  con.innerHTML = list.map(cl=>{
+    const name = cl.name||(cl.first_name||'')+' '+(cl.last_name||'');
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const evalCount = evaluations.filter(e=>e.clinician_name===name).length;
+    const imgHtml = cl.photo
+      ? '<img src="'+cl.photo+'" alt="'+name+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--orb)" onerror="this.style.display=\'none\'">'
+      : '<div style="width:64px;height:64px;border-radius:50%;background:var(--ord);border:2px solid var(--orb);display:flex;align-items:center;justify-content:center;font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+initials+'</div>';
+    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;display:flex;gap:14px;align-items:flex-start"><div style="flex-shrink:0">'+imgHtml+'</div><div style="flex:1;min-width:0"><div style="font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+name+'</div>'+(cl.role?'<div style="font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</div>':'')+(cl.city?'<div style="font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</div>':'')+(cl.bio?'<div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px">'+cl.bio+'</div>':'')+(cl.conference?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</div></div></div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FEATURE 5: FINAL REPORT PDF
+// ═══════════════════════════════════════════════════════
+function generateCamperReport(camperId, mode){
+  let c;
+  if(mode==='prompt'){ const name=prompt('Enter camper last name:'); if(!name)return; c=campers.find(x=>x.last_name.toLowerCase()===name.toLowerCase().trim()); if(!c){toast('Camper not found',true);return;} }
+  else { c=campers.find(x=>x.id===camperId); }
+  if(!c){toast('Camper not found',true);return;}
+  buildAndDownloadReport(c);
+}
+function generateAllReports(){
+  if(!confirm('Generate reports for all '+campers.length+' campers?')) return;
+  let i=0;
+  function next(){ if(i>=campers.length)return; buildAndDownloadReport(campers[i]); i++; setTimeout(next,600); }
+  next();
+}
+function buildAndDownloadReport(c){
+  const evs = evaluations.filter(e=>e.camper_id===c.id);
+  const n = evs.length;
+  const avg = n ? (evs.map(e=>e.overall_score||0).reduce((a,b)=>a+b,0)/n).toFixed(1) : 'N/A';
+  const rmac = evs.filter(e=>e.scores&&e.scores.rmac_ready===true).length >= Math.max(1,n/2);
+  const conf = evs.filter(e=>e.scores&&e.scores.conference_ready===true).length >= Math.max(1,n/2);
+  const top10 = evs.filter(e=>e.scores&&e.scores.top10===true).length >= Math.max(1,n/2);
+  const catRows = CFG.CATS.map(cat=>{
+    const key=cat.toLowerCase().replace(/\s+/g,'_');
+    const vals=evs.map(e=>e.scores&&e.scores[key]).filter(v=>v!=null);
+    const ca=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'N/A';
+    const color=parseFloat(ca)>=8?'#2ecc71':parseFloat(ca)>=5?'#F47B20':'#e74c3c';
+    const pct=vals.length?Math.round(parseFloat(ca)/10*100):0;
+    return '<tr><td style="padding:8px 12px;font-size:13px;color:#e8e8e0">'+cat+'</td><td style="padding:8px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:#2a2a2a;border-radius:3px"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px"></div></div><span style="font-size:14px;font-weight:700;color:'+color+';width:30px;text-align:right">'+ca+'</span></div></td></tr>';
+  }).join('');
+  const evalRows = evs.map(e=>{
+    const dt=e.eval_date||(e.created_at?new Date(e.created_at).toLocaleDateString():'—');
+    return '<tr><td style="padding:7px 12px;font-size:12px;color:#888880">'+(e.clinician_name||'—')+'</td><td style="padding:7px 12px;font-size:12px;color:#888880">'+dt+'</td><td style="padding:7px 12px;font-size:12px;color:#888880">Court '+(e.court||'—')+'</td><td style="padding:7px 12px;font-size:14px;font-weight:700;color:#F47B20">'+(e.overall_score||0).toFixed(1)+'</td></tr>';
+  }).join('');
+  const badges=[rmac?'<span style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">RMAC READY</span>':'',conf?'<span style="background:rgba(52,152,219,.15);border:1px solid #3498db;color:#3498db;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">CONFERENCE READY</span>':'',top10?'<span style="background:rgba(244,123,32,.15);border:1px solid #F47B20;color:#F47B20;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">TOP 10</span>':''].filter(Boolean).join(' ');
+  const rHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>VH1 Report — '+c.first_name+' '+c.last_name+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#0a0a0a;color:#e8e8e0;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div style="max-width:680px;margin:0 auto"><div style="background:#F47B20;padding:20px 24px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;color:rgba(0,0,0,.6);text-transform:uppercase">VH1 Basketball Officials Camp</div><div style="font-size:22px;font-weight:900;color:#000;letter-spacing:.06em;margin-top:2px">PERFORMANCE REPORT</div><div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:2px">Denver, CO · June 18–20, 2026</div></div><div style="text-align:right"><div style="font-size:11px;color:rgba(0,0,0,.6)">Generated</div><div style="font-size:12px;font-weight:700;color:#000">'+new Date().toLocaleDateString()+'</div></div></div><div style="background:#111;padding:20px 24px;border-bottom:1px solid #222"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:.04em">'+c.first_name+' '+c.last_name+'</div><div style="font-size:13px;color:#888;margin-top:3px">'+(c.city||'')+(c.state?', '+c.state:'')+' · '+(c.type||'Non-Staff')+'</div></div><div style="text-align:center;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 20px"><div style="font-size:48px;font-weight:900;color:#F47B20;line-height:1">'+avg+'</div><div style="font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Overall Avg · '+n+' eval'+(n!==1?'s':'')+'</div></div></div>'+(badges?'<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+badges+'</div>':'')+'</div>'+(n>0?'<div style="background:#0d0d0d;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Category Breakdown</div><table style="width:100%;border-collapse:collapse">'+catRows+'</table></div><div style="background:#111;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Evaluation History</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Clinician</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Date</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Court</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Score</th></tr></thead><tbody>'+evalRows+'</tbody></table></div>':'<div style="padding:24px;text-align:center;color:#555">No evaluations recorded</div>')+'<div style="background:#080808;padding:14px 24px;border-top:1px solid #1a1a1a;font-size:10px;color:#444;text-align:center">VH1 Basketball Officials Camp · Denver, CO · June 18–20, 2026</div></div><scr'+'ipt>window.onload=function(){window.print();}</'+'script></body></html>';
+  const blob=new Blob([rHTML],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='VH1-Report-'+c.last_name+'-'+c.first_name+'.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('📄 Report: '+c.first_name+' '+c.last_name);
+}
+
 // SCHEDULE SYSTEM
 // ═══════════════════════════════════════════════════════
 
