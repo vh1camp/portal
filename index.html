@@ -970,22 +970,6 @@ if('serviceWorker' in navigator){
 </div>
 </div>
 <div>
-<div class="stitle" style="margin-bottom:10px">🔐 ADMIN <span>PASSWORD</span></div>
-<div class="card" style="padding:15px;margin-bottom:14px">
-  <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Change the admin login password. Takes effect immediately — you'll use the new password on next login.</div>
-  <div style="margin-bottom:8px">
-    <label class="flabel">New Password</label>
-    <input class="finput" id="newAdminPw" type="password" placeholder="Enter new password" style="margin-bottom:0">
-  </div>
-  <div style="margin-bottom:12px">
-    <label class="flabel">Confirm Password</label>
-    <input class="finput" id="confirmAdminPw" type="password" placeholder="Confirm new password" style="margin-bottom:0">
-  </div>
-  <button class="btn bor bsm" style="width:100%;justify-content:center;padding:12px" onclick="changeAdminPassword()" type="button">UPDATE PASSWORD</button>
-  <div id="pwChangeStatus" style="margin-top:8px;font-size:12px"></div>
-</div>
-</div>
-<div>
 <div class="stitle" style="margin-bottom:10px">⚠️ DANGER <span>ZONE</span></div>
 <div class="card" style="padding:15px;border:1px solid var(--redb)">
 <div style="font-size:11px;color:var(--red2);font-weight:700;letter-spacing:.1em;margin-bottom:10px">IRREVERSIBLE ACTIONS</div>
@@ -1557,7 +1541,7 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">PIN</button>`:''}<button class="btn bsec bsm" onclick="editCamper('${c.id}')">Edit</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">Del</button></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')">Edit</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">Del</button></td>`;
     tbody.appendChild(tr);
   });
   // Keep arrow in sync
@@ -1788,34 +1772,6 @@ function renderAdminRankings(){
 }
 
 // ═══ SETTINGS ═══
-
-// ── CHANGE ADMIN PASSWORD ────────────────────────────────
-async function changeAdminPassword(){
-  const newPw = document.getElementById('newAdminPw')?.value?.trim();
-  const confirmPw = document.getElementById('confirmAdminPw')?.value?.trim();
-  const statusEl = document.getElementById('pwChangeStatus');
-  if(!newPw){ statusEl.innerHTML='<span style="color:var(--red2)">Please enter a new password</span>'; return; }
-  if(newPw !== confirmPw){ statusEl.innerHTML='<span style="color:var(--red2)">Passwords do not match</span>'; return; }
-  if(newPw.length < 4){ statusEl.innerHTML='<span style="color:var(--red2)">Password must be at least 4 characters</span>'; return; }
-  try{
-    // Try PATCH first (update existing row), then POST if not found
-    const existing = await supa('settings','GET',null,'?key=eq.admin_password');
-    if(existing && existing.length > 0){
-      await supa('settings','PATCH',{value: newPw},'?key=eq.admin_password');
-    } else {
-      await supa('settings','POST',{key:'admin_password', value: newPw});
-    }
-    settings['admin_password'] = newPw;
-    document.getElementById('newAdminPw').value = '';
-    document.getElementById('confirmAdminPw').value = '';
-    statusEl.innerHTML='<span style="color:var(--grn)">✅ Password updated successfully</span>';
-    toast('🔐 Admin password updated');
-    setTimeout(()=>{ if(statusEl) statusEl.innerHTML=''; }, 4000);
-  }catch(e){
-    statusEl.innerHTML='<span style="color:var(--red2)">Error saving password — try again</span>';
-  }
-}
-
 async function saveSetting(key,val){try{await supa('settings','PATCH',{value:String(val)},`?key=eq.${key}`);settings[key]=String(val);toast('Setting saved');}catch(e){toast('Error',true);}}
 async function clearAllEvals(){const ok=await cf('Clear ALL evaluations? This cannot be undone.','Clear','Cancel');if(!ok)return;try{await supa('evaluations','DELETE',null,'?id=not.is.null');toast('All evaluations cleared');await loadAll();updateAdminStats();renderRecentEvals();}catch(e){toast('Error',true);}}
 
@@ -2028,6 +1984,51 @@ async function sendPinEmail(id){
     if(res.ok){toast('PIN sent to '+c.first_name+' '+c.last_name);if(btn){btn.textContent='✅';setTimeout(()=>{if(btn)btn.textContent='📧';btn.disabled=false;},3000);}}
     else{toast('Email failed',true);if(btn){btn.textContent='📧';btn.disabled=false;}}
   }catch(e){toast('Email error',true);if(btn){btn.textContent='📧';btn.disabled=false;}}
+}
+
+
+// ── RESET CAMPER PIN ────────────────────────────────────
+async function resetCamperPin(id){
+  const c = campers.find(x => x.id === id);
+  if(!c) return;
+  if(!confirm(`Reset PIN for ${c.first_name} ${c.last_name}? A new PIN will be generated and emailed to them.`)) return;
+  const newPin = String(Math.floor(1000 + Math.random() * 9000));
+  const btn = document.getElementById('resetpinbtn-' + id);
+  if(btn){ btn.disabled = true; btn.textContent = '...'; }
+  try{
+    await supa('campers','PATCH',{pin: newPin},`?id=eq.${id}`);
+    const idx = campers.findIndex(x => x.id === id);
+    if(idx >= 0) campers[idx].pin = newPin;
+    // Email new PIN if they have an email
+    if(c.email){
+      await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        to: c.email,
+        from: CFG.FROM_EMAIL,
+        subject: 'VH1 Camp — Your New Login PIN',
+        html: `<div style="max-width:420px;margin:0 auto;font-family:Arial,sans-serif;background:#111;border-radius:8px;overflow:hidden;">
+          <div style="background:#F47B20;padding:12px 16px;"><div style="color:#fff;font-size:14px;font-weight:700;letter-spacing:1px;">VH1 BASKETBALL OFFICIALS CAMP</div></div>
+          <div style="padding:20px;">
+            <p style="color:#aaa;font-size:12px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.08em;">Hi ${c.first_name},</p>
+            <p style="color:#f0f0eb;font-size:13px;line-height:1.6;margin:0 0 16px;">Your camp portal PIN has been reset. Use the details below to log in.</p>
+            <div style="background:#1a1a1a;border:1px solid #F47B20;border-radius:6px;padding:14px;margin-bottom:16px;text-align:center;">
+              <div style="color:#aaa;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Last Name</div>
+              <div style="color:#fff;font-size:18px;font-weight:700;">${c.last_name}</div>
+              <div style="color:#aaa;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin:10px 0 6px;">New PIN</div>
+              <div style="color:#F47B20;font-size:32px;font-weight:900;letter-spacing:.15em;">${newPin}</div>
+            </div>
+            <a href="https://vh1camp.github.io/portal/" style="display:inline-block;background:#F47B20;color:#000;font-weight:700;font-size:12px;padding:9px 20px;border-radius:6px;text-decoration:none;">Open Camp Portal →</a>
+          </div>
+        </div>`
+      })});
+      toast(`✅ PIN reset & emailed to ${c.first_name}`);
+    } else {
+      toast(`✅ PIN reset to ${newPin} (no email on file)`);
+    }
+    renderAdminCampers();
+  }catch(e){
+    toast('Error resetting PIN', true);
+    if(btn){ btn.disabled = false; btn.textContent = 'Reset PIN'; }
+  }
 }
 
 async function sendAllPins(){
