@@ -970,6 +970,22 @@ if('serviceWorker' in navigator){
 </div>
 </div>
 <div>
+<div class="stitle" style="margin-bottom:10px">🔐 ADMIN <span>PASSWORD</span></div>
+<div class="card" style="padding:15px;margin-bottom:14px">
+  <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;line-height:1.6">Change the admin login password. Takes effect immediately — you'll use the new password on next login.</div>
+  <div style="margin-bottom:8px">
+    <label class="flabel">New Password</label>
+    <input class="finput" id="newAdminPw" type="password" placeholder="Enter new password" style="margin-bottom:0">
+  </div>
+  <div style="margin-bottom:12px">
+    <label class="flabel">Confirm Password</label>
+    <input class="finput" id="confirmAdminPw" type="password" placeholder="Confirm new password" style="margin-bottom:0">
+  </div>
+  <button class="btn bor bsm" style="width:100%;justify-content:center;padding:12px" onclick="changeAdminPassword()" type="button">UPDATE PASSWORD</button>
+  <div id="pwChangeStatus" style="margin-top:8px;font-size:12px"></div>
+</div>
+</div>
+<div>
 <div class="stitle" style="margin-bottom:10px">⚠️ DANGER <span>ZONE</span></div>
 <div class="card" style="padding:15px;border:1px solid var(--redb)">
 <div style="font-size:11px;color:var(--red2);font-weight:700;letter-spacing:.1em;margin-bottom:10px">IRREVERSIBLE ACTIONS</div>
@@ -1772,6 +1788,34 @@ function renderAdminRankings(){
 }
 
 // ═══ SETTINGS ═══
+
+// ── CHANGE ADMIN PASSWORD ────────────────────────────────
+async function changeAdminPassword(){
+  const newPw = document.getElementById('newAdminPw')?.value?.trim();
+  const confirmPw = document.getElementById('confirmAdminPw')?.value?.trim();
+  const statusEl = document.getElementById('pwChangeStatus');
+  if(!newPw){ statusEl.innerHTML='<span style="color:var(--red2)">Please enter a new password</span>'; return; }
+  if(newPw !== confirmPw){ statusEl.innerHTML='<span style="color:var(--red2)">Passwords do not match</span>'; return; }
+  if(newPw.length < 4){ statusEl.innerHTML='<span style="color:var(--red2)">Password must be at least 4 characters</span>'; return; }
+  try{
+    // Try PATCH first (update existing row), then POST if not found
+    const existing = await supa('settings','GET',null,'?key=eq.admin_password');
+    if(existing && existing.length > 0){
+      await supa('settings','PATCH',{value: newPw},'?key=eq.admin_password');
+    } else {
+      await supa('settings','POST',{key:'admin_password', value: newPw});
+    }
+    settings['admin_password'] = newPw;
+    document.getElementById('newAdminPw').value = '';
+    document.getElementById('confirmAdminPw').value = '';
+    statusEl.innerHTML='<span style="color:var(--grn)">✅ Password updated successfully</span>';
+    toast('🔐 Admin password updated');
+    setTimeout(()=>{ if(statusEl) statusEl.innerHTML=''; }, 4000);
+  }catch(e){
+    statusEl.innerHTML='<span style="color:var(--red2)">Error saving password — try again</span>';
+  }
+}
+
 async function saveSetting(key,val){try{await supa('settings','PATCH',{value:String(val)},`?key=eq.${key}`);settings[key]=String(val);toast('Setting saved');}catch(e){toast('Error',true);}}
 async function clearAllEvals(){const ok=await cf('Clear ALL evaluations? This cannot be undone.','Clear','Cancel');if(!ok)return;try{await supa('evaluations','DELETE',null,'?id=not.is.null');toast('All evaluations cleared');await loadAll();updateAdminStats();renderRecentEvals();}catch(e){toast('Error',true);}}
 
