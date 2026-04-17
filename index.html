@@ -2680,7 +2680,7 @@ function renderCamperProfiles(search){
   }).join('');
 }
 
-function openCamperProfile(id){
+function openCamperProfile(id,evalContext){
   const c=campers.find(x=>x.id===id);if(!c)return;
   const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
   const imgHtml=c.photo
@@ -2699,6 +2699,15 @@ function openCamperProfile(id){
   if(c.bio)body+=`<div class="pmod-bio">${c.bio}</div>`;
   else body+='<div style="font-size:13px;color:var(--tx3);padding:10px 0">No bio yet.</div>';
   body+=`</div>`;
+  // If opened from clinician schedule, show Evaluate button with pre-filled context
+  if(evalContext){
+    const [court,timeSlot,day]=evalContext.split('|');
+    const ctxLine=[court,timeSlot,day].filter(Boolean).join(' · ');
+    body+=`<div style="padding:0 16px 12px">
+      ${ctxLine?`<div style="font-size:12px;color:var(--tx3);text-align:center;margin-bottom:10px;letter-spacing:.04em">${ctxLine}</div>`:''}
+      <button class="btn" style="width:100%;background:var(--or);color:#fff;border:none;margin-bottom:10px" onclick="closeModal('mProfile');openEvalFromSchedule('${id}','${court||''}','${timeSlot||''}','${day||''}')">Evaluate ${c.first_name}</button>
+    </div>`;
+  }
   body+=`<div style="padding:0 16px 40px"><button class="btn bsec" style="width:100%" onclick="closeModal('mProfile')">Close</button></div>`;
   document.getElementById('pmBody').innerHTML=body;
   openModal('mProfile');
@@ -3640,9 +3649,10 @@ function renderClinicianSchedule() {
         ${camperIds.map((id, i) => {
           const c = campers.find(x => x.id === id);
           const name = c ? c.first_name + ' ' + c.last_name : '';
-          return name ? `<div class="sch-card-name" style="display:flex;align-items:center;justify-content:space-between">
-            <span>${name}</span>
-            <button onclick="event.stopPropagation();openEvalFromSchedule('${id}','${s.court}','${s.time_slot}','${s.day}')" style="background:var(--or);color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.08em;padding:4px 10px;cursor:pointer;font-family:Oswald,sans-serif;text-transform:uppercase">Eval</button>
+          const ctx = `${s.court}|${s.time_slot}|${s.day}`;
+          return name ? `<div class="sch-card-name" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span onclick="event.stopPropagation();openCamperProfile('${id}','${ctx}')" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--or);text-decoration-thickness:1px;text-underline-offset:3px;flex:1">${name}</span>
+            <button onclick="event.stopPropagation();openEvalFromSchedule('${id}','${s.court}','${s.time_slot}','${s.day}')" style="background:var(--or);color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.08em;padding:4px 10px;cursor:pointer;font-family:Oswald,sans-serif;text-transform:uppercase;flex-shrink:0">Eval</button>
           </div>` : '';
         }).filter(Boolean).join('')}
       </div>
