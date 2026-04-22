@@ -1267,7 +1267,7 @@ async function loginAdmin(){
   const pass=document.getElementById('laPass').value;
   if(!pass){showLoginErr('laErr','Enter password.');return;}
   await loadAll();
-  const adminPw=settings['admin_password']||'1234';
+  const adminPw=settings['admin_password'];
   if(pass!==adminPw){showLoginErr('laErr','Incorrect password.');return;}
   CU={first_name:'Admin',last_name:''};CR='admin';enterApp();
 }
