@@ -614,10 +614,6 @@ if('serviceWorker' in navigator){
 <!-- STAFF PORTAL -->
 <div class="portal" id="pStaff">
 <nav class="bnav on" id="navS">
-<button class="bb on" id="sb-evaluate" onclick="sView('evaluate')" type="button">
-  <div class="bb-icon"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
-  <span class="bl">Evaluate</span>
-</button>
 <button class="bb" id="sb-history" onclick="sView('history')" type="button">
   <div class="bb-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
   <span class="bl">My Evals</span>
@@ -908,7 +904,6 @@ if('serviceWorker' in navigator){
     <span class="sch-published-badge off" id="schPublishBadge">UNPUBLISHED</span>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn bor bsm" onclick="generateSchedule()" id="schGenBtn" type="button">Generate Schedule</button>
     <button class="btn bsec bsm" onclick="document.getElementById('schCSVInput').click()" type="button">Upload CSV</button>
     <input type="file" id="schCSVInput" accept=".csv" style="display:none" onchange="uploadScheduleCSV(this)">
     <button class="btn bsec bsm" onclick="downloadScheduleTemplate()" type="button">Download Template</button>
@@ -1528,7 +1523,7 @@ function enterApp(){
   document.getElementById('uName').textContent=CU.first_name+(CU.last_name?' '+CU.last_name:'');
   document.querySelectorAll('.portal').forEach(p=>p.classList.remove('on'));
   if(CR==='camper'){document.getElementById('pCamper').classList.add('on');document.getElementById('navC').classList.add('on');cView('home');}
-  else if(CR==='staff'){document.getElementById('pStaff').classList.add('on');document.getElementById('navS').classList.add('on');populateStaffEvalForm();sView('evaluate');}
+  else if(CR==='staff'){document.getElementById('pStaff').classList.add('on');document.getElementById('navS').classList.add('on');populateStaffEvalForm();sView('campinfo');}
   else{document.getElementById('pAdmin').classList.add('on');populateAdminForms();aTab('overview',document.querySelector('.atab'));}
   startChatBackgroundPoll();
 }
