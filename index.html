@@ -979,6 +979,7 @@ if('serviceWorker' in navigator){
   <button class="btn bor bsm" onclick="renderEvalTracker()" type="button">🔄 Refresh</button>
 </div>
 <div id="etSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+<div id="etClinicianPanel" style="margin-bottom:18px"></div>
 <div style="margin-bottom:10px">
   <div style="display:flex;gap:6px;flex-wrap:wrap">
     <button class="fchip on" id="etf-all" onclick="setEvalFilter('all',this)">All Campers</button>
@@ -3092,6 +3093,7 @@ function renderMyProfile(role){
       <input type="file" id="mpPhotoUpload" accept="image/*" style="display:none" onchange="handleMyPhotoUpload(this,'${role}')">
       <button type="button" onclick="document.getElementById('mpPhotoUpload').click()" style="background:var(--gray2);border:1px solid var(--b3);border-radius:var(--rs);padding:8px 18px;font-family:'Source Sans 3',sans-serif;font-size:13px;color:var(--tx2);cursor:pointer;margin-top:4px">📷 Upload Photo</button>
     </div>
+    ${role==='staff' ? renderMyEvalProgress(CU) : ''}
     <div class="form-group" style="margin-bottom:10px">
       <label class="flabel">First Name</label>
       <input class="finput" id="mpFirst" value="${CU.first_name||''}" placeholder="First">
@@ -3452,11 +3454,14 @@ function renderDailyView(){
       const c1 = campers.find(x=>x.id===s.camper_1_id);
       const c2 = campers.find(x=>x.id===s.camper_2_id);
       const c3 = campers.find(x=>x.id===s.camper_3_id);
-      const cl = clinicians.find(x=>x.id===s.clinician_id);
-      const clName = cl ? (cl.name||cl.first_name+' '+cl.last_name) : '—';
+      const clObjs = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
+        .map(id => clinicians.find(x => x.id === id))
+        .filter(Boolean);
+      const clNames = clObjs.map(c => c.name || (c.first_name+' '+c.last_name)).filter(Boolean);
+      const clName = clNames.length ? clNames.join(' & ') : '—';
       const evals1 = c1 ? evaluations.filter(e=>e.camper_id===c1.id).length : 0;
       const evals2 = c2 ? evaluations.filter(e=>e.camper_id===c2.id).length : 0;
-      html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px"><div style="font-family:\'Oswald\',sans-serif;font-size:16px;color:var(--or);margin-bottom:6px">'+s.court+'</div>'+(c1?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c1.first_name+' '+c1.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals1+' eval'+(evals1!==1?'s':'')+'</span></div>':'')+(c2?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c2.first_name+' '+c2.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals2+' eval'+(evals2!==1?'s':'')+'</span></div>':'')+(c3?'<div style="font-size:12px;color:var(--tx3)">'+c3.first_name+' '+c3.last_name+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--b2)">Clinician: '+clName+'</div></div>';
+      html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px"><div style="font-family:\'Oswald\',sans-serif;font-size:16px;color:var(--or);margin-bottom:6px">'+s.court+'</div>'+(c1?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c1.first_name+' '+c1.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals1+' eval'+(evals1!==1?'s':'')+'</span></div>':'')+(c2?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c2.first_name+' '+c2.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals2+' eval'+(evals2!==1?'s':'')+'</span></div>':'')+(c3?'<div style="font-size:12px;color:var(--tx3)">'+c3.first_name+' '+c3.last_name+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--b2)">'+(clNames.length>1?'Clinicians: ':'Clinician: ')+clName+'</div></div>';
     });
     html += '</div></div>';
   });
@@ -3486,6 +3491,7 @@ function renderEvalTracker(){
       '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--or)">'+noEval+'</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Not Evaluated</div></div>'+
       '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--or)">'+(total?Math.round(evaluated/total*100):0)+'%</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Complete</div></div>';
   }
+  renderEvalTrackerByClinician();
   let list = [...campers].sort((a,b)=>(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
   if(_evalFilter==='none') list = list.filter(c=>!evaluations.some(e=>e.camper_id===c.id));
   if(_evalFilter==='partial') list = list.filter(c=>{ const n=evaluations.filter(e=>e.camper_id===c.id).length; return n>0&&n<2; });
@@ -3603,6 +3609,113 @@ function timeToMinutes(t) {
   return h * 60 + m;
 }
 
+// Map schedule day labels to ISO dates so eval rows (eval_date is ISO)
+// can be matched against schedule rows (day is the long label).
+const SCH_DAY_TO_DATE = {
+  'Thursday June 18, 2026': '2026-06-18',
+  'Friday June 19, 2026':   '2026-06-19',
+  'Saturday June 20, 2026': '2026-06-20'
+};
+
+// ── CLINICIAN EVAL PROGRESS ─────────────────────────────
+// Returns total assigned games for a clinician name, how many they have
+// fully evaluated, and the subset whose scheduled start time is at least
+// 60 min in the past (i.e. games that should be done by now). VH1 doesn't
+// write a status column on evaluations, so any matching evaluations row
+// counts as a submitted eval.
+function clinicianEvalProgress(clinicianName, opts){
+  const slotPastMin = (opts && opts.slotPastMin) != null ? opts.slotPastMin : 60;
+  const now = new Date();
+  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const target = norm(clinicianName);
+  const clIds = clinicians.filter(c => norm(c.name) === target).map(c => String(c.id));
+  if (!clIds.length) return { totalAssigned: 0, totalSubmitted: 0, totalPast: 0, missingPast: 0, missingPastSlots: [] };
+  let totalAssigned = 0, totalSubmitted = 0, totalPast = 0, missingPast = 0;
+  const missingPastSlots = [];
+  for (const s of scheduleData) {
+    const assignedClins = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
+      .filter(Boolean).map(String);
+    if (!assignedClins.some(id => clIds.includes(id))) continue;
+    const camperIds = [s.camper_1_id, s.camper_2_id, s.camper_3_id].filter(Boolean);
+    if (!camperIds.length) continue;
+    totalAssigned++;
+    const date = SCH_DAY_TO_DATE[s.day] || null;
+    const slotEvals = evaluations.filter(e =>
+      e.clinician_name === clinicianName &&
+      e.eval_date === date &&
+      e.court === s.court &&
+      e.eval_time === s.time_slot
+    );
+    // VH1 doesn't track per-eval status — any matching row is "submitted".
+    const allSubmitted = camperIds.every(cid => slotEvals.find(e => String(e.camper_id) === String(cid)));
+    if (allSubmitted) totalSubmitted++;
+    if (date) {
+      const slotStart = new Date(`${date}T00:00:00`);
+      slotStart.setMinutes(slotStart.getMinutes() + timeToMinutes(s.time_slot) + slotPastMin);
+      if (slotStart < now) {
+        totalPast++;
+        if (!allSubmitted) { missingPast++; missingPastSlots.push(s); }
+      }
+    }
+  }
+  return { totalAssigned, totalSubmitted, totalPast, missingPast, missingPastSlots };
+}
+
+// Returns the HTML for the "Your Eval Progress" widget shown on a
+// clinician's My Profile. Takes the staff CU object (first/last name).
+function renderMyEvalProgress(profile){
+  const fullName = ((profile.first_name||'')+' '+(profile.last_name||'')).trim();
+  if (!fullName) return '';
+  const p = clinicianEvalProgress(fullName);
+  if (!p.totalAssigned) return '';
+  const pct = Math.round(p.totalSubmitted / p.totalAssigned * 100);
+  const barColor = p.totalSubmitted === p.totalAssigned ? 'var(--grn)' : (p.missingPast > 0 ? 'var(--red2)' : 'var(--or)');
+  const note = p.missingPast > 0
+    ? `<span style="color:var(--red2);font-weight:700">${p.missingPast} past-due</span>`
+    : (p.totalSubmitted === p.totalAssigned ? '<span style="color:var(--grn)">All caught up ✓</span>' : '<span style="color:var(--or)">On track</span>');
+  return `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--or)">YOUR EVAL PROGRESS</div>
+      <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or)">${p.totalSubmitted} / ${p.totalAssigned}</div>
+    </div>
+    <div style="height:6px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .3s"></div></div>
+    <div style="font-size:11px;color:var(--tx3)">${pct}% complete · ${note}</div>
+  </div>`;
+}
+
+// Renders the per-clinician progress panel inside the Eval Tracker tab.
+function renderEvalTrackerByClinician(){
+  const con = document.getElementById('etClinicianPanel');
+  if (!con) return;
+  if (!clinicians.length) { con.innerHTML = ''; return; }
+  const rows = clinicians.map(cl => ({ name: cl.name, id: cl.id, ...clinicianEvalProgress(cl.name) }))
+    .filter(r => r.totalAssigned > 0)
+    .sort((a,b) => {
+      if (b.missingPast !== a.missingPast) return b.missingPast - a.missingPast;
+      return a.name.localeCompare(b.name);
+    });
+  if (!rows.length) { con.innerHTML = ''; return; }
+  let html = '<div style="font-family:\'Oswald\',sans-serif;font-size:13px;letter-spacing:.08em;color:var(--or);margin-bottom:8px">BY CLINICIAN</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:6px">';
+  rows.forEach(r => {
+    const pct = r.totalAssigned ? Math.round(r.totalSubmitted / r.totalAssigned * 100) : 0;
+    const barColor = r.totalSubmitted === r.totalAssigned ? 'var(--grn)' : (r.missingPast > 0 ? 'var(--red2)' : 'var(--or)');
+    const pastNote = r.missingPast > 0
+      ? `<span style="color:var(--red2);font-weight:700">· ${r.missingPast} past-due</span>`
+      : (r.totalSubmitted === r.totalAssigned ? '<span style="color:var(--grn)">· all done ✓</span>' : '');
+    html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px 12px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'
+      +   '<span style="font-size:13px;font-weight:600;color:var(--tx)">'+r.name+'</span>'
+      +   '<span style="font-family:\'Oswald\',sans-serif;font-size:14px;color:var(--or);flex-shrink:0">'+r.totalSubmitted+' / '+r.totalAssigned+'</span>'
+      + '</div>'
+      + '<div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'
+      + '<div style="font-size:10px;color:var(--tx3)">'+pct+'% complete '+pastNote+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  con.innerHTML = html;
+}
+
 // ── ADMIN: Switch day ────────────────────────────────────
 function adminSchDay(day, btn) {
   currentAdminDay = day;
@@ -3663,6 +3776,9 @@ function renderAdminSchedule() {
           </div>
         </div>
         <select class="sch-select" id="cl_${slotId}" style="width:100%">${clinOpts}</select>
+        <select class="sch-select" id="cl2_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 2nd Clinician (optional) —')}</select>
+        <select class="sch-select" id="cl3_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 3rd Clinician (optional) —')}</select>
+        <select class="sch-select" id="cl4_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 4th Clinician (optional) —')}</select>
         <div id="flag_${slotId}" style="margin-top:6px"></div>
       </div>`;
     });
@@ -3680,11 +3796,17 @@ function renderAdminSchedule() {
       const s2 = document.getElementById(`c2_${slotId}`);
       const s3 = document.getElementById(`c3_${slotId}`);
       const sc = document.getElementById(`cl_${slotId}`);
+      const sc2 = document.getElementById(`cl2_${slotId}`);
+      const sc3 = document.getElementById(`cl3_${slotId}`);
+      const sc4 = document.getElementById(`cl4_${slotId}`);
       const getName = id => { const c = campers.find(x=>x.id===id); return c ? c.first_name+' '+c.last_name : ''; };
       if (s1 && existing.camper_1_id) { s1.value = existing.camper_1_id; const ti=document.getElementById('c1i_'+slotId); if(ti) ti.value=getName(existing.camper_1_id); }
       if (s2 && existing.camper_2_id) { s2.value = existing.camper_2_id; const ti=document.getElementById('c2i_'+slotId); if(ti) ti.value=getName(existing.camper_2_id); }
       if (s3 && existing.camper_3_id) { s3.value = existing.camper_3_id; const ti=document.getElementById('c3i_'+slotId); if(ti) ti.value=getName(existing.camper_3_id); }
       if (sc && existing.clinician_id) sc.value = existing.clinician_id;
+      if (sc2 && existing.clinician_2_id) sc2.value = existing.clinician_2_id;
+      if (sc3 && existing.clinician_3_id) sc3.value = existing.clinician_3_id;
+      if (sc4 && existing.clinician_4_id) sc4.value = existing.clinician_4_id;
     });
   });
 
@@ -3699,6 +3821,9 @@ async function saveSlot(dayKey, slot, court) {
   const c2 = document.getElementById(`c2_${slotId}`)?.value || null;
   const c3 = document.getElementById(`c3_${slotId}`)?.value || null;
   const cl = document.getElementById(`cl_${slotId}`)?.value || null;
+  const cl2 = document.getElementById(`cl2_${slotId}`)?.value || null;
+  const cl3 = document.getElementById(`cl3_${slotId}`)?.value || null;
+  const cl4 = document.getElementById(`cl4_${slotId}`)?.value || null;
   if (!c1 && !c2 && !c3) { toast('Select at least one camper', true); return; }
 
   // Validate before save
@@ -3717,7 +3842,10 @@ async function saveSlot(dayKey, slot, court) {
     camper_1_id: c1 || null,
     camper_2_id: c2 || null,
     camper_3_id: c3 || null,
-    clinician_id: cl && !cl.startsWith('ph_') ? cl : null
+    clinician_id: cl && !cl.startsWith('ph_') ? cl : null,
+    clinician_2_id: cl2 && !cl2.startsWith('ph_') ? cl2 : null,
+    clinician_3_id: cl3 && !cl3.startsWith('ph_') ? cl3 : null,
+    clinician_4_id: cl4 && !cl4.startsWith('ph_') ? cl4 : null
   };
 
   // Check if exists
@@ -3767,9 +3895,16 @@ function validateSlot(day, slot, court, c1, c2, c3, cl, excludeId) {
     });
   });
 
-  // Clinician: same camper twice check
+  // Clinician: same camper twice check. A clinician can be assigned to a
+  // game in any of clinician_id, clinician_2_id, clinician_3_id,
+  // clinician_4_id, so check all four when counting games.
   if (cl && !cl.startsWith('ph_')) {
-    const clinGames = daySlots.filter(s => s.clinician_id === cl);
+    const clinGames = daySlots.filter(s =>
+      s.clinician_id === cl
+      || s.clinician_2_id === cl
+      || s.clinician_3_id === cl
+      || s.clinician_4_id === cl
+    );
     camperIds.forEach(cid => {
       const seenCount = clinGames.filter(s =>
         s.camper_1_id === cid || s.camper_2_id === cid || s.camper_3_id === cid
@@ -3904,12 +4039,12 @@ function renderCamperSchedule() {
       return c ? c.first_name + ' ' + c.last_name : '';
     }).filter(Boolean);
 
-    // Clinician name
-    let clinName = '';
-    if (s.clinician_id) {
-      const cl = clinicians.find(x => x.id === s.clinician_id);
-      clinName = cl ? (cl.name || cl.first_name + ' ' + cl.last_name) : '';
-    }
+    // Clinician name(s) — show all up to four
+    const clinNames = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
+      .map(id => clinicians.find(x => x.id === id))
+      .filter(Boolean)
+      .map(cl => cl.name || (cl.first_name + ' ' + cl.last_name));
+    const clinName = clinNames.join(' & ');
 
     html += `<div class="sch-card">
       <div class="sch-card-meta">${s.time_slot}</div>
@@ -3918,7 +4053,7 @@ function renderCamperSchedule() {
         <div class="sch-card-name" style="color:var(--or)">${CU.first_name} ${CU.last_name}</div>
         ${partners.map(p => `<div class="sch-card-name">${p}</div>`).join('')}
       </div>
-      ${clinName ? `<div class="sch-card-clinician">Clinician: ${clinName}</div>` : ''}
+      ${clinName ? `<div class="sch-card-clinician">${clinNames.length>1?'Clinicians: ':'Clinician: '}${clinName}</div>` : ''}
     </div>`;
   });
 
@@ -3942,8 +4077,12 @@ function renderClinicianSchedule() {
     return cn === cuName || cn.includes(cuName) || cuName.includes(cn.split(' ')[0]);
   });
   const clinId = matchedClin?.id || CU.id;
-  const mySlots = scheduleData.filter(s => s.clinician_id === clinId)
-    .sort((a,b) => {
+  const mySlots = scheduleData.filter(s =>
+    String(s.clinician_id) === String(clinId)
+    || String(s.clinician_2_id) === String(clinId)
+    || String(s.clinician_3_id) === String(clinId)
+    || String(s.clinician_4_id) === String(clinId)
+  ).sort((a,b) => {
       const dayOrder = ['Thursday June 18, 2026','Friday June 19, 2026','Saturday June 20, 2026'];
       const d = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
       if (d !== 0) return d;
@@ -3970,10 +4109,19 @@ function renderClinicianSchedule() {
       return c ? c.first_name + ' ' + c.last_name : '';
     }).filter(Boolean);
 
+    // Co-clinician names — everyone on this game except the logged-in clinician.
+    const coClinNames = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
+      .filter(id => id && String(id) !== String(clinId))
+      .map(id => clinicians.find(x => x.id === id))
+      .filter(Boolean)
+      .map(c => c.name || (c.first_name+' '+c.last_name));
+    const coClinLine = coClinNames.length ? `<div style="font-size:11px;color:var(--tx3);margin-top:4px">With ${coClinNames.join(' & ')}</div>` : '';
+
     const firstCamperId = camperIds[0] || '';
     html += `<div class="sch-card" style="cursor:pointer;border-color:var(--or);opacity:0.95;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.95'">
       <div class="sch-card-meta">${s.time_slot}</div>
       <div class="sch-card-court">${s.court}</div>
+      ${coClinLine}
       <div class="sch-card-names">
         ${camperIds.map((id, i) => {
           const c = campers.find(x => x.id === id);
@@ -4363,7 +4511,11 @@ async function saveGeneratedSchedule() {
     const payload = slots.map(s => ({
       day: s.day, time_slot: s.time_slot, court: s.court,
       camper_1_id: s.camper_1_id, camper_2_id: s.camper_2_id,
-      camper_3_id: s.camper_3_id, clinician_id: s.clinician_id
+      camper_3_id: s.camper_3_id,
+      clinician_id: s.clinician_id,
+      clinician_2_id: s.clinician_2_id || null,
+      clinician_3_id: s.clinician_3_id || null,
+      clinician_4_id: s.clinician_4_id || null
     }));
 
     for (let i = 0; i < payload.length; i += 20) {
@@ -4393,8 +4545,8 @@ function downloadGeneratedCSV() {
   const slots = window._generatedSchedule;
   if (!slots || !slots.length) { toast('Generate first', true); return; }
 
-  const rows = [['Day','Time','Court','Camper 1','Camper 2','Camper 3','Clinician']];
-  slots.forEach(s => rows.push([s.day, s.time_slot, s.court, s.camper_1_name, s.camper_2_name, s.camper_3_name, s.clinician_name]));
+  const rows = [['Day','Time','Court','Camper 1','Camper 2','Camper 3','Clinician','Clinician 2','Clinician 3','Clinician 4']];
+  slots.forEach(s => rows.push([s.day, s.time_slot, s.court, s.camper_1_name, s.camper_2_name, s.camper_3_name, s.clinician_name, s.clinician_2_name||'', s.clinician_3_name||'', s.clinician_4_name||'']));
 
   const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
@@ -4406,11 +4558,11 @@ function downloadGeneratedCSV() {
 
 // ── DOWNLOAD BLANK TEMPLATE ───────────────────────────
 function downloadScheduleTemplate() {
-  const rows = [['Day','Time','Court','Camper 1','Camper 2','Camper 3','Clinician']];
+  const rows = [['Day','Time','Court','Camper 1','Camper 2','Camper 3','Clinician','Clinician 2','Clinician 3','Clinician 4']];
   Object.entries(SCH_STRUCTURE).forEach(([day, blocks]) => {
     const slots = blocks.all || [...(blocks.am||[]), ...(blocks.pm||[])];
     slots.forEach(time => {
-      SCH_COURTS.forEach(court => rows.push([day, time, court, '','','','']));
+      SCH_COURTS.forEach(court => rows.push([day, time, court, '','','','','','','']));
     });
   });
   const csv = rows.map(r => r.map(v=>`"${v}"`).join(',')).join('\n');
@@ -4460,19 +4612,31 @@ async function uploadScheduleCSV(input) {
     const c2 = row['camper 2'] ? findCamper(row['camper 2']) : null;
     const c3 = row['camper 3'] ? findCamper(row['camper 3']) : null;
     const cl = row['clinician'] ? findClin(row['clinician']) : null;
+    const cl2 = row['clinician 2'] ? findClin(row['clinician 2']) : null;
+    const cl3 = row['clinician 3'] ? findClin(row['clinician 3']) : null;
+    const cl4 = row['clinician 4'] ? findClin(row['clinician 4']) : null;
 
     if (row['camper 1'] && !c1) errors.push(`Row ${i+2}: "${row['camper 1']}" not found`);
     if (row['camper 2'] && !c2) errors.push(`Row ${i+2}: "${row['camper 2']}" not found`);
     if (row['camper 3'] && !c3) errors.push(`Row ${i+2}: "${row['camper 3']}" not found`);
+    if (row['clinician 2'] && !cl2) errors.push(`Row ${i+2}: clinician 2 "${row['clinician 2']}" not found`);
+    if (row['clinician 3'] && !cl3) errors.push(`Row ${i+2}: clinician 3 "${row['clinician 3']}" not found`);
+    if (row['clinician 4'] && !cl4) errors.push(`Row ${i+2}: clinician 4 "${row['clinician 4']}" not found`);
 
     parsed.push({
       day: row.day, time_slot: row.time, court: row.court,
       camper_1_id: c1?.id||null, camper_2_id: c2?.id||null, camper_3_id: c3?.id||null,
       clinician_id: cl?.id||null,
+      clinician_2_id: cl2?.id||null,
+      clinician_3_id: cl3?.id||null,
+      clinician_4_id: cl4?.id||null,
       camper_1_name: c1 ? c1.first_name+' '+c1.last_name : row['camper 1'],
       camper_2_name: c2 ? c2.first_name+' '+c2.last_name : row['camper 2'],
       camper_3_name: c3 ? c3.first_name+' '+c3.last_name : row['camper 3'],
-      clinician_name: cl ? (cl.name||cl.first_name+' '+cl.last_name) : row['clinician']
+      clinician_name: cl ? (cl.name||cl.first_name+' '+cl.last_name) : row['clinician'],
+      clinician_2_name: cl2 ? (cl2.name||cl2.first_name+' '+cl2.last_name) : row['clinician 2'],
+      clinician_3_name: cl3 ? (cl3.name||cl3.first_name+' '+cl3.last_name) : row['clinician 3'],
+      clinician_4_name: cl4 ? (cl4.name||cl4.first_name+' '+cl4.last_name) : row['clinician 4']
     });
   });
 
