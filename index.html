@@ -437,6 +437,12 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .le-yn.yes{background:var(--grn);border-color:var(--grn);color:#000}
 .le-yn.no{background:var(--red2);border-color:var(--red2);color:#fff}
 .le-yn:disabled{opacity:.6;cursor:not-allowed}
+
+/* VOICE-TO-TEXT MIC */
+.mic-btn{background:var(--gray2);border:1px solid var(--b2);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:transform .12s,background .15s,border-color .15s}
+.mic-btn:active{transform:scale(.92)}
+.mic-btn.mic-on{background:#ffe4e1;border-color:#e74c3c;color:#e74c3c;animation:micPulse 1.1s ease-in-out infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(231,76,60,.55)}50%{box-shadow:0 0 0 8px rgba(231,76,60,0)}}
 </style>
 
 <script>
@@ -745,7 +751,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="followup" id="seConfFollowup"><div class="yn-row"><div class="yn-lbl">Conference Ready</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('conference','yes',this)">Yes</button><button class="yn-btn" onclick="setYN('conference','no',this)">No</button></div></div></div>
 <div class="yn-row" style="margin-bottom:0"><div class="yn-lbl">Top 10 Camper</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('top10','yes',this)">Yes</button><button class="yn-btn" onclick="setYN('top10','no',this)">No</button></div></div>
 </div>
-<div class="eval-card"><div class="eval-cat" style="margin-bottom:8px">Comments</div><textarea class="ftarea" id="seComments" placeholder="Additional observations..."></textarea></div>
+<div class="eval-card"><div class="eval-cat" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">Comments<button type="button" id="seMicBtn" class="mic-btn" onclick="toggleVoiceInput('seComments','seMicBtn')" title="Voice to text">🎤</button></div><textarea class="ftarea" id="seComments" placeholder="Additional observations..."></textarea></div>
 <div class="overall-card"><div class="overall-lbl">CURRENT AVERAGE</div><div class="overall-val" id="seOverall">—</div></div>
 <button class="btn bor" style="width:100%;padding:16px;font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:.1em" id="seSubmitBtn" onclick="submitStaffEval()">SUBMIT EVALUATION</button>
 <div id="seStatus" style="margin-top:10px"></div>
@@ -931,7 +937,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="followup" id="aeConfFollowup"><div class="yn-row"><div class="yn-lbl">Conference Ready</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('conference','yes',this,'ae')">Yes</button><button class="yn-btn" onclick="setYN('conference','no',this,'ae')">No</button></div></div></div>
 <div class="yn-row" style="margin-bottom:0"><div class="yn-lbl">Top 10 Camper</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('top10','yes',this,'ae')">Yes</button><button class="yn-btn" onclick="setYN('top10','no',this,'ae')">No</button></div></div>
 </div>
-<div class="eval-card"><div class="eval-cat" style="margin-bottom:8px">Comments</div><textarea class="ftarea" id="aeComments" placeholder="Additional observations..."></textarea></div>
+<div class="eval-card"><div class="eval-cat" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">Comments<button type="button" id="aeMicBtn" class="mic-btn" onclick="toggleVoiceInput('aeComments','aeMicBtn')" title="Voice to text">🎤</button></div><textarea class="ftarea" id="aeComments" placeholder="Additional observations..."></textarea></div>
 <div class="overall-card"><div class="overall-lbl">CURRENT AVERAGE</div><div class="overall-val" id="aeOverall">—</div></div>
 <button class="btn bor" style="width:100%;padding:16px;font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:.1em" id="aeSubmitBtn" onclick="submitAdminEval()">SUBMIT & EMAIL CAMPER</button>
 <div id="aeStatus" style="margin-top:10px"></div>
@@ -1406,6 +1412,73 @@ function isNameSubscribed(name){
   return pushSubNames.has(norm(name));
 }
 
+// ═══ VOICE TO TEXT (Web Speech API) ═══
+// Speech recognition appends transcribed text into a target textarea.
+// Tap the mic button once to start, again to stop. iOS Safari auto-stops
+// after pauses, so we restart unless the user explicitly tapped stop.
+const _voice = { rec:null, active:null, activeBtnId:null, baseText:'', userStopped:false };
+function toggleVoiceInput(taId, btnId){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast('Voice input not supported on this browser', true); return; }
+  const ta = document.getElementById(taId), btn = document.getElementById(btnId);
+  if (!ta || !btn) return;
+  if (_voice.active === taId){
+    // User tapped stop — clean up immediately (don't trust onend on iOS)
+    _voice.userStopped = true;
+    try { _voice.rec?.stop(); } catch(e){}
+    try { _voice.rec?.abort(); } catch(e){}
+    btn.classList.remove('mic-on'); btn.textContent = '🎤';
+    _voice.rec = null; _voice.active = null;
+    return;
+  }
+  // Stop any other active session first
+  if (_voice.rec){
+    _voice.userStopped = true;
+    try { _voice.rec.stop(); } catch(e){}
+    try { _voice.rec.abort(); } catch(e){}
+    const prevBtn = _voice.activeBtnId ? document.getElementById(_voice.activeBtnId) : null;
+    if (prevBtn){ prevBtn.classList.remove('mic-on'); prevBtn.textContent = '🎤'; }
+    _voice.rec = null; _voice.active = null;
+  }
+  const rec = new SR();
+  rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+  _voice.rec = rec; _voice.active = taId; _voice.activeBtnId = btnId; _voice.userStopped = false;
+  _voice.baseText = ta.value ? ta.value.replace(/\s*$/, '') + ' ' : '';
+  btn.classList.add('mic-on'); btn.textContent = '⏺';
+  rec.onresult = (e) => {
+    let finalT = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalT += t; else interim += t;
+    }
+    if (finalT) _voice.baseText += finalT.replace(/^\s+/, '') + ' ';
+    ta.value = (_voice.baseText + interim).trim();
+    // Notify Live Eval of changes so the auto-save picks them up.
+    if (taId === 'leCamperNotes') liveEvalNotesInput();
+    else if (taId === 'leCrewNote') liveEvalCrewInput();
+  };
+  rec.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
+      toast('Microphone permission denied', true); _voice.userStopped = true;
+    }
+  };
+  rec.onend = () => {
+    // iOS Safari auto-stops after pauses — restart unless the user tapped stop
+    if (!_voice.userStopped && _voice.active === taId){
+      try { rec.start(); return; } catch(e){}
+    }
+    const liveBtn = _voice.activeBtnId ? document.getElementById(_voice.activeBtnId) : btn;
+    if (liveBtn){ liveBtn.classList.remove('mic-on'); liveBtn.textContent = '🎤'; }
+    _voice.rec = null; _voice.active = null; _voice.activeBtnId = null;
+  };
+  try { rec.start(); }
+  catch(e){
+    btn.classList.remove('mic-on'); btn.textContent = '🎤';
+    _voice.rec = null; _voice.active = null;
+    toast('Could not start microphone', true);
+  }
+}
+
 // ═══ LIVE EVAL ═══
 // Tiny convenience — VH1 stores category scores under
 // `cat.toLowerCase().replace(/\s+/g,'_')`. Centralizing this so the Live
@@ -1628,7 +1701,7 @@ function renderLiveEvalGameView(){
     <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">${camps.length} camper${camps.length===1?'':'s'} · <span id="leSavedTxt">${savedTxt}</span>${submitted?' · 🔒 Locked':''}</div>
 
     <div class="eval-card">
-      <div class="eval-cat" style="margin-bottom:8px">CREW FEEDBACK</div>
+      <div class="eval-cat" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">CREW FEEDBACK<button type="button" id="leCrewMic" class="mic-btn" onclick="toggleVoiceInput('leCrewNote','leCrewMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
       <textarea class="ftarea" id="leCrewNote" placeholder="Notes for the whole crew (visible to all campers in this game)..." ${submitted?'disabled':''} oninput="liveEvalCrewInput()" onblur="liveEvalCrewBlur()">${escapeHtml(crewNote)}</textarea>
     </div>
 
@@ -1645,7 +1718,7 @@ function renderLiveEvalGameView(){
       ${catBlocks}
       ${flagBtns}
       <div style="margin-top:12px">
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">${isAbsent?'Notes (optional)':`Notes for ${escapeHtml(active.first_name)}`}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">${isAbsent?'Notes (optional)':`Notes for ${escapeHtml(active.first_name)}`}<button type="button" id="leCamperMic" class="mic-btn" onclick="toggleVoiceInput('leCamperNotes','leCamperMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
         <textarea class="ftarea" id="leCamperNotes" placeholder="${isAbsent?'Add any context (e.g. came late, hurt ankle in 2nd half)...':`Individual notes (only ${escapeHtml(active.first_name)} sees these)...`}" ${submitted?'disabled':''} oninput="liveEvalNotesInput()" onblur="liveEvalNotesBlur()">${escapeHtml(evRow.comments||'')}</textarea>
       </div>
     </div>` : '<div class="empty"><span class="ei">📋</span><div class="et">No campers in this game</div></div>'}
