@@ -4852,21 +4852,54 @@ function adminSchDay(day, btn) {
 }
 
 // ── ADMIN: Render schedule builder ──────────────────────
+// In-memory list of slot keys (slot+court) the admin has clicked to add
+// for the current day. Populated rows render as editable but unsaved
+// until the admin clicks Save on the row. Cleared on day switch.
+let _pendingNewSlots = {};
+
+function _slotRowHTML(dayKey, slot, court, clinOpts){
+  const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+  return `<div class="sch-slot-row" id="row_${slotId}">
+    <div class="sch-slot-header">
+      <span class="sch-slot-title">${slot} · ${court}</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn bor bsm" onclick="saveSlot('${dayKey}','${slot}','${court}')" type="button">Save</button>
+        <button class="btn bred bsm" onclick="removeSlot('${dayKey}','${slot}','${court}')" type="button" title="Delete this slot">✕</button>
+      </div>
+    </div>
+    <div class="sch-selects-3" style="margin-bottom:8px">
+      <div style="position:relative">
+        <input class="sch-select" id="c1i_${slotId}" placeholder="Camper 1..." oninput="filterCamperDrop('c1_${slotId}',this.value)" onfocus="showCamperDrop('c1_${slotId}')" onblur="hideCamperDrop('c1_${slotId}')" autocomplete="off" type="text">
+        <input type="hidden" id="c1_${slotId}">
+        <div class="cdrop" id="c1_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+      </div>
+      <div style="position:relative">
+        <input class="sch-select" id="c2i_${slotId}" placeholder="Camper 2..." oninput="filterCamperDrop('c2_${slotId}',this.value)" onfocus="showCamperDrop('c2_${slotId}')" onblur="hideCamperDrop('c2_${slotId}')" autocomplete="off" type="text">
+        <input type="hidden" id="c2_${slotId}">
+        <div class="cdrop" id="c2_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+      </div>
+      <div style="position:relative">
+        <input class="sch-select" id="c3i_${slotId}" placeholder="Camper 3..." oninput="filterCamperDrop('c3_${slotId}',this.value)" onfocus="showCamperDrop('c3_${slotId}')" onblur="hideCamperDrop('c3_${slotId}')" autocomplete="off" type="text">
+        <input type="hidden" id="c3_${slotId}">
+        <div class="cdrop" id="c3_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+      </div>
+    </div>
+    <select class="sch-select" id="cl_${slotId}" style="width:100%">${clinOpts}</select>
+    <select class="sch-select" id="cl2_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 2nd Clinician (optional) —')}</select>
+    <select class="sch-select" id="cl3_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 3rd Clinician (optional) —')}</select>
+    <select class="sch-select" id="cl4_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 4th Clinician (optional) —')}</select>
+    <div id="flag_${slotId}" style="margin-top:6px"></div>
+  </div>`;
+}
+
 function renderAdminSchedule() {
   const dayKey = currentAdminDay;
   const dayInfo = SCHEDULE_DAYS[dayKey];
   const container = document.getElementById('schBuilderSlots');
   if (!container) return;
 
-  // Build camper options
-  let camperOpts = '<option value="">— Camper —</option>';
-  [...campers].sort((a,b) => (a.last_name||'').localeCompare(b.last_name||'')).forEach(c => {
-    camperOpts += `<option value="${c.id}">${c.first_name} ${c.last_name}</option>`;
-  });
-
-  // Build clinician options
+  // Build clinician options once
   let clinOpts = '<option value="">— Clinician —</option>';
-  // Try real clinicians first
   const clinList = clinicians.length ? clinicians : PLACEHOLDER_CLINICIANS.map((n,i) => ({id:'ph_'+i, name:n}));
   clinList.forEach(c => {
     const id = c.id || 'ph_'+c.name;
@@ -4874,70 +4907,126 @@ function renderAdminSchedule() {
     clinOpts += `<option value="${id}">${name}</option>`;
   });
 
-  let html = '';
-  dayInfo.slots.forEach(slot => {
-    COURTS.forEach(court => {
-      const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
-      const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
-      
-      html += `<div class="sch-slot-row" id="row_${slotId}">
-        <div class="sch-slot-header">
-          <span class="sch-slot-title">${slot} · ${court}</span>
-          <button class="btn bor bsm" onclick="saveSlot('${dayKey}','${slot}','${court}')" type="button">Save</button>
-        </div>
-        <div class="sch-selects-3" style="margin-bottom:8px">
-          <div style="position:relative">
-            <input class="sch-select" id="c1i_${slotId}" placeholder="Camper 1..." oninput="filterCamperDrop('c1_${slotId}',this.value)" onfocus="showCamperDrop('c1_${slotId}')" onblur="hideCamperDrop('c1_${slotId}')" autocomplete="off" type="text">
-            <input type="hidden" id="c1_${slotId}">
-            <div class="cdrop" id="c1_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
-          </div>
-          <div style="position:relative">
-            <input class="sch-select" id="c2i_${slotId}" placeholder="Camper 2..." oninput="filterCamperDrop('c2_${slotId}',this.value)" onfocus="showCamperDrop('c2_${slotId}')" onblur="hideCamperDrop('c2_${slotId}')" autocomplete="off" type="text">
-            <input type="hidden" id="c2_${slotId}">
-            <div class="cdrop" id="c2_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
-          </div>
-          <div style="position:relative">
-            <input class="sch-select" id="c3i_${slotId}" placeholder="Camper 3..." oninput="filterCamperDrop('c3_${slotId}',this.value)" onfocus="showCamperDrop('c3_${slotId}')" onblur="hideCamperDrop('c3_${slotId}')" autocomplete="off" type="text">
-            <input type="hidden" id="c3_${slotId}">
-            <div class="cdrop" id="c3_${slotId}_drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--b3);border-radius:var(--rs);z-index:50;max-height:160px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
-          </div>
-        </div>
-        <select class="sch-select" id="cl_${slotId}" style="width:100%">${clinOpts}</select>
-        <select class="sch-select" id="cl2_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 2nd Clinician (optional) —')}</select>
-        <select class="sch-select" id="cl3_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 3rd Clinician (optional) —')}</select>
-        <select class="sch-select" id="cl4_${slotId}" style="width:100%;margin-top:6px">${clinOpts.replace('— Clinician —','— 4th Clinician (optional) —')}</select>
-        <div id="flag_${slotId}" style="margin-top:6px"></div>
-      </div>`;
+  // Render only:
+  // (1) slots that already exist in scheduleData for this day, sorted by
+  //     time then court, AND
+  // (2) any pending in-progress new rows the admin just added via "+ Add Slot"
+  //     but hasn't saved yet.
+  const existingRows = scheduleData
+    .filter(s => s.day === dayInfo.label)
+    .sort((a,b) => {
+      const t = timeToMinutes(a.time_slot) - timeToMinutes(b.time_slot);
+      if (t !== 0) return t;
+      return String(a.court||'').localeCompare(String(b.court||''));
     });
-  });
+
+  const existingKeys = new Set(existingRows.map(s => s.time_slot+'|'+s.court));
+  const pendingKeys = Object.keys(_pendingNewSlots[dayKey] || {});
+  const pendingRows = pendingKeys
+    .filter(k => !existingKeys.has(k))
+    .map(k => { const [time, court] = k.split('|'); return { time, court }; })
+    .sort((a,b) => {
+      const t = timeToMinutes(a.time) - timeToMinutes(b.time);
+      if (t !== 0) return t;
+      return a.court.localeCompare(b.court);
+    });
+
+  let html = '';
+  existingRows.forEach(s => { html += _slotRowHTML(dayKey, s.time_slot, s.court, clinOpts); });
+  pendingRows.forEach(p => { html += _slotRowHTML(dayKey, p.time, p.court, clinOpts); });
+
+  if (!html){
+    html = '<div class="empty" style="padding:30px 20px"><span class="ei">📅</span><div class="et">No games scheduled for this day yet</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">Use the "+ Add Slot" button below to create one, or upload a CSV.</div></div>';
+  }
+  html += '<div style="display:flex;justify-content:center;margin-top:12px"><button class="btn bor" onclick="openAddSlot()" type="button">+ Add Slot</button></div>';
 
   container.innerHTML = html;
 
   // Populate existing values
-  dayInfo.slots.forEach(slot => {
-    COURTS.forEach(court => {
-      const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
-      if (!existing) return;
-      const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
-      const s1 = document.getElementById(`c1_${slotId}`);
-      const s2 = document.getElementById(`c2_${slotId}`);
-      const s3 = document.getElementById(`c3_${slotId}`);
-      const sc = document.getElementById(`cl_${slotId}`);
-      const sc2 = document.getElementById(`cl2_${slotId}`);
-      const sc3 = document.getElementById(`cl3_${slotId}`);
-      const sc4 = document.getElementById(`cl4_${slotId}`);
-      const getName = id => { const c = campers.find(x=>x.id===id); return c ? c.first_name+' '+c.last_name : ''; };
-      if (s1 && existing.camper_1_id) { s1.value = existing.camper_1_id; const ti=document.getElementById('c1i_'+slotId); if(ti) ti.value=getName(existing.camper_1_id); }
-      if (s2 && existing.camper_2_id) { s2.value = existing.camper_2_id; const ti=document.getElementById('c2i_'+slotId); if(ti) ti.value=getName(existing.camper_2_id); }
-      if (s3 && existing.camper_3_id) { s3.value = existing.camper_3_id; const ti=document.getElementById('c3i_'+slotId); if(ti) ti.value=getName(existing.camper_3_id); }
-      if (sc && existing.clinician_id) sc.value = existing.clinician_id;
-      if (sc2 && existing.clinician_2_id) sc2.value = existing.clinician_2_id;
-      if (sc3 && existing.clinician_3_id) sc3.value = existing.clinician_3_id;
-      if (sc4 && existing.clinician_4_id) sc4.value = existing.clinician_4_id;
-    });
+  existingRows.forEach(existing => {
+    const slot = existing.time_slot;
+    const court = existing.court;
+    const slotId = `${dayKey}_${slot.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+    const s1 = document.getElementById(`c1_${slotId}`);
+    const s2 = document.getElementById(`c2_${slotId}`);
+    const s3 = document.getElementById(`c3_${slotId}`);
+    const sc = document.getElementById(`cl_${slotId}`);
+    const sc2 = document.getElementById(`cl2_${slotId}`);
+    const sc3 = document.getElementById(`cl3_${slotId}`);
+    const sc4 = document.getElementById(`cl4_${slotId}`);
+    const getName = id => { const c = campers.find(x=>x.id===id); return c ? c.first_name+' '+c.last_name : ''; };
+    if (s1 && existing.camper_1_id) { s1.value = existing.camper_1_id; const ti=document.getElementById('c1i_'+slotId); if(ti) ti.value=getName(existing.camper_1_id); }
+    if (s2 && existing.camper_2_id) { s2.value = existing.camper_2_id; const ti=document.getElementById('c2i_'+slotId); if(ti) ti.value=getName(existing.camper_2_id); }
+    if (s3 && existing.camper_3_id) { s3.value = existing.camper_3_id; const ti=document.getElementById('c3i_'+slotId); if(ti) ti.value=getName(existing.camper_3_id); }
+    if (sc && existing.clinician_id) sc.value = existing.clinician_id;
+    if (sc2 && existing.clinician_2_id) sc2.value = existing.clinician_2_id;
+    if (sc3 && existing.clinician_3_id) sc3.value = existing.clinician_3_id;
+    if (sc4 && existing.clinician_4_id) sc4.value = existing.clinician_4_id;
   });
 
   updateAllFlags();
+}
+
+// Modal-style picker for time + court → renders an empty editable row.
+async function openAddSlot(){
+  const dayKey = currentAdminDay;
+  const dayInfo = SCHEDULE_DAYS[dayKey];
+  const timeOpts = dayInfo.slots.map(s => `<option value="${s}">${s}</option>`).join('');
+  const courtOpts = COURTS.map(c => `<option value="${c}">${c}</option>`).join('');
+  // Prompt via a small overlay reusing the .overlay/.modal classes.
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="overlay on" id="mAddSlot" style="display:flex">
+      <div class="modal" style="max-width:360px">
+        <div class="mhd"><div class="mtitle">ADD SLOT</div><button class="mclose" onclick="document.getElementById('mAddSlot').remove()" type="button">✕</button></div>
+        <div class="mbody">
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Pick a time + court for ${dayInfo.label.replace(/, 2026/,'')}.</div>
+          <label class="flabel">Time</label>
+          <select class="finput" id="addSlotTime">${timeOpts}</select>
+          <label class="flabel" style="margin-top:8px">Court</label>
+          <select class="finput" id="addSlotCourt">${courtOpts}</select>
+          <div style="display:flex;gap:8px;margin-top:14px"><button class="btn bsec" style="flex:1" onclick="document.getElementById('mAddSlot').remove()" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="confirmAddSlot()" type="button">Add</button></div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap.firstElementChild);
+}
+function confirmAddSlot(){
+  const dayKey = currentAdminDay;
+  const dayInfo = SCHEDULE_DAYS[dayKey];
+  const time = document.getElementById('addSlotTime').value;
+  const court = document.getElementById('addSlotCourt').value;
+  const exists = scheduleData.some(s => s.day === dayInfo.label && s.time_slot === time && s.court === court);
+  if (exists){ toast('That slot already exists — scroll down to edit it', true); return; }
+  _pendingNewSlots[dayKey] = _pendingNewSlots[dayKey] || {};
+  _pendingNewSlots[dayKey][time+'|'+court] = true;
+  document.getElementById('mAddSlot').remove();
+  renderAdminSchedule();
+  // Scroll the new row into view.
+  const slotId = `${dayKey}_${time.replace(/[: ]/g,'')}_${court.replace(' ','')}`;
+  const el = document.getElementById('row_'+slotId);
+  if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+// Delete a saved slot (or remove a pending unsaved row from the buffer).
+async function removeSlot(dayKey, slot, court){
+  const dayInfo = SCHEDULE_DAYS[dayKey];
+  const existing = scheduleData.find(s => s.day === dayInfo.label && s.time_slot === slot && s.court === court);
+  if (existing){
+    const ok = await cf(`Delete the ${slot} · ${court} slot? Any evals attached to this slot will remain in the evaluations table.`,'Delete','Cancel');
+    if (!ok) return;
+    const pwOk = await cfPwd('Enter the admin password to delete this slot.');
+    if (!pwOk) return;
+    try{
+      await supa('schedule','DELETE',null,`?id=eq.${existing.id}`);
+      await loadSchedule();
+      renderAdminSchedule();
+      toast('Slot deleted');
+    }catch(e){ toast('Delete failed: '+e.message, true); }
+  } else {
+    if (_pendingNewSlots[dayKey]) delete _pendingNewSlots[dayKey][slot+'|'+court];
+    renderAdminSchedule();
+  }
 }
 
 // ── SAVE A SLOT ─────────────────────────────────────────
