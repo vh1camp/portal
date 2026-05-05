@@ -2235,6 +2235,7 @@ function dismissWelcomeModal(){
 
 // ═══ CAMPER PORTAL ═══
 function cView(v){
+  _restoreBnav();
   if(v!=='chat')chatActiveSuffix=null;
   document.querySelectorAll('#pCamper .view').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('#navC .bb').forEach(b=>b.classList.remove('on'));
@@ -2281,8 +2282,18 @@ function renderCamperResults(){
   con.innerHTML=h;
 }
 
+// Helper: defensively re-show the role's bottom nav on every nav switch.
+// iPad PWAs can hold an old SW that left inline display:none on a bnav;
+// without this, switching tabs wouldn't clear it.
+function _restoreBnav(){
+  document.querySelectorAll('.bnav').forEach(n=>{ n.style.display=''; });
+  if(CR==='camper'){const n=document.getElementById('navC');if(n)n.classList.add('on');}
+  else if(CR==='staff'||CR==='clinician'){const n=document.getElementById('navS');if(n)n.classList.add('on');}
+}
+
 // ═══ STAFF PORTAL ═══
 function sView(v){
+  _restoreBnav();
   if(v!=='chat')chatActiveSuffix=null;
   document.querySelectorAll('#pStaff .view').forEach(el=>el.classList.remove('on'));
   document.querySelectorAll('#navS .bb').forEach(b=>b.classList.remove('on'));
@@ -3769,10 +3780,15 @@ function renderBlastHistory(){
 }
 
 async function sendChatEmailBlast(msg,from){
-  const withEmail=campers.filter(c=>c.email);
+  const withEmail=campers.filter(c=>c.email&&String(c.email).includes('@'));
+  if(!withEmail.length){
+    toast('No campers have an email on file', true);
+    return;
+  }
+  let sent=0, failed=0;
   for(const c of withEmail){
     try{
-      await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      const res=await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         to:c.email,from:CFG.FROM_EMAIL,
         subject:`VH1 Camp Announcement from ${from}`,
         html:`<div style="max-width:420px;margin:0 auto;font-family:Arial,sans-serif;background:#111;border-radius:8px;overflow:hidden;">
@@ -3784,10 +3800,18 @@ async function sendChatEmailBlast(msg,from){
           </div>
         </div>`
       })});
-    }catch(e){}
+      const data=await res.json().catch(()=>({}));
+      if(res.ok && data.success!==false && data.error==null) sent++;
+      else { failed++; console.warn('Chat email blast failed for', c.email, res.status, data); }
+    }catch(e){
+      failed++;
+      console.warn('Chat email blast network error for', c.email, e);
+    }
     await new Promise(r=>setTimeout(r,150));
   }
-  toast('📧 Email blast sent to all campers!');
+  if(sent>0 && failed===0) toast(`📧 Sent to ${sent} camper${sent===1?'':'s'}`);
+  else if(sent>0) toast(`📧 Sent to ${sent}, ${failed} failed`, true);
+  else toast(`📧 All ${failed} sends failed — check Netlify env vars`, true);
 }
 
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
