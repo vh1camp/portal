@@ -361,7 +361,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .chat-wrap{display:flex;flex-direction:column;height:calc(100dvh - 120px)}
 /* When chat view is active, drop the fixed height and let chat fill the
    space above the sticky bottom nav, so the input row never gets hidden. */
-#cv-chat.on,#sv-chat.on{display:flex;flex-direction:column;flex:1;min-height:0;padding-bottom:0}
+#cv-chat.on,#sv-chat.on{display:flex;flex-direction:column;flex:1;min-height:0;padding-bottom:calc(80px + var(--safe))}
 #cv-chat.on .chat-wrap,#sv-chat.on .chat-wrap{flex:1;min-height:0;height:auto!important}
 .chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
 .chat-msg{display:flex;flex-direction:column;max-width:82%}
@@ -561,17 +561,17 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <!-- CAMPER PORTAL -->
 <div class="portal" id="pCamper">
 <nav class="bnav on" id="navC">
-<button class="bb on" id="cb-home" onclick="cView('home')" type="button">
-  <div class="bb-icon"><svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg></div>
-  <span class="bl">Home</span>
+<button class="bb on" id="cb-campinfo" onclick="cView('campinfo')" type="button">
+  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+  <span class="bl">Camp Info</span>
+</button>
+<button class="bb" id="cb-schedule" onclick="cView('schedule')" type="button">
+  <div class="bb-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+  <span class="bl">Schedule</span>
 </button>
 <button class="bb" id="cb-results" onclick="cView('results')" type="button">
   <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M12 11v10M8 17l4 4 4-4"/><path d="M6 21h12"/></svg></div>
   <span class="bl">Results</span>
-</button>
-<button class="bb" id="cb-campinfo" onclick="cView('campinfo')" type="button">
-  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
-  <span class="bl">Camp Info</span>
 </button>
 <button class="bb" id="cb-chat" onclick="cView('chat')" type="button">
   <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="badge-dot" id="chatDotC" style="top:0;right:0"></span></div>
@@ -587,10 +587,6 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="more-drawer" id="moreDrawerC">
   <div class="more-drawer-handle"></div>
   <div class="more-drawer-grid">
-    <button class="more-item" id="cb-schedule" onclick="cView('schedule');closeMoreC()" type="button">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span>Schedule</span>
-    </button>
     <button class="more-item" id="cb-profiles" onclick="cView('profiles');closeMoreC()" type="button">
       <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></svg>
       <span>Roster</span>
@@ -2197,7 +2193,7 @@ function enterApp(){
   // Clear any leftover inline display styles on bnavs so the .bnav.on CSS
   // rule controls visibility (avoids cross-session leaks of display:none).
   document.querySelectorAll('.bnav').forEach(n=>{ n.style.display=''; });
-  if(CR==='camper'){document.getElementById('pCamper').classList.add('on');document.getElementById('navC').classList.add('on');cView('home');}
+  if(CR==='camper'){document.getElementById('pCamper').classList.add('on');document.getElementById('navC').classList.add('on');cView('campinfo');}
   else if(CR==='staff'){document.getElementById('pStaff').classList.add('on');document.getElementById('navS').classList.add('on');populateStaffEvalForm();sView('campinfo');}
   else{document.getElementById('pAdmin').classList.add('on');populateAdminForms();aTab('overview',document.querySelector('.atab'));}
   startChatBackgroundPoll();
@@ -2244,7 +2240,7 @@ function cView(v){
   document.getElementById('cv-'+v).classList.add('on');
   const btn=document.getElementById('cb-'+v);if(btn)btn.classList.add('on');
   // Highlight More btn for drawer items
-  const drawerViews=['schedule','myprofile','profiles','clinicians'];
+  const drawerViews=['myprofile','profiles','clinicians'];
   if(drawerViews.includes(v)){const mb=document.getElementById('cb-more-btn');if(mb)mb.classList.add('on');}
   if(v==='home')renderCamperHome();
   if(v==='results')renderCamperResults();
