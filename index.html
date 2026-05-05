@@ -739,7 +739,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
 <div><label class="flabel">Date</label><input type="date" class="finput" id="seDate" style="margin-bottom:0"></div>
 <div><label class="flabel">Court</label><select class="finput" id="seCourt" style="margin-bottom:0"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-<div><label class="flabel">Time</label><select class="finput" id="seTime" style="margin-bottom:0"><option value="">—</option><option>8:00 AM</option><option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option><option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option><option>6:00 PM</option><option>7:00 PM</option><option>8:00 PM</option></select></div>
+<div><label class="flabel">Time</label><input type="time" class="finput" id="seTime" style="margin-bottom:0"></div>
 </div>
 <div id="seCards"></div>
 <div class="eval-card" id="seYnCard">
@@ -914,7 +914,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div><label class="flabel">Clinician</label><select class="finput" id="aeClinician" style="margin-bottom:0"><option value="">— Select —</option></select></div>
 <div><label class="flabel">Date</label><input type="date" class="finput" id="aeDate" style="margin-bottom:0"></div>
 <div><label class="flabel">Court</label><select class="finput" id="aeCourt" style="margin-bottom:0"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-<div><label class="flabel">Time</label><select class="finput" id="aeTime" style="margin-bottom:0"><option value="">—</option><option>8:00 AM</option><option>9:00 AM</option><option>10:00 AM</option><option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option><option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option><option>6:00 PM</option><option>7:00 PM</option><option>8:00 PM</option></select></div>
+<div><label class="flabel">Time</label><input type="time" class="finput" id="aeTime" style="margin-bottom:0"></div>
 </div>
 <div id="aeCards"></div>
 <div class="eval-card" id="aeYnCard">
@@ -2392,7 +2392,7 @@ async function submitStaffEval(){
   const clinName=CU.first_name+' '+CU.last_name;
   const evalDate=document.getElementById('seDate').value;
   const court=document.getElementById('seCourt').value;
-  const time=document.getElementById('seTime').value;
+  const time=normalizeTime12(document.getElementById('seTime').value);
   let allFilled=true;CFG.CATS.forEach((_,i)=>{if(getScoreVal('se',i)===null)allFilled=false;});
   if(!allFilled){toast('Score all categories',true);return;}
   const btn=document.getElementById('seSubmitBtn');const st=document.getElementById('seStatus');
@@ -2426,7 +2426,7 @@ async function submitAdminEval(){
   const overall=parseFloat(document.getElementById('aeOverall').textContent);
   const evalDate=document.getElementById('aeDate').value;
   const court=document.getElementById('aeCourt').value;
-  const time=document.getElementById('aeTime').value;
+  const time=normalizeTime12(document.getElementById('aeTime').value);
   try{
     await supa('evaluations','POST',{camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,overall_score:overall});
     st.innerHTML='<div class="email-ok">✓ Evaluation saved</div>';
@@ -4557,6 +4557,33 @@ function timeToMinutes(t) {
   return h * 60 + m;
 }
 
+// ── TIME FORMAT HELPERS ───────────────────────────────────
+// VH1 stores time everywhere as "H:MM AM/PM" strings (e.g. "9:30 AM").
+// <input type="time"> reads/writes 24h "HH:MM". These two helpers convert
+// between them so admins can pick any time (down to the minute) without
+// breaking string-equality lookups in evals + schedule.
+function normalizeTime12(time24){
+  if (!time24) return '';
+  const m = String(time24).match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return time24;
+  let h = parseInt(m[1],10);
+  const min = m[2];
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${min} ${ampm}`;
+}
+function to24Hour(time12){
+  if (!time12) return '';
+  const m = String(time12).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!m) return '';
+  let h = parseInt(m[1],10);
+  const min = m[2];
+  const ampm = m[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return String(h).padStart(2,'0')+':'+min;
+}
+
 // Map schedule day labels to ISO dates so eval rows (eval_date is ISO)
 // can be matched against schedule rows (day is the long label).
 const SCH_DAY_TO_DATE = {
@@ -4971,7 +4998,6 @@ function renderAdminSchedule() {
 async function openAddSlot(){
   const dayKey = currentAdminDay;
   const dayInfo = SCHEDULE_DAYS[dayKey];
-  const timeOpts = dayInfo.slots.map(s => `<option value="${s}">${s}</option>`).join('');
   const courtOpts = COURTS.map(c => `<option value="${c}">${c}</option>`).join('');
   // Prompt via a small overlay reusing the .overlay/.modal classes.
   const wrap = document.createElement('div');
@@ -4980,9 +5006,9 @@ async function openAddSlot(){
       <div class="modal" style="max-width:360px">
         <div class="mhd"><div class="mtitle">ADD SLOT</div><button class="mclose" onclick="document.getElementById('mAddSlot').remove()" type="button">✕</button></div>
         <div class="mbody">
-          <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Pick a time + court for ${dayInfo.label.replace(/, 2026/,'')}.</div>
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Pick a time + court for ${dayInfo.label.replace(/, 2026/,'')}. Any minute works (10:15, 9:45, etc.).</div>
           <label class="flabel">Time</label>
-          <select class="finput" id="addSlotTime">${timeOpts}</select>
+          <input type="time" class="finput" id="addSlotTime" value="10:00">
           <label class="flabel" style="margin-top:8px">Court</label>
           <select class="finput" id="addSlotCourt">${courtOpts}</select>
           <div style="display:flex;gap:8px;margin-top:14px"><button class="btn bsec" style="flex:1" onclick="document.getElementById('mAddSlot').remove()" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="confirmAddSlot()" type="button">Add</button></div>
@@ -4994,8 +5020,10 @@ async function openAddSlot(){
 function confirmAddSlot(){
   const dayKey = currentAdminDay;
   const dayInfo = SCHEDULE_DAYS[dayKey];
-  const time = document.getElementById('addSlotTime').value;
+  const raw = document.getElementById('addSlotTime').value;
+  const time = normalizeTime12(raw);
   const court = document.getElementById('addSlotCourt').value;
+  if (!time){ toast('Pick a valid time', true); return; }
   const exists = scheduleData.some(s => s.day === dayInfo.label && s.time_slot === time && s.court === court);
   if (exists){ toast('That slot already exists — scroll down to edit it', true); return; }
   _pendingNewSlots[dayKey] = _pendingNewSlots[dayKey] || {};
@@ -5383,17 +5411,10 @@ function openEvalFromSchedule(camperId, court, timeSlot, day) {
     const courtNum = court.replace(/[^0-9]/g, '');
     courtSel.value = courtNum;
   }
-  // Pre-fill time
-  const timeSel = document.getElementById('seTime');
-  if (timeSel && timeSlot) {
-    // Normalize time: "10:00 AM" matches option values
-    for (let i = 0; i < timeSel.options.length; i++) {
-      if (timeSel.options[i].text === timeSlot || timeSel.options[i].value === timeSlot) {
-        timeSel.selectedIndex = i;
-        break;
-      }
-    }
-  }
+  // Pre-fill time — convert the "H:MM AM/PM" slot string into 24h "HH:MM"
+  // for the native <input type="time">.
+  const timeEl = document.getElementById('seTime');
+  if (timeEl && timeSlot) timeEl.value = to24Hour(timeSlot);
   // Pre-fill date from day string
   const dateParts = { 'Thursday June 18, 2026': '2026-06-18', 'Friday June 19, 2026': '2026-06-19', 'Saturday June 20, 2026': '2026-06-20' };
   const dateEl = document.getElementById('seDate');
