@@ -2416,7 +2416,7 @@ function renderStaffRoster(filter){
   con.innerHTML=list.map(c=>{
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const loc=(c.city||'')+(c.state?', '+c.state:'');
+    const loc=formatLocation(c);
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
@@ -2662,7 +2662,7 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile('${c.id}')">${c.first_name} ${c.last_name}</span></td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}" type="button">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}" type="button">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')" type="button">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report" type="button">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')" type="button">Del</button></div></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile('${c.id}')">${c.first_name} ${c.last_name}</span></td><td>${formatLocation(c)}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}" type="button">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}" type="button">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')" type="button">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report" type="button">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')" type="button">Del</button></div></td>`;
     tbody.appendChild(tr);
   });
   // Keep arrow in sync
@@ -3129,7 +3129,7 @@ function renderProfiles(search){
     const avg=sc?sc.overall.toFixed(1):'—';
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const loc=(c.city||'')+(c.state?', '+c.state:'');
+    const loc=formatLocation(c);
     const typeLabel=c.type||'Non-Staff';
     const evalStatus=evals?`${evals} eval${evals!==1?'s':''} · Avg <strong style="color:var(--or)">${avg}</strong>`:'<span style="color:var(--tx3)">Not yet evaluated</span>';
     return`<div class="pcard" onclick="openProfile('${c.id}')">
@@ -3152,7 +3152,7 @@ function openProfile(id){
   const imgHtml=c.photo
     ?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
     :`<div class="pmod-initials">${initials}</div>`;
-  const loc=(c.city||'')+(c.state?', '+c.state:'');
+  const loc=formatLocation(c);
   let tags='';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
   let body=imgHtml;
@@ -3891,6 +3891,22 @@ async function sendChatEmailBlast(msg,from){
 }
 
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Some legacy camper rows have city AND state both set to the full
+// "City, ST" string (or a freeform address) from an older import path.
+// Display de-dups so we render "Pueblo, CO" instead of
+// "Pueblo, CO, Pueblo, CO" without needing a data migration.
+function formatLocation(c){
+  const city = (c?.city||'').trim();
+  const state = (c?.state||'').trim();
+  if (!city && !state) return '';
+  if (!state) return city;
+  if (!city) return state;
+  const cl = city.toLowerCase();
+  const sl = state.toLowerCase();
+  if (cl === sl) return city;
+  if (cl.includes(sl) || sl.includes(cl)) return city;
+  return city + ', ' + state;
+}
 
 // Trigger a real download of a stored doc (data URL → Blob URL). iOS Safari
 // and the installed PWA refuse to download huge data: URLs from <a download>,
@@ -3940,7 +3956,7 @@ function renderCamperProfiles(search){
   grid.innerHTML=list.map(c=>{
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const loc=(c.city||'')+(c.state?', '+c.state:'');
+    const loc=formatLocation(c);
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
@@ -3958,7 +3974,7 @@ function openCamperProfile(id,evalContext){
   const imgHtml=c.photo
     ?`<img class="pmod-img" src="${c.photo}" alt="${c.first_name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
     :`<div class="pmod-initials">${initials}</div>`;
-  const loc=(c.city||'')+(c.state?', '+c.state:'');
+  const loc=formatLocation(c);
   let tags='';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
   let body=imgHtml;
@@ -4555,7 +4571,7 @@ function renderEvalTracker(){
     const clinNames = [...new Set(evs.map(e=>e.clinician_name).filter(Boolean))];
     const pct = Math.min(100, Math.round(n/3*100));
     const barColor = n===0?'var(--red2)':n<2?'var(--or)':'var(--grn)';
-    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:600;color:var(--or);cursor:pointer;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile(\''+c.id+'\')">'+c.first_name+' '+c.last_name+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.city||'')+(c.state?', '+c.state:'')+'</div></div><div style="text-align:right"><div style="font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+avg+'</div><div style="font-size:10px;color:var(--tx3)">'+n+' eval'+(n!==1?'s':'')+'</div></div></div><div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'+(clinNames.length?'<div style="font-size:10px;color:var(--tx3)">By: '+clinNames.join(', ')+'</div>':'<div style="font-size:10px;color:var(--red2)">⚠ No evaluations yet</div>')+'</div>';
+    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:600;color:var(--or);cursor:pointer;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile(\''+c.id+'\')">'+c.first_name+' '+c.last_name+'</div><div style="font-size:11px;color:var(--tx3)">'+formatLocation(c)+'</div></div><div style="text-align:right"><div style="font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+avg+'</div><div style="font-size:10px;color:var(--tx3)">'+n+' eval'+(n!==1?'s':'')+'</div></div></div><div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'+(clinNames.length?'<div style="font-size:10px;color:var(--tx3)">By: '+clinNames.join(', ')+'</div>':'<div style="font-size:10px;color:var(--red2)">⚠ No evaluations yet</div>')+'</div>';
   }).join('');
 }
 
@@ -4618,7 +4634,7 @@ function buildAndDownloadReport(c){
     return '<tr><td style="padding:7px 12px;font-size:12px;color:#888880">'+(e.clinician_name||'—')+'</td><td style="padding:7px 12px;font-size:12px;color:#888880">'+dt+'</td><td style="padding:7px 12px;font-size:12px;color:#888880">Court '+(e.court||'—')+'</td><td style="padding:7px 12px;font-size:14px;font-weight:700;color:#F47B20">'+(e.overall_score||0).toFixed(1)+'</td></tr>';
   }).join('');
   const badges=[rmac?'<span style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">RMAC READY</span>':'',conf?'<span style="background:rgba(52,152,219,.15);border:1px solid #3498db;color:#3498db;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">CONFERENCE READY</span>':'',top10?'<span style="background:rgba(244,123,32,.15);border:1px solid #F47B20;color:#F47B20;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">TOP 10</span>':''].filter(Boolean).join(' ');
-  const rHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>VH1 Report — '+c.first_name+' '+c.last_name+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#0a0a0a;color:#e8e8e0;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div style="max-width:680px;margin:0 auto"><div style="background:#F47B20;padding:20px 24px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;color:rgba(0,0,0,.6);text-transform:uppercase">VH1 Basketball Officials Camp</div><div style="font-size:22px;font-weight:900;color:#000;letter-spacing:.06em;margin-top:2px">PERFORMANCE REPORT</div><div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:2px">Denver, CO · June 18–20, 2026</div></div><div style="text-align:right"><div style="font-size:11px;color:rgba(0,0,0,.6)">Generated</div><div style="font-size:12px;font-weight:700;color:#000">'+new Date().toLocaleDateString()+'</div></div></div><div style="background:#111;padding:20px 24px;border-bottom:1px solid #222"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:.04em">'+c.first_name+' '+c.last_name+'</div><div style="font-size:13px;color:#888;margin-top:3px">'+(c.city||'')+(c.state?', '+c.state:'')+' · '+(c.type||'Non-Staff')+'</div></div><div style="text-align:center;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 20px"><div style="font-size:48px;font-weight:900;color:#F47B20;line-height:1">'+avg+'</div><div style="font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Overall Avg · '+n+' eval'+(n!==1?'s':'')+'</div></div></div>'+(badges?'<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+badges+'</div>':'')+'</div>'+(n>0?'<div style="background:#0d0d0d;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Category Breakdown</div><table style="width:100%;border-collapse:collapse">'+catRows+'</table></div><div style="background:#111;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Evaluation History</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Clinician</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Date</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Court</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Score</th></tr></thead><tbody>'+evalRows+'</tbody></table></div>':'<div style="padding:24px;text-align:center;color:#555">No evaluations recorded</div>')+'<div style="background:#080808;padding:14px 24px;border-top:1px solid #1a1a1a;font-size:10px;color:#444;text-align:center">VH1 Basketball Officials Camp · Denver, CO · June 18–20, 2026</div></div><scr'+'ipt>window.onload=function(){window.print();}</'+'script></body></html>';
+  const rHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>VH1 Report — '+c.first_name+' '+c.last_name+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#0a0a0a;color:#e8e8e0;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div style="max-width:680px;margin:0 auto"><div style="background:#F47B20;padding:20px 24px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;color:rgba(0,0,0,.6);text-transform:uppercase">VH1 Basketball Officials Camp</div><div style="font-size:22px;font-weight:900;color:#000;letter-spacing:.06em;margin-top:2px">PERFORMANCE REPORT</div><div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:2px">Denver, CO · June 18–20, 2026</div></div><div style="text-align:right"><div style="font-size:11px;color:rgba(0,0,0,.6)">Generated</div><div style="font-size:12px;font-weight:700;color:#000">'+new Date().toLocaleDateString()+'</div></div></div><div style="background:#111;padding:20px 24px;border-bottom:1px solid #222"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:.04em">'+c.first_name+' '+c.last_name+'</div><div style="font-size:13px;color:#888;margin-top:3px">'+formatLocation(c)+' · '+(c.type||'Non-Staff')+'</div></div><div style="text-align:center;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 20px"><div style="font-size:48px;font-weight:900;color:#F47B20;line-height:1">'+avg+'</div><div style="font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Overall Avg · '+n+' eval'+(n!==1?'s':'')+'</div></div></div>'+(badges?'<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+badges+'</div>':'')+'</div>'+(n>0?'<div style="background:#0d0d0d;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Category Breakdown</div><table style="width:100%;border-collapse:collapse">'+catRows+'</table></div><div style="background:#111;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Evaluation History</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Clinician</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Date</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Court</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Score</th></tr></thead><tbody>'+evalRows+'</tbody></table></div>':'<div style="padding:24px;text-align:center;color:#555">No evaluations recorded</div>')+'<div style="background:#080808;padding:14px 24px;border-top:1px solid #1a1a1a;font-size:10px;color:#444;text-align:center">VH1 Basketball Officials Camp · Denver, CO · June 18–20, 2026</div></div><scr'+'ipt>window.onload=function(){window.print();}</'+'script></body></html>';
   const blob=new Blob([rHTML],{type:'text/html'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
