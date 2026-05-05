@@ -1973,13 +1973,11 @@ function closeModal(id){
     el.style.display='none';
     if(id==='mProfile')startChatBackgroundPoll();
   }else{el.classList.remove('on');}
-  // Defensive: any modal close restores the role's bottom nav. Avoids the
-  // case where some flow dismissed the modal without going through the
-  // mProfile-specific restore path and left the nav hidden.
-  const navC=document.getElementById('navC');
-  const navS=document.getElementById('navS');
-  if(CR==='camper'&&navC)navC.style.display='flex';
-  else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
+  // Defensive: any modal close clears the inline display:none that
+  // openModal('mProfile'/'mClinicianProfile') sets on every .bnav. Clearing
+  // the inline style lets the .bnav.on CSS rule re-take control instead of
+  // leaving stale inline styles that override across sessions/roles.
+  document.querySelectorAll('.bnav').forEach(n=>{ n.style.display=''; });
   if(id==='mClinician')resetClinicianModal();
 }
 
@@ -2196,6 +2194,9 @@ function enterApp(){
   badge.className='nbadge '+(CR==='camper'?'bc':CR==='staff'?'bs':'ba');
   document.getElementById('uName').textContent=CU.first_name+(CU.last_name?' '+CU.last_name:'');
   document.querySelectorAll('.portal').forEach(p=>p.classList.remove('on'));
+  // Clear any leftover inline display styles on bnavs so the .bnav.on CSS
+  // rule controls visibility (avoids cross-session leaks of display:none).
+  document.querySelectorAll('.bnav').forEach(n=>{ n.style.display=''; });
   if(CR==='camper'){document.getElementById('pCamper').classList.add('on');document.getElementById('navC').classList.add('on');cView('home');}
   else if(CR==='staff'){document.getElementById('pStaff').classList.add('on');document.getElementById('navS').classList.add('on');populateStaffEvalForm();sView('campinfo');}
   else{document.getElementById('pAdmin').classList.add('on');populateAdminForms();aTab('overview',document.querySelector('.atab'));}
