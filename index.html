@@ -250,7 +250,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .rank-avg{font-family:'Oswald',sans-serif;font-size:28px;color:var(--or);margin-left:12px;flex-shrink:0}
 .rank-bars{margin-top:5px}
 .rank-bar-row{display:flex;align-items:center;gap:5px;margin-bottom:3px}
-.rank-bar-lbl{font-size:9px;color:var(--tx3);width:50px;text-align:right;flex-shrink:0}
+.rank-bar-lbl{font-size:9px;color:var(--tx3);width:90px;text-align:right;flex-shrink:0;line-height:1.2;word-break:break-word}
 .rank-bar-bg{flex:1;height:5px;background:var(--gray3);border-radius:3px;overflow:hidden}
 .rank-bar-fill{height:100%;background:var(--or);border-radius:3px;transition:width .5s ease}
 .rank-bar-val{font-size:9px;color:var(--tx2);width:24px;flex-shrink:0}
@@ -299,6 +299,10 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 @media(max-width:600px){.sg4{grid-template-columns:1fr 1fr}.frow{grid-template-columns:1fr}}
 .ae-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 @media(max-width:600px){.ae-fields{grid-template-columns:1fr}}
+.ae-fields .finput{box-sizing:border-box;min-width:0;width:100%}
+.ae-fields input[type="date"]{-webkit-appearance:none;appearance:none}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:780px){.settings-grid{grid-template-columns:1fr}}
 
 /* PROFILES GRID */
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:4px}
@@ -565,9 +569,9 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
   <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M12 11v10M8 17l4 4 4-4"/><path d="M6 21h12"/></svg></div>
   <span class="bl">Results</span>
 </button>
-<button class="bb" id="cb-profiles" onclick="cView('profiles')" type="button">
-  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></svg></div>
-  <span class="bl">Roster</span>
+<button class="bb" id="cb-campinfo" onclick="cView('campinfo')" type="button">
+  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+  <span class="bl">Camp Info</span>
 </button>
 <button class="bb" id="cb-chat" onclick="cView('chat')" type="button">
   <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="badge-dot" id="chatDotC" style="top:0;right:0"></span></div>
@@ -587,6 +591,10 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span>Schedule</span>
     </button>
+    <button class="more-item" id="cb-profiles" onclick="cView('profiles');closeMoreC()" type="button">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></svg>
+      <span>Roster</span>
+    </button>
     <button class="more-item" id="cb-myprofile" onclick="cView('myprofile');closeMoreC()" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span>My Profile</span>
@@ -594,10 +602,6 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
     <button class="more-item" id="cb-clinicians" onclick="cView('clinicians');closeMoreC()" type="button">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Clinicians
-    </button>
-    <button class="more-item" id="cb-campinfo" onclick="cView('campinfo');closeMoreC()" type="button">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-      <span>Camp Info</span>
     </button>
     <button class="more-item" id="cb-signout" onclick="closeMoreC();logout()" type="button">
       <svg viewBox="0 0 24 24" style="stroke:var(--red2)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -651,11 +655,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="view" id="cv-campinfo">
 <div class="stitle">CAMP <span>INFO</span></div>
-<div id="cvCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
-<div id="cvCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
-</div>
-<div class="view" id="cv-campinfo">
-<div class="stitle">CAMP <span>INFO</span></div>
+<div id="cvMessageBoard" style="margin-bottom:14px"></div>
 <div id="cvCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
 <div id="cvCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
 </div>
@@ -689,9 +689,9 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
   <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="badge-dot" id="chatDotS" style="top:0;right:0"></span></div>
   <span class="bl">Chat</span>
 </button>
-<button class="bb" id="sb-staffchat" onclick="sView('staffchat')" type="button">
-  <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="badge-dot" id="chatDotSR" style="top:0;right:0"></span></div>
-  <span class="bl">Staff</span>
+<button class="bb" id="sb-campinfo" onclick="sView('campinfo')" type="button">
+  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+  <span class="bl">Camp Info</span>
 </button>
 <button class="bb" id="sb-more-btn" onclick="openMoreS()" type="button">
   <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></div>
@@ -718,10 +718,6 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
     <button class="more-item" id="sb-clinicians" onclick="sView('clinicians');closeMoreS()" type="button">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Clinicians
-    </button>
-    <button class="more-item" id="sb-campinfo" onclick="sView('campinfo');closeMoreS()" type="button">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-      <span>Camp Info</span>
     </button>
     <button class="more-item" id="sb-signout" onclick="closeMoreS();logout()" type="button">
       <svg viewBox="0 0 24 24" style="stroke:var(--red2)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -779,11 +775,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="view" id="sv-campinfo">
 <div class="stitle">CAMP <span>INFO</span></div>
-<div id="svCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
-<div id="svCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
-</div>
-<div class="view" id="sv-campinfo">
-<div class="stitle">CAMP <span>INFO</span></div>
+<div id="svMessageBoard" style="margin-bottom:14px"></div>
 <div id="svCampInfoList" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
 <div id="svCampInfoEmpty" style="color:var(--tx3);font-size:13px;text-align:center;padding:32px 0">No documents posted yet.</div>
 </div>
@@ -796,24 +788,16 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div id="sMyProfileCon"></div>
 </div>
 <div class="view" id="sv-chat">
-<div class="stitle" style="margin-bottom:8px">CAMP <span>CHAT</span></div>
-<div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Visible to everyone — campers, staff, and admin</div>
+<div style="display:flex;gap:0;margin-bottom:10px;border:1px solid var(--b2);border-radius:var(--r);overflow:hidden">
+  <button id="staffChatTab-general" onclick="switchStaffChatRoom('general')" style="flex:1;padding:10px;background:var(--or);color:#000;border:none;font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">CAMP CHAT</button>
+  <button id="staffChatTab-staff" onclick="switchStaffChatRoom('staff')" style="flex:1;padding:10px;background:var(--gray2);color:var(--tx2);border:none;border-left:1px solid var(--b2);font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">STAFF ROOM 🔒</button>
+</div>
+<div id="staffChatRoomLabel" style="font-size:11px;color:var(--tx3);margin-bottom:10px">Visible to everyone — campers, staff, and admin</div>
 <div class="chat-wrap" style="height:calc(100dvh - 200px)">
 <div class="chat-messages" id="chatMsgsStaff"></div>
 <div class="chat-input-row">
 <textarea class="chat-input" id="chatInputStaff" placeholder="Message the camp..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('staff');}"></textarea>
-<button class="chat-send" onclick="sendChat('staff')">➤</button>
-</div>
-</div>
-</div>
-<div class="view" id="sv-staffchat">
-<div class="stitle" style="margin-bottom:8px">STAFF <span>ROOM</span></div>
-<div style="font-size:11px;color:var(--tx3);margin-bottom:10px">🔒 Staff &amp; clinicians only — campers cannot see this</div>
-<div class="chat-wrap" style="height:calc(100dvh - 200px)">
-<div class="chat-messages" id="chatMsgsStaffRoom"></div>
-<div class="chat-input-row">
-<textarea class="chat-input" id="chatInputStaffRoom" placeholder="Message staff only..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('staffroom');}"></textarea>
-<button class="chat-send" onclick="sendChat('staffroom')" style="background:#e05a00">➤</button>
+<button class="chat-send" id="staffChatSendBtn" onclick="sendChat('staff')">➤</button>
 </div>
 </div>
 </div>
@@ -919,6 +903,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <button class="btn bred bsm" onclick="deleteAllClinicians()" type="button">Del All</button>
 </div>
 </div>
+<div style="margin-bottom:10px"><div class="swrap" style="width:100%"><span class="sicon">🔍</span><input class="sinput" style="width:100%" type="text" id="aclSearch" placeholder="Search clinicians..." oninput="renderAdminClinicians(this.value)"></div></div>
 <div class="twrap"><table><thead><tr><th>#</th><th>Name</th><th></th></tr></thead><tbody id="aclbody"></tbody></table></div>
 </div>
 <div class="tc" id="at-evaluate">
@@ -959,8 +944,6 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
     <div class="swrap"><span class="sicon">🔍</span><input class="sinput" type="text" id="apSearch" placeholder="Search..." oninput="renderProfiles(this.value)"></div>
     <select class="finput" id="apFilter" style="width:auto;margin-bottom:0;padding:8px 11px;font-size:12px" onchange="renderProfiles(document.getElementById('apSearch').value)">
       <option value="">All</option>
-      <option value="rmac">RMAC</option>
-      <option value="returning">Returning</option>
       <option value="evaluated">Evaluated</option>
       <option value="not-evaluated">Not Evaluated</option>
     </select>
@@ -1124,7 +1107,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 
 <div class="tc" id="at-settings">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+<div class="settings-grid">
 <div>
 <div class="stitle" style="margin-bottom:10px">APP <span>CONTROLS</span></div>
 <div class="card" style="padding:15px;margin-bottom:14px">
@@ -1140,12 +1123,18 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 </div>
 <div>
+<div class="stitle" style="margin-bottom:10px">📌 MESSAGE <span>BOARD</span></div>
+<div class="card" style="padding:15px;margin-bottom:14px">
+<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Post a message visible to all campers + clinicians on the Camp Info tab.</div>
+<textarea class="finput" id="mboardInput" placeholder="Type your message..." style="min-height:80px;resize:vertical;margin-bottom:8px"></textarea>
+<button class="btn bor bsm" id="mboardPostBtn" style="width:100%;justify-content:center;padding:10px;margin-bottom:10px" onclick="postMessageBoard()" type="button">Post</button>
+<div id="adminMessageBoard"></div>
+</div>
 <div class="stitle" style="margin-bottom:10px">⚠️ DANGER <span>ZONE</span></div>
 <div class="card" style="padding:15px;border:1px solid var(--redb)">
 <div style="font-size:11px;color:var(--red2);font-weight:700;letter-spacing:.1em;margin-bottom:10px">IRREVERSIBLE ACTIONS</div>
 <div style="display:flex;flex-direction:column;gap:7px">
 <button class="btn bred bsm" style="width:100%;justify-content:center" onclick="clearAllEvals()" type="button">Clear All Evaluations</button>
-</div>
 </div>
 </div>
 </div>
@@ -1160,6 +1149,15 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
     <button onclick="closeModal('mProfile')" type="button" style="position:fixed;top:12px;right:12px;z-index:300;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.25);border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
   </div>
   <div id="pmBody" style="padding:0"></div>
+</div></div></div>
+
+<!-- CLINICIAN PROFILE MODAL -->
+<div id="mClinicianProfile" style="display:none;position:fixed;inset:0;z-index:200;background:var(--black);overflow:hidden"><div id="mClinicianProfileScroll" style="position:absolute;inset:0;overflow-y:scroll;-webkit-overflow-scrolling:touch"><div style="max-width:480px;margin:0 auto;padding-bottom:60px">
+  <div style="position:relative">
+    <div id="cpmImgWrap"></div>
+    <button onclick="closeModal('mClinicianProfile')" type="button" style="position:fixed;top:12px;right:12px;z-index:300;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.25);border-radius:50%;width:36px;height:36px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+  <div id="cpmBody" style="padding:0"></div>
 </div></div></div>
 
 
@@ -1336,6 +1334,7 @@ async function loadAll(){
     settings={};(sets||[]).forEach(s=>settings[s.key]=s.value);
     await loadChat();
     await loadPushSubs();
+    await loadMessageBoard();
   }catch(e){console.error('loadAll error:',e);}
 }
 
@@ -1960,23 +1959,27 @@ document.getElementById('cfpwdinput').addEventListener('keydown',e=>{if(e.key===
 // ═══ MODALS ═══
 function openModal(id){
   const el=document.getElementById(id);
-  if(id==='mProfile'){
+  if(id==='mProfile'||id==='mClinicianProfile'){
     el.style.display='block';
-    const scroller=document.getElementById('mProfileScroll');
+    const scrollerId = id==='mProfile' ? 'mProfileScroll' : 'mClinicianProfileScroll';
+    const scroller=document.getElementById(scrollerId);
     if(scroller)scroller.scrollTop=0;
     document.querySelectorAll('.bnav').forEach(n=>n.style.display='none');
   }else{el.classList.add('on');}
 }
 function closeModal(id){
   const el=document.getElementById(id);
-  if(id==='mProfile'){
+  if(id==='mProfile'||id==='mClinician'||id==='mClinicianProfile'){
     el.style.display='none';
-    const navC=document.getElementById('navC');
-    const navS=document.getElementById('navS');
-    if(CR==='camper'&&navC)navC.style.display='flex';
-    else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
-    startChatBackgroundPoll();
+    if(id==='mProfile')startChatBackgroundPoll();
   }else{el.classList.remove('on');}
+  // Defensive: any modal close restores the role's bottom nav. Avoids the
+  // case where some flow dismissed the modal without going through the
+  // mProfile-specific restore path and left the nav hidden.
+  const navC=document.getElementById('navC');
+  const navS=document.getElementById('navS');
+  if(CR==='camper'&&navC)navC.style.display='flex';
+  else if((CR==='staff'||CR==='clinician')&&navS)navS.style.display='flex';
   if(id==='mClinician')resetClinicianModal();
 }
 
@@ -2197,6 +2200,39 @@ function enterApp(){
   else if(CR==='staff'){document.getElementById('pStaff').classList.add('on');document.getElementById('navS').classList.add('on');populateStaffEvalForm();sView('campinfo');}
   else{document.getElementById('pAdmin').classList.add('on');populateAdminForms();aTab('overview',document.querySelector('.atab'));}
   startChatBackgroundPoll();
+  // First-time onboarding nudge — shown once per browser, dismissible.
+  maybeShowWelcomeModal();
+}
+
+function maybeShowWelcomeModal(){
+  if (localStorage.getItem('vh1WelcomeDismissed')==='1') return;
+  const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+  const a2hsBlock = isIos
+    ? `<div style="background:var(--ord);border:1px solid var(--orb);border-radius:8px;padding:12px 14px;margin-bottom:12px"><div style="font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--or);margin-bottom:6px">📱 ADD TO HOME SCREEN (iOS)</div><div style="font-size:13px;color:var(--tx2);line-height:1.6">${standalone?'You\\'re already running as an app — nice. ✓':'Tap <strong>Share</strong> in Safari → <strong>Add to Home Screen</strong>. Then open VH1 Camp from your home screen icon.'}</div></div>`
+    : `<div style="background:var(--ord);border:1px solid var(--orb);border-radius:8px;padding:12px 14px;margin-bottom:12px"><div style="font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--or);margin-bottom:6px">📱 INSTALL ON YOUR PHONE</div><div style="font-size:13px;color:var(--tx2);line-height:1.6"><strong>Android (Chrome):</strong> tap the menu (⋮) → <strong>Add to Home screen</strong>.<br><strong>iPhone (Safari):</strong> tap Share → <strong>Add to Home Screen</strong>.</div></div>`;
+  const pushBlock = `<div style="background:var(--gray2);border:1px solid var(--b2);border-radius:8px;padding:12px 14px;margin-bottom:12px"><div style="font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--or);margin-bottom:6px">🔔 PUSH NOTIFICATIONS</div><div style="font-size:13px;color:var(--tx2);line-height:1.6">Tap the <strong>🔔 Notify</strong> button in the top-right to get phone alerts when admin posts an announcement or a new evaluation lands.${isIos?'<br><em style="color:var(--tx3)">iPhone: only works after you\\'ve added the app to your home screen.</em>':''}</div></div>`;
+  const html = `
+    <div class="overlay on" id="mWelcome" style="display:flex">
+      <div class="modal" style="max-width:480px">
+        <div class="mhd"><div class="mtitle">Welcome to VH1 Camp</div><button class="mclose" onclick="dismissWelcomeModal()" type="button">✕</button></div>
+        <div class="mbody">
+          <p style="color:var(--tx2);font-size:13px;line-height:1.6;margin:0 0 14px">Two quick setup tips so you don't miss anything:</p>
+          ${a2hsBlock}
+          ${pushBlock}
+          <button class="btn bor" style="width:100%;justify-content:center;padding:12px" onclick="dismissWelcomeModal()" type="button">Got it</button>
+        </div>
+      </div>
+    </div>`;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  document.body.appendChild(wrap.firstElementChild);
+}
+
+function dismissWelcomeModal(){
+  localStorage.setItem('vh1WelcomeDismissed','1');
+  const m = document.getElementById('mWelcome');
+  if (m) m.remove();
 }
 
 // ═══ CAMPER PORTAL ═══
@@ -2207,7 +2243,7 @@ function cView(v){
   document.getElementById('cv-'+v).classList.add('on');
   const btn=document.getElementById('cb-'+v);if(btn)btn.classList.add('on');
   // Highlight More btn for drawer items
-  const drawerViews=['schedule','myprofile','campinfo'];
+  const drawerViews=['schedule','myprofile','profiles','clinicians'];
   if(drawerViews.includes(v)){const mb=document.getElementById('cb-more-btn');if(mb)mb.classList.add('on');}
   if(v==='home')renderCamperHome();
   if(v==='results')renderCamperResults();
@@ -2255,7 +2291,7 @@ function sView(v){
   document.getElementById('sv-'+v).classList.add('on');
   const btn=document.getElementById('sb-'+v);if(btn)btn.classList.add('on');
   // Highlight More btn for drawer items
-  const drawerViewsS=['schedule','liveeval','myprofile','campinfo','staffchat'];
+  const drawerViewsS=['schedule','liveeval','myprofile'];
   if(drawerViewsS.includes(v)){const mb=document.getElementById('sb-more-btn');if(mb)mb.classList.add('on');}
   if(v==='evaluate')populateStaffEvalForm();
   if(v==='history')renderStaffHistory();
@@ -2302,11 +2338,9 @@ function renderStaffRoster(filter){
   con.innerHTML=list.map(c=>{
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const rmacTag=c.rmac?'<span class="ptag ptag-rmac">RMAC</span>':'';
-    const retTag=c.is_returning?'<span class="ptag ptag-ret">↩</span>':'';
     const loc=(c.city||'')+(c.state?', '+c.state:'');
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
-      <div class="pcard-img">${imgHtml}<div class="pcard-tags">${rmacTag}</div><div class="pcard-tags2">${retTag}</div></div>
+      <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
         <div class="pcard-name">${c.first_name} ${c.last_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
@@ -2485,6 +2519,7 @@ function _aTabActions(name){
   if(name==='schedule'){renderAdminSchedule();}
   if(name==='dailyview'){renderDailyView();}
   if(name==='evaltracker'){renderEvalTracker();}
+  if(name==='settings'){renderAdminMessageBoard();}
 }
 function updateAdminStats(){
   document.getElementById('asc').textContent=campers.length;
@@ -2542,19 +2577,41 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm">${c.first_name} ${c.last_name}</td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">Del</button></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile('${c.id}')">${c.first_name} ${c.last_name}</span></td><td>${c.city||''}${c.state?', '+c.state:''}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td style="display:flex;gap:4px">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')">Del</button></td>`;
     tbody.appendChild(tr);
   });
   // Keep arrow in sync
   const sa=document.getElementById('sa-'+camperSortCol);
   if(sa){sa.textContent=camperSortDir===1?'↑':'↓';sa.classList.add('active');}
 }
+// ═══ CAMPER DEDUP GUARD ═══
+// Email match (case-insensitive, trimmed) wins. Falls back to a name+city
+// composite when no email is present. Returns the matching existing camper
+// row, or null. Pass `excludeId` to skip a row (useful for edit-in-place).
+function camperDupeKey(c){
+  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const email = norm(c.email);
+  if (email && email.includes('@')) return 'e:'+email;
+  return 'n:'+norm(c.first_name)+'|'+norm(c.last_name)+'|'+norm(c.city);
+}
+function findCamperDupe(candidate, excludeId){
+  const key = camperDupeKey(candidate);
+  return campers.find(c => String(c.id) !== String(excludeId||'') && camperDupeKey(c) === key) || null;
+}
+
 let editCId=null;
 async function saveCamper(){
   const f=document.getElementById('cfFirst').value.trim(),l=document.getElementById('cfLast').value.trim(),e=document.getElementById('cfEmail').value.trim();
   if(!f||!l){document.getElementById('cfErr').textContent='Name required';document.getElementById('cfErr').style.display='block';return;}
   const pin=document.getElementById('cfPin').value.trim()||String(Math.floor(1000+Math.random()*9000));
   const data={first_name:f,last_name:l,email:e||null,city:document.getElementById('cfCity').value.trim(),state:document.getElementById('cfState').value.trim().toUpperCase(),type:document.getElementById('cfType').value,pin,photo:document.getElementById('cfPhoto').value.trim()||null,bio:document.getElementById('cfBio').value.trim()||null,conference:document.getElementById('cfConf').value.trim()||null};
+  // Dedup guard — email-first, falls back to name+city. Skipped when editing
+  // (so re-saving an existing row doesn't trip on its own match).
+  const dupe = findCamperDupe(data, editCId);
+  if (dupe){
+    const ok = await cf(`A camper with the same ${data.email?'email':'name + city'} already exists: ${dupe.first_name} ${dupe.last_name}${dupe.email?' ('+dupe.email+')':''}. Save anyway?`, 'Save Anyway', 'Cancel');
+    if (!ok) return;
+  }
   try{
     if(editCId){await supa('campers','PATCH',data,`?id=eq.${editCId}`);editCId=null;}
     else{await supa('campers','POST',data);}
@@ -2591,6 +2648,7 @@ function openAddCamper(){
 }
 async function delCamper(id){
   const ok=await cf('Remove this camper and their evaluations?','Remove','Cancel');if(!ok)return;
+  const pwOk=await cfPwd('Enter the admin password to remove this camper.');if(!pwOk)return;
   try{await supa('evaluations','DELETE',null,`?camper_id=eq.${id}`);await supa('campers','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminCampers();updateAdminStats();}catch(e){toast('Error',true);}
 }
 
@@ -2611,14 +2669,17 @@ async function saveStaffMember(){
   if(!f||!l||!u||!p){document.getElementById('sfErr').textContent='All fields required';document.getElementById('sfErr').style.display='block';return;}
   try{await supa('staff','POST',{first_name:f,last_name:l,username:u,password:p,title:document.getElementById('sfTitle').value.trim(),role:document.getElementById('sfRole').value});closeModal('mStaff');toast('Staff added!');await loadAll();renderAdminStaff();updateAdminStats();}catch(e){toast('Error (username may be taken)',true);}
 }
-async function delStaff(id){const ok=await cf('Remove this staff member?','Remove','Cancel');if(!ok)return;try{await supa('staff','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminStaff();updateAdminStats();}catch(e){toast('Error',true);}}
+async function delStaff(id){const ok=await cf('Remove this staff member?','Remove','Cancel');if(!ok)return;const pwOk=await cfPwd('Enter the admin password to remove this staff member.');if(!pwOk)return;try{await supa('staff','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminStaff();updateAdminStats();}catch(e){toast('Error',true);}}
 
 // ═══ ADMIN CLINICIANS ═══
-function renderAdminClinicians(){
+function renderAdminClinicians(filter){
   const tbody=document.getElementById('aclbody');
   if(!clinicians.length){tbody.innerHTML='<tr><td colspan="3"><div class="empty"><span class="ei">🏁</span><div class="et">No Clinicians Yet</div></div></td></tr>';return;}
+  const q=(filter||'').toLowerCase().trim();
+  const list=q?clinicians.filter(c=>(c.name||'').toLowerCase().includes(q)):clinicians;
+  if(!list.length){tbody.innerHTML='<tr><td colspan="3"><div class="empty"><span class="ei">🔍</span><div class="et">No matches</div></div></td></tr>';return;}
   tbody.innerHTML='';
-  clinicians.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline" onclick="viewClinicianRankings('${c.name}')">${c.name}</span></td><td style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')">Edit</button><button class="btn bred bsm" onclick="delClinician('${c.id}')">Del</button></td>`;tbody.appendChild(tr);});
+  list.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline" onclick="openClinicianDetail('${c.id}')">${c.name}</span></td><td style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')">Edit</button><button class="btn bred bsm" onclick="delClinician('${c.id}')">Del</button></td>`;tbody.appendChild(tr);});
 }
 let _editClinicianId=null;
 let _editStaffId=null;
@@ -2745,7 +2806,79 @@ function buildClinicianEmailHTML(first,last,username,password){
 }
 function viewClinicianRankings(name){rankClinician=name;rankSort='overall';aTab('rankings',document.querySelector('.atab[onclick*="rankings"]'));renderAdminRankings();}
 
-async function delClinician(id){const ok=await cf('Remove this clinician?','Remove','Cancel');if(!ok)return;try{await supa('clinicians','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminClinicians();updateAdminStats();}catch(e){toast('Error',true);}}
+// Opens a fullscreen modal showing every eval this clinician has submitted,
+// grouped by camper, with score bars + comments inline. Layout mirrors the
+// camper profile modal pattern.
+function openClinicianDetail(clinicianId){
+  const cl = clinicians.find(c => String(c.id) === String(clinicianId));
+  if (!cl){ toast('Clinician not found', true); return; }
+  const name = cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+  const initials = (name.split(' ').map(w=>w[0]||'').join('')).substring(0,2).toUpperCase();
+  const imgWrap = document.getElementById('cpmImgWrap');
+  if (imgWrap){
+    imgWrap.innerHTML = cl.photo
+      ? `<img class="pmod-img" src="${cl.photo}" alt="${name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
+      : `<div class="pmod-initials">${initials}</div>`;
+  }
+  const myEvals = evaluations.filter(e => e.clinician_name === name);
+  // Group evaluations by camper for the per-camper sections.
+  const byCamper = {};
+  myEvals.forEach(e => { (byCamper[String(e.camper_id)] ||= []).push(e); });
+  let body = '<div style="padding:16px 16px 0">';
+  body += `<div class="pmod-name">${escapeHtml(name)}</div>`;
+  const meta = [];
+  if (cl.role) meta.push(cl.role);
+  if (cl.conference) meta.push(cl.conference);
+  if (cl.city) meta.push(cl.city + (cl.state?', '+cl.state:''));
+  if (meta.length) body += `<div class="pmod-meta">${meta.map(escapeHtml).join(' · ')}</div>`;
+  if (cl.bio) body += `<div class="pmod-bio">${escapeHtml(cl.bio)}</div>`;
+  body += `<div class="pmod-sec">EVALUATIONS · ${myEvals.length}</div>`;
+  if (!myEvals.length){
+    body += '<div style="font-size:13px;color:var(--tx3);padding:8px 0">No evaluations submitted yet.</div>';
+  } else {
+    Object.keys(byCamper).forEach(cid => {
+      const camper = campers.find(c => String(c.id) === String(cid));
+      const camperName = camper ? (camper.first_name+' '+camper.last_name) : '(unknown camper)';
+      const evs = byCamper[cid];
+      body += `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:10px">`;
+      body += `<div style="font-family:'Oswald',sans-serif;font-size:16px;color:var(--tx);margin-bottom:8px">${escapeHtml(camperName)}</div>`;
+      evs.forEach(ev => {
+        const slotMeta = [];
+        if (ev.eval_date) slotMeta.push(ev.eval_date);
+        if (ev.court) slotMeta.push('Court '+ev.court);
+        if (ev.eval_time) slotMeta.push(ev.eval_time);
+        const isAbsent = ev.status === 'absent';
+        const isInProgress = ev.status === 'in_progress';
+        const tag = isAbsent ? '<span style="font-size:10px;color:var(--red2);font-weight:700;letter-spacing:.06em;margin-left:6px">DNP</span>'
+                  : isInProgress ? '<span style="font-size:10px;color:var(--or);font-weight:700;letter-spacing:.06em;margin-left:6px">DRAFT</span>'
+                  : '';
+        body += `<div style="border-top:1px solid var(--b2);padding-top:8px;margin-top:8px;font-size:11px;color:var(--tx3)">${slotMeta.map(escapeHtml).join(' · ')||'—'}${tag}</div>`;
+        if (!isAbsent){
+          CFG.CATS.forEach(cat => {
+            const k = catKey(cat);
+            const v = ev.scores?.[k];
+            if (v == null) return;
+            const pct = (v/10)*100;
+            body += `<div class="pmod-bar-row"><span class="pmod-bar-lbl">${escapeHtml(cat)}</span><div class="pmod-bar-bg"><div class="pmod-bar-fill" style="width:${pct}%"></div></div><span class="pmod-bar-val">${v}</span></div>`;
+          });
+          if (ev.overall_score != null){
+            body += `<div style="margin-top:6px;font-size:11px;color:var(--tx3)">Overall <strong style="color:var(--or)">${Number(ev.overall_score).toFixed(1)}</strong></div>`;
+          }
+        }
+        if (ev.comments && ev.comments.trim()){
+          body += `<div style="margin-top:8px;background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>`;
+        }
+      });
+      body += '</div>';
+    });
+  }
+  body += `<div style="padding:8px 0 32px"><button class="btn bsec" style="width:100%" onclick="closeModal('mClinicianProfile')">Close</button></div>`;
+  body += '</div>';
+  document.getElementById('cpmBody').innerHTML = body;
+  openModal('mClinicianProfile');
+}
+
+async function delClinician(id){const ok=await cf('Remove this clinician?','Remove','Cancel');if(!ok)return;const pwOk=await cfPwd('Enter the admin password to remove this clinician.');if(!pwOk)return;try{await supa('clinicians','DELETE',null,`?id=eq.${id}`);toast('Removed');await loadAll();renderAdminClinicians();updateAdminStats();}catch(e){toast('Error',true);}}
 
 // ═══ RANKINGS ═══
 function buildCamperScores(){
@@ -2769,7 +2902,7 @@ function renderAdminRankings(){
   else sorted.sort((a,b)=>(b.catAverages[rankSort]||0)-(a.catAverages[rankSort]||0));
   const con=document.getElementById('arankcon');
   if(!sorted.length){con.innerHTML='<div class="empty"><span class="ei">'+(rankSort==='top10'?'⭐':rankSort==='rmac'?'✅':'📊')+'</span><div class="et">'+(rankSort==='top10'?'No Top 10 campers yet':rankSort==='rmac'?'No RMAC Ready campers yet':'No evaluations yet')+'</div></div>';return;}
-  con.innerHTML=sorted.map((e,idx)=>{const rc=idx<3?'r'+(idx+1):'';const bars=CFG.CATS.map(cat=>{const v=e.catAverages[cat]||0;const p=(v/10)*100;return`<div class="rank-bar-row"><span class="rank-bar-lbl">${cat.length>8?cat.substring(0,8):cat}</span><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${p}%"></div></div><span class="rank-bar-val">${v.toFixed(1)}</span></div>`;}).join('');let tags='';if(e.rmac)tags+='<span class="bdg bdgrn">RMAC</span>';if(e.conference)tags+='<span class="bdg bdo">Conference</span>';if(e.top10)tags+='<span class="bdg bdgold">Top 10</span>';return`<div class="rank-card ${rc}"><div class="rank-num">${idx+1}</div><div class="rank-info"><div class="rank-name">${e.camper.first_name} ${e.camper.last_name}</div><div class="rank-det">${e.evalCount} eval${e.evalCount!==1?'s':''} · ${e.clinicians.join(', ')}</div>${tags?`<div class="rank-tags">${tags}</div>`:''}<div class="rank-bars">${bars}</div></div><div class="rank-avg">${e.overall.toFixed(1)}</div></div>`;}).join('');
+  con.innerHTML=sorted.map((e,idx)=>{const rc=idx<3?'r'+(idx+1):'';const bars=CFG.CATS.map(cat=>{const v=e.catAverages[cat]||0;const p=(v/10)*100;return`<div class="rank-bar-row"><span class="rank-bar-lbl">${cat}</span><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${p}%"></div></div><span class="rank-bar-val">${v.toFixed(1)}</span></div>`;}).join('');let tags='';if(e.rmac)tags+='<span class="bdg bdgrn">RMAC</span>';if(e.conference)tags+='<span class="bdg bdo">Conference</span>';if(e.top10)tags+='<span class="bdg bdgold">Top 10</span>';return`<div class="rank-card ${rc}"><div class="rank-num">${idx+1}</div><div class="rank-info"><div class="rank-name">${e.camper.first_name} ${e.camper.last_name}</div><div class="rank-det">${e.evalCount} eval${e.evalCount!==1?'s':''} · ${e.clinicians.join(', ')}</div>${tags?`<div class="rank-tags">${tags}</div>`:''}<div class="rank-bars">${bars}</div></div><div class="rank-avg">${e.overall.toFixed(1)}</div></div>`;}).join('');
 }
 
 // ═══ SETTINGS ═══
@@ -2784,7 +2917,7 @@ async function clearAllEvals(){
 
 // ═══ CSV IMPORT ═══
 function handleCSV(file){if(!file)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());csvParsed=[];const fl=lines[0].toLowerCase();const si=(fl.includes('first')||fl.includes('name')||fl.includes('email'))?1:0;for(let i=si;i<lines.length;i++){const p=lines[i].split(',').map(s=>s.trim().replace(/^["']|["']$/g,''));if(p.length>=2)csvParsed.push({first_name:p[0],last_name:p[1],email:p[2]||null,city:p[3]||null,state:p[4]||null,type:p[5]||'Non-Staff'});}if(csvParsed.length){document.getElementById('csvCount').textContent=csvParsed.length;document.getElementById('csvList').innerHTML=csvParsed.map(c=>`<div style="font-size:12px;color:var(--tx2);padding:3px 0;border-bottom:1px solid var(--b1)">${c.first_name} ${c.last_name}${c.email?' — '+c.email:''}</div>`).join('');document.getElementById('csvPreview').style.display='block';document.getElementById('csvUploadBtn').style.display='block';}else toast('No valid data',true);};r.readAsText(file);}
-async function uploadCSV(){const btn=document.getElementById('csvUploadBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';let s=0;const toUpload=csvParsed.map(c=>({...c,pin:String(Math.floor(1000+Math.random()*9000))}));try{await supa('campers','POST',toUpload);s=toUpload.length;}catch(e){for(const c of toUpload){try{await supa('campers','POST',c);s++;}catch(er){}}}btn.disabled=false;btn.textContent='Upload All';closeModal('mImport');toast(`${s} campers uploaded!`);await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();}
+async function uploadCSV(){const btn=document.getElementById('csvUploadBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';let s=0;const allRows=csvParsed.map(c=>({...c,pin:String(Math.floor(1000+Math.random()*9000))}));const seen=new Set();const toUpload=allRows.filter(c=>{const k=camperDupeKey(c);if(seen.has(k))return false;seen.add(k);return !findCamperDupe(c);});const skipped=allRows.length-toUpload.length;try{if(toUpload.length)await supa('campers','POST',toUpload);s=toUpload.length;}catch(e){for(const c of toUpload){try{await supa('campers','POST',c);s++;}catch(er){}}}btn.disabled=false;btn.textContent='Upload All';closeModal('mImport');toast(`${s} campers uploaded${skipped?` · ${skipped} duplicates skipped`:''}`);await loadAll();renderAdminCampers();updateAdminStats();populateAdminForms();}
 // ═══ GOOGLE SHEETS SYNC (JotForm) ═══
 const SHEET_ID='1iWz9UiknCSy0WZcEgYO50nmD3IBs-puNxRNoIFXdNYk';
 function titleCase(s){if(!s)return'';return s.trim().replace(/\w\S*/g,t=>t.charAt(0).toUpperCase()+t.substr(1).toLowerCase());}
@@ -2818,7 +2951,10 @@ async function processGvizData(t){
   const iRet=ci('returning camper?');
   const iBio=ci('bio');
   const iConf=ci('conference');
-  const emails=new Set(campers.map(c=>(c.email||'').toLowerCase()));
+  // Use the shared dedup key so name+city dupes are caught even when an
+  // email is missing or differs only in casing (root cause of past dupes).
+  const existingKeys=new Set(campers.map(c=>camperDupeKey(c)));
+  const seenInBatch=new Set();
   let added=0,skipped=0;
   const newCampers=[];
   t.rows.forEach(row=>{
@@ -2826,7 +2962,9 @@ async function processGvizData(t){
     const last=titleCase(cell(row,iLast));
     const email=cell(row,iEmail).toLowerCase();
     if(!first||!last||!email||!email.includes('@'))return;
-    if(emails.has(email)){skipped++;return;}
+    const probeKey=camperDupeKey({first_name:first,last_name:last,email,city:''});
+    if(existingKeys.has(probeKey)||seenInBatch.has(probeKey)){skipped++;return;}
+    seenInBatch.add(probeKey);
     const loc=cell(row,iLoc);
     let city='',state='';
     if(loc.includes(',')){const p=loc.split(',');city=p[0].trim();state=p[1].trim();}else{city=loc;}
@@ -2841,7 +2979,7 @@ async function processGvizData(t){
       type:rmac?'Staff':'Non-Staff',
       pin:String(Math.floor(1000+Math.random()*9000))
     });
-    emails.add(email);added++;
+    added++;
   });
   if(newCampers.length){
     try{await supa('campers','POST',newCampers);}catch(e){
@@ -2896,8 +3034,6 @@ function renderProfiles(search){
   const cs=buildCamperScores();
   let list=[...campers].sort((a,b)=>(a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase()));
   if(search)list=list.filter(c=>(c.first_name+' '+c.last_name+' '+(c.city||'')+' '+(c.state||'')).toLowerCase().includes(search));
-  if(filter==='rmac')list=list.filter(c=>c.rmac);
-  if(filter==='returning')list=list.filter(c=>c.is_returning);
   if(filter==='evaluated')list=list.filter(c=>cs[c.id]);
   if(filter==='not-evaluated')list=list.filter(c=>!cs[c.id]);
   const grid=document.getElementById('apGrid');
@@ -2908,17 +3044,11 @@ function renderProfiles(search){
     const avg=sc?sc.overall.toFixed(1):'—';
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const rmacTag=c.rmac?'<span class="ptag ptag-rmac">RMAC</span>':'';
-    const retTag=c.is_returning?'<span class="ptag ptag-ret">↩ Returning</span>':'';
     const loc=(c.city||'')+(c.state?', '+c.state:'');
     const typeLabel=c.type||'Non-Staff';
     const evalStatus=evals?`${evals} eval${evals!==1?'s':''} · Avg <strong style="color:var(--or)">${avg}</strong>`:'<span style="color:var(--tx3)">Not yet evaluated</span>';
     return`<div class="pcard" onclick="openProfile('${c.id}')">
-      <div class="pcard-img">
-        ${imgHtml}
-        <div class="pcard-tags">${rmacTag}</div>
-        <div class="pcard-tags2">${retTag}</div>
-      </div>
+      <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
         <div class="pcard-name">${c.first_name} ${c.last_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
@@ -2939,8 +3069,6 @@ function openProfile(id){
     :`<div class="pmod-initials">${initials}</div>`;
   const loc=(c.city||'')+(c.state?', '+c.state:'');
   let tags='';
-  if(c.rmac)tags+='<span class="ptag ptag-rmac">RMAC</span>';
-  if(c.is_returning)tags+='<span class="ptag ptag-ret">↩ Returning</span>';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
   let body=imgHtml;
   body+=`<div style="padding:16px 16px 0">`;
@@ -3126,7 +3254,10 @@ function handleXLSX(file){
 }
 
 function parseXLSXRows(rows){
-  const existingEmails=new Set(campers.map(c=>(c.email||'').toLowerCase()));
+  // Build a Set of dedup keys for everything already in the table so we can
+  // catch BOTH email-match and name+city-match dupes in one pass.
+  const existingKeys=new Set(campers.map(c=>camperDupeKey(c)));
+  const seenInBatch=new Set();
   xlsxParsed=[];
   let skipped=0;
   rows.forEach(row=>{
@@ -3135,7 +3266,6 @@ function parseXLSXRows(rows){
     const last=titleCase((row['Last Name']||'').trim());
     const email=(row['E-mail']||row['Email']||'').trim().toLowerCase();
     if(!first||!last)return;
-    if(email&&existingEmails.has(email)){skipped++;return;}
     // Parse city/state
     const cityState=(row['City, State']||'').trim();
     let city='',state='';
@@ -3163,7 +3293,7 @@ function parseXLSXRows(rows){
     // Photo URL — clean spaces
     const photoRaw=(row['Profile picture (head shot)']||row['Profile Picture']||row['Photo']||'').toString().trim();
     const photo=photoRaw.replace(/\s+/g,'%20')||null;
-    xlsxParsed.push({
+    const candidate={
       first_name:first,last_name:last,email:email||null,
       city,state,phone:(row['Phone Number']||'').toString().trim()||null,
       bio:(row['Bio']||'').toString().trim()||null,
@@ -3172,8 +3302,11 @@ function parseXLSXRows(rows){
       photo:photo&&photo.startsWith('http')?photo:null,
       rmac,is_returning,type,
       pin:String(Math.floor(1000+Math.random()*9000))
-    });
-    if(email)existingEmails.add(email);
+    };
+    const key=camperDupeKey(candidate);
+    if(existingKeys.has(key)||seenInBatch.has(key)){skipped++;return;}
+    seenInBatch.add(key);
+    xlsxParsed.push(candidate);
   });
   // Show preview
   document.getElementById('xlsxCount').textContent=xlsxParsed.length;
@@ -3300,6 +3433,26 @@ function switchAdminChatRoom(room){
   renderChat('Admin');
 }
 
+// ── STAFF CHAT ROOM SWITCHER ───────────────────────────
+// Same toggle pattern as admin: one button on the staff bottom nav opens a
+// chat view with a top pill that flips between general and staff-only.
+let _staffChatRoom = 'general';
+function switchStaffChatRoom(room){
+  _staffChatRoom = room;
+  const isStaff = room === 'staff';
+  const gen = document.getElementById('staffChatTab-general');
+  const stf = document.getElementById('staffChatTab-staff');
+  if (gen){ gen.style.background = isStaff ? 'var(--gray2)' : 'var(--or)'; gen.style.color = isStaff ? 'var(--tx2)' : '#000'; }
+  if (stf){ stf.style.background = isStaff ? 'var(--or)' : 'var(--gray2)'; stf.style.color = isStaff ? '#000' : 'var(--tx2)'; }
+  const label = document.getElementById('staffChatRoomLabel');
+  if (label) label.textContent = isStaff ? '🔒 Staff & clinicians only — campers cannot see this' : 'Visible to everyone — campers, staff, and admin';
+  const send = document.getElementById('staffChatSendBtn');
+  if (send) send.style.background = isStaff ? '#e05a00' : 'var(--or)';
+  const input = document.getElementById('chatInputStaff');
+  if (input) input.placeholder = isStaff ? 'Message staff only...' : 'Message the camp...';
+  renderChat('Staff');
+}
+
 // ═══ CHAT ═══
 let chatMessages=[];
 let chatLastRead=parseInt(localStorage.getItem('chatLastRead')||'0');
@@ -3398,7 +3551,9 @@ function renderChatMessages(suffix){
   const con=document.getElementById('chatMsgs'+suffix);
   if(!con)return;
   const wasAtBottom=con.scrollHeight-con.scrollTop-con.clientHeight<60;
-  const room = (suffix==='StaffRoom' || (suffix==='Admin' && typeof _adminChatRoom!=='undefined' && _adminChatRoom==='staff')) ? 'staff' : 'general';
+  const room = (suffix==='StaffRoom'
+    || (suffix==='Admin' && typeof _adminChatRoom!=='undefined' && _adminChatRoom==='staff')
+    || (suffix==='Staff' && typeof _staffChatRoom!=='undefined' && _staffChatRoom==='staff')) ? 'staff' : 'general';
   const msgs = getChatRoom(chatMessages, room);
   if(!msgs.length){
     con.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tx3);font-size:13px">No messages yet. Say hello! 👋</div>';
@@ -3437,7 +3592,9 @@ async function sendChat(role){
   input.value='';
   const displayName=CU.first_name+' '+(CU.last_name||'');
   try{
-    const chatRoom = (role==='staffroom' || (role==='admin' && typeof _adminChatRoom!=='undefined' && _adminChatRoom==='staff')) ? 'staff' : 'general';
+    const chatRoom = (role==='staffroom'
+      || (role==='admin' && typeof _adminChatRoom!=='undefined' && _adminChatRoom==='staff')
+      || (role==='staff' && typeof _staffChatRoom!=='undefined' && _staffChatRoom==='staff')) ? 'staff' : 'general';
     const saved=await supa('chat','POST',{
       user_id:CU.id||CU.username||displayName,
       display_name:displayName,
@@ -3685,11 +3842,9 @@ function renderCamperProfiles(search){
   grid.innerHTML=list.map(c=>{
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
-    const rmacTag=c.rmac?'<span class="ptag ptag-rmac">RMAC</span>':'';
-    const retTag=c.is_returning?'<span class="ptag ptag-ret">↩</span>':'';
     const loc=(c.city||'')+(c.state?', '+c.state:'');
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
-      <div class="pcard-img">${imgHtml}<div class="pcard-tags">${rmacTag}</div><div class="pcard-tags2">${retTag}</div></div>
+      <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
         <div class="pcard-name">${c.first_name} ${c.last_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
@@ -3707,8 +3862,6 @@ function openCamperProfile(id,evalContext){
     :`<div class="pmod-initials">${initials}</div>`;
   const loc=(c.city||'')+(c.state?', '+c.state:'');
   let tags='';
-  if(c.rmac)tags+='<span class="ptag ptag-rmac">RMAC</span>';
-  if(c.is_returning)tags+='<span class="ptag ptag-ret">↩ Returning</span>';
   if(c.type)tags+=`<span class="ptag" style="background:var(--ord);border:1px solid var(--orb);color:var(--or)">${c.type}</span>`;
   let body=imgHtml;
   body+=`<div class="pmod-body" style="padding:16px 16px 40px">`;
@@ -3774,6 +3927,8 @@ function dismissPWA(){
 async function clearChat(){
   const ok=await cf('Clear ALL chat messages? This cannot be undone.','Clear','Cancel');
   if(!ok)return;
+  const pwOk=await cfPwd('Enter the admin password to clear all chat messages.');
+  if(!pwOk)return;
   try{
     await supa('chat','DELETE',null,'?id=not.is.null');
     chatMessages=[];
@@ -3977,6 +4132,8 @@ function renderCampInfoDocs(){
 }
 
 function renderCampInfoViewer(prefix){
+  // Render the message board first (above docs), then the doc list.
+  renderMessageBoard(prefix);
   const list=document.getElementById(prefix+'CampInfoList');
   const empty=document.getElementById(prefix+'CampInfoEmpty');
   if(!list)return;
@@ -3990,6 +4147,78 @@ function renderCampInfoViewer(prefix){
       </div>
       <button class="btn bor bsm" onclick="downloadCampDoc('${doc.id}')" type="button">⬇ Download</button>
     </div>`).join('');
+}
+
+// ═══ MESSAGE BOARD ═══
+let messageBoardMessages = [];
+async function loadMessageBoard(){
+  try{
+    const rows = await supa('messages','GET',null,'?order=created_at.desc&limit=100');
+    messageBoardMessages = rows||[];
+  }catch(e){ messageBoardMessages = []; }
+}
+function renderMessageBoard(prefix){
+  // prefix='cv' for camper view, 'sv' for staff view. Admins view from the
+  // Settings tab via renderAdminMessageBoard.
+  const con = document.getElementById(prefix+'MessageBoard');
+  if (!con) return;
+  if (!messageBoardMessages.length){
+    con.innerHTML = `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:14px;text-align:center;color:var(--tx3);font-size:13px">📌 No messages yet — check back later.</div>`;
+    return;
+  }
+  con.innerHTML = `
+    <div style="font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:.08em;color:var(--or);margin-bottom:8px">📌 MESSAGE BOARD</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${messageBoardMessages.map(m => `
+        <div style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);padding:10px 12px">
+          <div style="font-size:13px;color:var(--tx);line-height:1.5;white-space:pre-wrap">${escapeHtml(m.content||'')}</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:6px">${m.posted_by?escapeHtml(m.posted_by)+' · ':''}${new Date(m.created_at).toLocaleString()}</div>
+        </div>`).join('')}
+    </div>`;
+}
+function renderAdminMessageBoard(){
+  const con = document.getElementById('adminMessageBoard');
+  if (!con) return;
+  const rows = messageBoardMessages.map(m => `
+    <div style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;color:var(--tx);line-height:1.5;white-space:pre-wrap">${escapeHtml(m.content||'')}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:6px">${m.posted_by?escapeHtml(m.posted_by)+' · ':''}${new Date(m.created_at).toLocaleString()}</div>
+      </div>
+      <button class="btn bred bsm" style="flex-shrink:0" onclick="deleteMessageBoardPost('${m.id}')">Del</button>
+    </div>`).join('');
+  con.innerHTML = (messageBoardMessages.length
+    ? `<div style="margin-bottom:8px">${rows}</div>`
+    : '<div style="font-size:12px;color:var(--tx3);padding:6px 0">No messages posted yet.</div>');
+}
+async function postMessageBoard(){
+  const ta = document.getElementById('mboardInput');
+  if (!ta) return;
+  const content = ta.value.trim();
+  if (!content){ toast('Type a message first', true); return; }
+  const btn = document.getElementById('mboardPostBtn');
+  if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  try{
+    await supa('messages','POST',{
+      content,
+      posted_by: ((CU?.first_name||'')+' '+(CU?.last_name||'')).trim() || 'Admin'
+    });
+    ta.value = '';
+    await loadMessageBoard();
+    renderAdminMessageBoard();
+    toast('📌 Message posted');
+  }catch(e){ toast('Post failed', true); }
+  if (btn){ btn.disabled = false; btn.textContent = 'Post'; }
+}
+async function deleteMessageBoardPost(id){
+  const ok = await cf('Delete this message?', 'Delete', 'Cancel');
+  if (!ok) return;
+  try{
+    await supa('messages','DELETE',null,`?id=eq.${id}`);
+    await loadMessageBoard();
+    renderAdminMessageBoard();
+    toast('Removed');
+  }catch(e){ toast('Error', true); }
 }
 
 function handlePDFUpload(e){
@@ -4012,6 +4241,8 @@ function handlePDFUpload(e){
 async function deleteCampDoc(id){
   const ok=await cf('Remove this document?','Remove','Cancel');
   if(!ok)return;
+  const pwOk=await cfPwd('Enter the admin password to remove this document.');
+  if(!pwOk)return;
   try{
     await supa('camp_docs','DELETE',null,`?id=eq.${id}`);
     await loadCampDocs();
@@ -4221,7 +4452,7 @@ function renderEvalTracker(){
     const clinNames = [...new Set(evs.map(e=>e.clinician_name).filter(Boolean))];
     const pct = Math.min(100, Math.round(n/3*100));
     const barColor = n===0?'var(--red2)':n<2?'var(--or)':'var(--grn)';
-    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:600;color:var(--tx)">'+c.first_name+' '+c.last_name+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.city||'')+(c.state?', '+c.state:'')+'</div></div><div style="text-align:right"><div style="font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+avg+'</div><div style="font-size:10px;color:var(--tx3)">'+n+' eval'+(n!==1?'s':'')+'</div></div></div><div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'+(clinNames.length?'<div style="font-size:10px;color:var(--tx3)">By: '+clinNames.join(', ')+'</div>':'<div style="font-size:10px;color:var(--red2)">⚠ No evaluations yet</div>')+'</div>';
+    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:600;color:var(--or);cursor:pointer;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile(\''+c.id+'\')">'+c.first_name+' '+c.last_name+'</div><div style="font-size:11px;color:var(--tx3)">'+(c.city||'')+(c.state?', '+c.state:'')+'</div></div><div style="text-align:right"><div style="font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+avg+'</div><div style="font-size:10px;color:var(--tx3)">'+n+' eval'+(n!==1?'s':'')+'</div></div></div><div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'+(clinNames.length?'<div style="font-size:10px;color:var(--tx3)">By: '+clinNames.join(', ')+'</div>':'<div style="font-size:10px;color:var(--red2)">⚠ No evaluations yet</div>')+'</div>';
   }).join('');
 }
 
@@ -4596,7 +4827,7 @@ function renderEvalTrackerByClinician(){
       +   '<span style="display:flex;align-items:center;gap:6px;min-width:0">'
       +     emailBadge
       +     pushBadge
-      +     '<span style="font-size:13px;font-weight:600;color:var(--tx)">'+r.name+'</span>'
+      +     '<span style="font-size:13px;font-weight:600;color:var(--or);cursor:pointer;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openClinicianDetail(\''+r.id+'\')">'+r.name+'</span>'
       +   '</span>'
       +   '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">'
       +     '<span style="font-family:\'Oswald\',sans-serif;font-size:14px;color:var(--or)">'+r.totalSubmitted+' / '+r.totalAssigned+'</span>'
