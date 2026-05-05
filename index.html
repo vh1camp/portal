@@ -2333,10 +2333,54 @@ function renderStaffHistory(){
     const c=campers.find(x=>x.id===e.camper_id)||{first_name:'?',last_name:''};
     const dt=new Date(e.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
     const row=document.createElement('div');
-    row.style.cssText='background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px';
-    row.innerHTML=`<div><div style="font-size:15px;font-weight:600;color:var(--tx)">${c.first_name} ${c.last_name}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${e.eval_date||''} · Court ${e.court||'—'}</div><div style="font-size:11px;color:var(--tx3)">${dt}</div></div><div style="text-align:right"><div style="font-family:Oswald,sans-serif;font-size:32px;color:var(--or);line-height:1">${(e.overall_score||0).toFixed(1)}</div><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">/ 10</div></div>`;
+    row.style.cssText='background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap';
+    row.innerHTML=`<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;color:var(--tx)">${c.first_name} ${c.last_name}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${e.eval_date||''} · Court ${e.court||'—'}${e.eval_time?' · '+e.eval_time:''}</div><div style="font-size:11px;color:var(--tx3)">${dt}</div></div><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><div style="text-align:right"><div style="font-family:Oswald,sans-serif;font-size:32px;color:var(--or);line-height:1">${(e.overall_score||0).toFixed(1)}</div><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">/ 10</div></div><button class="btn bsec bsm" type="button" onclick="editStaffEval('${e.id}')">✏️ Edit</button></div>`;
     con.appendChild(row);
   });
+}
+
+// Lets a clinician re-open one of their own evaluations and overwrite it.
+// Loads the eval row back into the staff Submit Eval form, sets
+// _editingEvalId so submit PATCHes instead of POSTing a fresh row.
+let _editingEvalId = null;
+function editStaffEval(evId){
+  const e = evaluations.find(ev => String(ev.id) === String(evId));
+  if (!e){ toast('Evaluation not found', true); return; }
+  sView('evaluate');
+  // Wait one tick so the view + form is in the DOM, then populate.
+  setTimeout(() => {
+    const sel = document.getElementById('seCamper');
+    if (sel) sel.value = e.camper_id;
+    const form = document.getElementById('seForm');
+    if (form) form.style.display = 'block';
+    buildEvalCards('se');
+    resetEvalForm('se');
+    _editingEvalId = e.id;
+    // Scores
+    CFG.CATS.forEach((cat, i) => {
+      const v = e.scores?.[catKey(cat)];
+      if (v != null) pickScore('se', i, v);
+    });
+    // Yes/No flags — programmatic clicks via setYN so visuals + state align.
+    const ynBtns = document.querySelectorAll('#seYnCard .yn-btn');
+    if (ynBtns.length >= 6){
+      if (e.scores?.rmac_ready === true) setYN('rmac','yes',ynBtns[0]);
+      else if (e.scores?.rmac_ready === false) setYN('rmac','no',ynBtns[1]);
+      if (e.scores?.conference_ready === true) setYN('conference','yes',ynBtns[2]);
+      else if (e.scores?.conference_ready === false) setYN('conference','no',ynBtns[3]);
+      if (e.scores?.top10 === true) setYN('top10','yes',ynBtns[4]);
+      else if (e.scores?.top10 === false) setYN('top10','no',ynBtns[5]);
+    }
+    document.getElementById('seDate').value = e.eval_date || '';
+    document.getElementById('seCourt').value = e.court || '';
+    document.getElementById('seTime').value = to24Hour(e.eval_time || '');
+    document.getElementById('seComments').value = e.comments || '';
+    const stEl = document.getElementById('seStatus');
+    if (stEl) stEl.innerHTML = '<div style="font-size:11px;color:var(--or);font-weight:700;letter-spacing:.06em;padding:6px 10px;background:var(--ord);border:1px solid var(--orb);border-radius:6px;display:inline-block">✏️ EDITING — submit will overwrite this evaluation</div>';
+    const btn = document.getElementById('seSubmitBtn');
+    if (btn) btn.textContent = 'UPDATE EVALUATION';
+    form?.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 0);
 }
 function renderStaffRoster(filter){
   filter=(filter||'').toLowerCase().trim();
@@ -2380,7 +2424,7 @@ function updateOverallScore(pfx){
 }
 function resetEvalForm(pfx){
   CFG.CATS.forEach((_,i)=>{document.querySelectorAll(`#${pfx}ScB_${i} .score-box`).forEach(b=>b.classList.remove('sel'));document.getElementById(`${pfx}ScD_${i}`).textContent='—';});
-  if(pfx==='se'){document.getElementById('seComments').value='';document.getElementById('seDate').value=new Date().toISOString().split('T')[0];document.getElementById('seCourt').value='';document.getElementById('seTime').value='';document.getElementById('seStatus').innerHTML='';ynState={rmac:null,conference:null,top10:null};}
+  if(pfx==='se'){document.getElementById('seComments').value='';document.getElementById('seDate').value=new Date().toISOString().split('T')[0];document.getElementById('seCourt').value='';document.getElementById('seTime').value='';document.getElementById('seStatus').innerHTML='';ynState={rmac:null,conference:null,top10:null};_editingEvalId=null;const seBtn=document.getElementById('seSubmitBtn');if(seBtn)seBtn.textContent='SUBMIT EVALUATION';}
   if(pfx==='ae'){document.getElementById('aeComments').value='';document.getElementById('aeDate').value=new Date().toISOString().split('T')[0];document.getElementById('aeCourt').value='';document.getElementById('aeTime').value='';document.getElementById('aeStatus').innerHTML='';ynStateAe={rmac:null,conference:null,top10:null};}
   document.querySelectorAll(`#${pfx}YnCard .yn-btn`).forEach(b=>b.classList.remove('yes','no'));
   const fu=document.getElementById(pfx+'ConfFollowup');if(fu)fu.classList.remove('show');
@@ -2410,13 +2454,20 @@ async function submitStaffEval(){
   scores.rmac_ready=ynState.rmac;scores.conference_ready=ynState.conference;scores.top10=ynState.top10;
   const comments=document.getElementById('seComments').value.trim();
   const overall=parseFloat(document.getElementById('seOverall').textContent);
+  const isEdit=!!_editingEvalId;
+  const payload={camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,overall_score:overall};
   try{
-    await supa('evaluations','POST',{camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,overall_score:overall});
-    st.innerHTML='<div class="email-ok">✓ Evaluation saved</div>';
-    try{await pushEvalToCamper(cid,st);}catch(_){}
-    await loadAll();toast('Evaluation saved!');resetEvalForm('se');document.getElementById('seCamper').value='';document.getElementById('seForm').style.display='none';
+    if(isEdit){
+      await supa('evaluations','PATCH',payload,`?id=eq.${_editingEvalId}`);
+      st.innerHTML='<div class="email-ok">✓ Evaluation updated</div>';
+    } else {
+      await supa('evaluations','POST',payload);
+      st.innerHTML='<div class="email-ok">✓ Evaluation saved</div>';
+      try{await pushEvalToCamper(cid,st);}catch(_){}
+    }
+    await loadAll();toast(isEdit?'Evaluation updated!':'Evaluation saved!');resetEvalForm('se');document.getElementById('seCamper').value='';document.getElementById('seForm').style.display='none';
   }catch(e){console.error(e);toast('Error saving',true);st.innerHTML='<div class="email-err">✕ Error saving</div>';}
-  btn.disabled=false;btn.textContent='SUBMIT EVALUATION';
+  btn.disabled=false;btn.textContent=_editingEvalId?'UPDATE EVALUATION':'SUBMIT EVALUATION';
 }
 
 // ═══ SUBMIT EVAL (admin with email) ═══
