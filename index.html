@@ -456,7 +456,32 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{_swReg=await navigator.serviceWorker.register('sw.js');}catch(e){}
     maybeShowIosInstallHint();
+    // Forced update check whenever the app becomes visible (returning from
+    // background) and once every 30 min. Catches the case where iOS PWAs
+    // hold an old service worker indefinitely.
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden&&_swReg)_swReg.update().catch(()=>{});
+    });
+    setInterval(()=>{ if(_swReg)_swReg.update().catch(()=>{}); }, 30*60*1000);
   });
+  // When a new service worker takes control, surface a banner so the user
+  // can refresh without losing in-progress state. We don't auto-reload —
+  // a clinician mid-Live-Eval would lose their unsaved scores.
+  let _swReloadPrompted=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(_swReloadPrompted)return;
+    _swReloadPrompted=true;
+    showUpdateBanner();
+  });
+}
+function showUpdateBanner(){
+  if(document.getElementById('vh1UpdateBanner'))return;
+  const bar=document.createElement('div');
+  bar.id='vh1UpdateBanner';
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--or);color:#000;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;text-align:center;font-family:Oswald,sans-serif;letter-spacing:.06em;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+  bar.textContent='🔄 NEW VERSION AVAILABLE — TAP TO REFRESH';
+  bar.onclick=()=>location.reload();
+  document.body.appendChild(bar);
 }
 function maybeShowIosInstallHint(){
   const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
