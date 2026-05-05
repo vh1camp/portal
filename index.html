@@ -1506,6 +1506,9 @@ async function sendClinicianLoginToSelf(){
 }
 function logout(){
   clearSession();
+  stopChatBackgroundPoll();
+  chatLatestCreatedAt=null;
+  chatMessages=[];
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('app').style.display='none';
   document.querySelectorAll('.portal').forEach(p=>p.classList.remove('on'));
@@ -2632,11 +2635,23 @@ let chatMessages=[];
 let chatLastRead=parseInt(localStorage.getItem('chatLastRead')||'0');
 let chatActiveSuffix=null; // 'Camper','Staff','Admin' — whichever tab is open, or null
 let _chatPollTimer=null;
+let chatLatestCreatedAt=null; // tracks newest message timestamp; used as "since" filter to keep polls cheap
 
 async function loadChat(){
   try{
-    const msgs=await supa('chat','GET',null,'?order=created_at.asc&limit=300');
-    chatMessages=msgs||[];
+    let q='?order=created_at.asc&limit=300';
+    if(chatLatestCreatedAt){
+      q='?order=created_at.asc&limit=300&created_at=gt.'+encodeURIComponent(chatLatestCreatedAt);
+    }
+    const msgs=await supa('chat','GET',null,q);
+    if(chatLatestCreatedAt){
+      if(msgs&&msgs.length)chatMessages=chatMessages.concat(msgs);
+    } else {
+      chatMessages=msgs||[];
+    }
+    if(chatMessages.length){
+      chatLatestCreatedAt=chatMessages[chatMessages.length-1].created_at;
+    }
     checkChatBadge();
   }catch(e){console.warn('Chat load error',e);}
 }
@@ -2687,6 +2702,7 @@ function chatNotifTap(){
 }
 function startChatBackgroundPoll(){
   if(_chatPollTimer)return; // already running
+  if(document.hidden)return; // don't poll while tab is hidden — visibilitychange handler restarts on resume
   _chatPollTimer=setInterval(async()=>{
     const prevLatestId=chatMessages.length?chatMessages[chatMessages.length-1].id:null;
     await loadChat();
@@ -2699,7 +2715,13 @@ function startChatBackgroundPoll(){
         showChatNotif(latest);
       }
     }
-  },4000);
+  },10000);
+}
+function stopChatBackgroundPoll(){
+  if(_chatPollTimer){
+    clearInterval(_chatPollTimer);
+    _chatPollTimer=null;
+  }
 }
 
 function renderChatMessages(suffix){
@@ -2950,11 +2972,17 @@ function downloadCampDoc(id){
   }catch(e){console.error('Doc download failed',e);toast('Download failed',true);}
 }
 
-// Re-render chat if app becomes visible again
+// Pause chat polling when tab is hidden; resume + catch up when it becomes visible again
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&chatActiveSuffix){
-    loadChat().then(()=>renderChatMessages(chatActiveSuffix));
+  if(document.hidden){
+    stopChatBackgroundPoll();
+    return;
   }
+  if(!CU)return; // not logged in — nothing to resume
+  loadChat().then(()=>{
+    if(chatActiveSuffix)renderChatMessages(chatActiveSuffix);
+  });
+  startChatBackgroundPoll();
 });
 
 // ═══ CAMPER PROFILES VIEW ═══
