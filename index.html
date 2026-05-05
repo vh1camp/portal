@@ -422,6 +422,21 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .profile-photo-circle img{width:100%;height:100%;object-fit:cover;object-position:center 15%}
 .profile-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:22px}
 .profile-photo-circle:hover .profile-photo-overlay{opacity:1}
+
+/* LIVE EVAL */
+.le-tab-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 0;margin:0 0 10px;position:sticky;top:calc(58px + env(safe-area-inset-top,0px));background:var(--bg);z-index:5}
+.le-tab{flex:0 0 auto;background:transparent;border:1px solid var(--b3);border-radius:18px;padding:7px 14px;font-size:13px;color:var(--tx2);cursor:pointer;font-family:'Oswald',sans-serif;letter-spacing:.04em;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.le-tab.on{background:var(--or);border-color:var(--or);color:#000;font-weight:700}
+.le-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.le-row-lbl{flex:1;min-width:0;font-size:12px;color:var(--tx2)}
+.le-row-btns{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.le-score{width:34px;height:34px;border:1px solid var(--b3);border-radius:8px;background:transparent;font-size:13px;font-weight:700;color:var(--tx2);cursor:pointer;font-family:'Oswald',sans-serif}
+.le-score.on{background:var(--or);border-color:var(--or);color:#000}
+.le-score:disabled{opacity:.6;cursor:not-allowed}
+.le-yn{padding:6px 12px;border:1px solid var(--b3);border-radius:8px;background:transparent;font-size:11px;font-weight:700;color:var(--tx2);cursor:pointer;font-family:'Oswald',sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.le-yn.yes{background:var(--grn);border-color:var(--grn);color:#000}
+.le-yn.no{background:var(--red2);border-color:var(--red2);color:#fff}
+.le-yn:disabled{opacity:.6;cursor:not-allowed}
 </style>
 
 <script>
@@ -686,6 +701,10 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span>Schedule</span>
     </button>
+    <button class="more-item" id="sb-liveeval" onclick="sView('liveeval');closeMoreS()" type="button">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Live Eval</span>
+    </button>
     <button class="more-item" id="sb-myprofile" onclick="sView('myprofile');closeMoreS()" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       <span>My Profile</span>
@@ -744,6 +763,13 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="view" id="sv-schedule">
 <div class="stitle" style="margin-bottom:14px">MY <span>SCHEDULE</span></div>
 <div id="svSchContent"><div class="schedule-empty"><div class="schedule-empty-txt">Schedule Coming Soon</div><div class="schedule-empty-sub">Your schedule will appear here once published.</div></div></div>
+</div>
+<div class="view" id="sv-liveeval">
+  <div id="leGameList">
+    <div class="stitle" style="margin-bottom:14px">LIVE <span>EVAL</span></div>
+    <div id="leGameListBody"><div class="empty"><span class="ei">📋</span><div class="et">No games assigned</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">Your scheduled games will appear here once published.</div></div></div>
+  </div>
+  <div id="leGameView" style="display:none"></div>
 </div>
 <div class="view" id="sv-campinfo">
 <div class="stitle">CAMP <span>INFO</span></div>
@@ -1380,6 +1406,453 @@ function isNameSubscribed(name){
   return pushSubNames.has(norm(name));
 }
 
+// ═══ LIVE EVAL ═══
+// Tiny convenience — VH1 stores category scores under
+// `cat.toLowerCase().replace(/\s+/g,'_')`. Centralizing this so the Live
+// Eval form, save path, and admin close-out all agree.
+function catKey(cat){ return String(cat||'').toLowerCase().replace(/\s+/g,'_'); }
+
+const ABSENT_REASONS = ['No-show', 'Injured / left early', 'Other'];
+
+// Resolve the logged-in staff CU to a row in the `clinicians` lookup table
+// by case-insensitive name. Falls back to the staff name if no match.
+function findMatchingClinician(){
+  const cuName = ((CU?.first_name||'')+' '+(CU?.last_name||'')).trim();
+  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const target = norm(cuName);
+  const cl = clinicians.find(c => norm(c.name) === target)
+    || clinicians.find(c => target && norm(c.name).includes(target.split(' ')[0]));
+  return cl || { name: cuName, id: null };
+}
+
+// Returns 'submitted' | 'in_progress' | 'not_started' | 'empty' for a slot,
+// from the perspective of the LOGGED-IN clinician (matched by name).
+function liveEvalGameStatus(scheduleRow, allEvals){
+  const camperIds = [scheduleRow.camper_1_id, scheduleRow.camper_2_id, scheduleRow.camper_3_id].filter(Boolean);
+  if (!camperIds.length) return 'empty';
+  const matched = findMatchingClinician();
+  const myName = matched.name;
+  const date = SCH_DAY_TO_DATE[scheduleRow.day] || null;
+  const slotEvals = (allEvals||[]).filter(e =>
+    e.clinician_name === myName &&
+    e.eval_date === date &&
+    e.court === scheduleRow.court &&
+    e.eval_time === scheduleRow.time_slot
+  );
+  if (!slotEvals.length) return 'not_started';
+  const allDone = camperIds.every(cid => slotEvals.find(e =>
+    String(e.camper_id) === String(cid) && (!e.status || e.status === 'submitted' || e.status === 'absent')));
+  if (allDone) return 'submitted';
+  return 'in_progress';
+}
+
+const _liveEval = { game:null, evals:{}, crew:null, activeIdx:0, saveTimers:{}, lastSavedAt:null, isSubmitted:false, _gameList:null };
+
+function renderLiveEvalGameList(){
+  // Show the list, hide any open game form.
+  const list = document.getElementById('leGameList');
+  const view = document.getElementById('leGameView');
+  if (list) list.style.display = 'block';
+  if (view){ view.style.display = 'none'; view.innerHTML = ''; }
+  const body = document.getElementById('leGameListBody');
+  if (!body) return;
+  if (!schedulePublished){
+    body.innerHTML = '<div class="empty"><span class="ei">📋</span><div class="et">Schedule not published yet</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">Your games will appear here once admin publishes the schedule.</div></div>';
+    return;
+  }
+  const matched = findMatchingClinician();
+  const cuName = matched.name;
+  // Match assigned slots by clinician id OR (fallback) by name on the row.
+  const myClinId = matched.id;
+  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const myNameNorm = norm(cuName);
+  const my = (scheduleData||[]).filter(s => {
+    const ids = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id].filter(Boolean).map(String);
+    if (myClinId && ids.includes(String(myClinId))) return true;
+    // Fallback: match on the rendered clinician name in case the staff CU
+    // isn't linked to a clinicians row.
+    const names = [s.clinician_name, s.clinician_2_name, s.clinician_3_name, s.clinician_4_name].map(norm).filter(Boolean);
+    return names.includes(myNameNorm);
+  }).sort((a,b) => {
+    const dayOrder = ['Thursday June 18, 2026','Friday June 19, 2026','Saturday June 20, 2026'];
+    const d = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+    if (d !== 0) return d;
+    return timeToMinutes(a.time_slot) - timeToMinutes(b.time_slot);
+  });
+  _liveEval._gameList = my;
+  if (!my.length){
+    body.innerHTML = '<div class="empty"><span class="ei">📋</span><div class="et">No games assigned to you</div></div>';
+    return;
+  }
+  let html = '';
+  let lastDay = '';
+  my.forEach((s, idx) => {
+    if (s.day !== lastDay){ html += `<div class="sch-day-header">${s.day}</div>`; lastDay = s.day; }
+    const status = liveEvalGameStatus(s, evaluations);
+    const badge = status==='submitted' ? '<span style="color:var(--grn);font-size:11px;font-weight:700">✓ Submitted</span>'
+      : status==='in_progress' ? '<span style="color:var(--or);font-size:11px;font-weight:700">⏳ In progress</span>'
+      : '<span style="color:var(--tx3);font-size:11px;font-weight:700">○ Not started</span>';
+    const camperIds = [s.camper_1_id, s.camper_2_id, s.camper_3_id].filter(Boolean);
+    const names = camperIds.map(id => { const c = campers.find(x => x.id === id); return c ? c.first_name+' '+c.last_name : ''; }).filter(Boolean);
+    html += `<div class="sch-card" style="cursor:pointer;border-color:var(--or)" onclick="openLiveEvalGame(${idx})">
+      <div class="sch-card-meta">${s.time_slot}</div>
+      <div class="sch-card-court">${s.court}</div>
+      <div style="margin:6px 0;font-size:12px;color:var(--tx2)">${names.join(' · ')||'—'}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px">
+        ${badge}
+        <button onclick="event.stopPropagation();openLiveEvalGame(${idx})" style="background:var(--or);color:#000;border:none;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.08em;padding:8px 14px;cursor:pointer;font-family:Oswald,sans-serif;text-transform:uppercase">Open</button>
+      </div>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+function openLiveEvalFromSchedule(scheduleId){
+  const row = (scheduleData||[]).find(s => String(s.id)===String(scheduleId));
+  if (!row){ toast('Game not found', true); return; }
+  sView('liveeval');
+  setTimeout(() => openLiveEvalGame(row), 0);
+}
+
+async function openLiveEvalGame(rowOrIdx){
+  const g = (rowOrIdx && typeof rowOrIdx === 'object') ? rowOrIdx : _liveEval._gameList?.[rowOrIdx];
+  if (!g){ renderLiveEvalGameList(); return; }
+  const matched = findMatchingClinician();
+  const date = SCH_DAY_TO_DATE[g.day] || null;
+  const camperIds = [g.camper_1_id, g.camper_2_id, g.camper_3_id].filter(Boolean);
+  const camps = camperIds.map(id => campers.find(c => String(c.id)===String(id))).filter(Boolean);
+  _liveEval.game = { date, court:g.court, time:g.time_slot, day:g.day, clinicianName:matched.name, scheduleRow:g, campers:camps };
+  _liveEval.evals = {}; _liveEval.crew = null; _liveEval.activeIdx = 0; _liveEval.lastSavedAt = null; _liveEval.saveTimers = {};
+  try {
+    const existing = await supa('evaluations','GET',null,
+      `?select=*&clinician_name=eq.${encodeURIComponent(matched.name)}&eval_date=eq.${date}&court=eq.${encodeURIComponent(g.court)}&eval_time=eq.${encodeURIComponent(g.time_slot)}`);
+    (existing||[]).forEach(e => { _liveEval.evals[String(e.camper_id)] = { id:e.id, scores:e.scores||{}, comments:e.comments||'', status:e.status||'submitted', overall:e.overall_score }; });
+  } catch(e){}
+  try {
+    const crews = await supa('crew_notes','GET',null,
+      `?select=*&clinician_name=eq.${encodeURIComponent(matched.name)}&eval_date=eq.${date}&court=eq.${encodeURIComponent(g.court)}&eval_time=eq.${encodeURIComponent(g.time_slot)}`);
+    if (Array.isArray(crews) && crews.length) _liveEval.crew = { id:crews[0].id, note:crews[0].note||'', status:crews[0].status||'in_progress' };
+  } catch(e){}
+  _liveEval.isSubmitted = camps.length > 0 && camps.every(c => {
+    const st = _liveEval.evals[String(c.id)]?.status;
+    return st === 'submitted' || st === 'absent' || (_liveEval.evals[String(c.id)] && !st);
+  });
+  // Show the form, hide the list.
+  const list = document.getElementById('leGameList');
+  const view = document.getElementById('leGameView');
+  if (list) list.style.display = 'none';
+  if (view) view.style.display = 'block';
+  renderLiveEvalGameView();
+}
+
+function closeLiveEvalGame(){
+  _liveEval.game = null; _liveEval.evals = {}; _liveEval.crew = null; _liveEval.saveTimers = {};
+  renderLiveEvalGameList();
+}
+
+function liveEvalCamperStatusIcon(camperId){
+  const ev = _liveEval.evals[String(camperId)]; if (!ev) return '○';
+  if (ev.status === 'absent') return '🚫';
+  const filled = CFG.CATS.filter(c => ev.scores?.[catKey(c)] != null).length;
+  if (filled === CFG.CATS.length) return '●';
+  if (filled > 0) return '◐';
+  return '○';
+}
+
+function liveEvalAvg(camperId){
+  const ev = _liveEval.evals[String(camperId)]; if (!ev) return null;
+  const vs = CFG.CATS.map(c => ev.scores?.[catKey(c)]).filter(v => v != null);
+  if (!vs.length) return null;
+  return (vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1);
+}
+
+function renderLiveEvalGameView(){
+  const view = document.getElementById('leGameView');
+  if (!view || !_liveEval.game) return;
+  const g = _liveEval.game;
+  const camps = g.campers;
+  const submitted = _liveEval.isSubmitted;
+  const crewNote = _liveEval.crew?.note || '';
+  const savedTxt = _liveEval.lastSavedAt ? `Saved ${Math.max(1, Math.round((Date.now()-_liveEval.lastSavedAt)/1000))}s ago` : 'Not saved yet';
+
+  const tabs = camps.map((c,i) => {
+    const icon = liveEvalCamperStatusIcon(c.id);
+    const cls = i === _liveEval.activeIdx ? 'le-tab on' : 'le-tab';
+    return `<button type="button" class="${cls}" onclick="liveEvalSetTab(${i})">${icon} ${escapeHtml(c.first_name)}</button>`;
+  }).join('');
+
+  const active = camps[_liveEval.activeIdx];
+  const evRow = active ? (_liveEval.evals[String(active.id)] || {}) : {};
+  const isAbsent = evRow.status === 'absent';
+  const avg = active ? liveEvalAvg(active.id) : null;
+
+  const catBlocks = active && !isAbsent ? CFG.CATS.map((cat) => {
+    const v = evRow.scores?.[catKey(cat)];
+    const btns = [1,2,3,4,5,6,7,8,9,10].map(n => {
+      const on = v === n ? 'on' : '';
+      return `<button type="button" class="le-score ${on}" ${submitted?'disabled':''} onclick="liveEvalSetScore('${active.id}','${catKey(cat)}',${n})">${n}</button>`;
+    }).join('');
+    return `<div class="le-row"><div class="le-row-lbl">${cat}</div><div class="le-row-btns">${btns}</div></div>`;
+  }).join('') : '';
+
+  const top10 = evRow.scores?.top10;
+  const rmac = evRow.scores?.rmac_ready;
+  const conf = evRow.scores?.conference_ready;
+  const flagBtns = active && !isAbsent ? `
+    <div class="le-row" style="margin-top:6px"><div class="le-row-lbl">Top 10?</div><div class="le-row-btns">
+      <button type="button" class="le-yn ${top10===true?'yes':''}" ${submitted?'disabled':''} onclick="liveEvalSetFlag('${active.id}','top10',true)">Yes</button>
+      <button type="button" class="le-yn ${top10===false?'no':''}" ${submitted?'disabled':''} onclick="liveEvalSetFlag('${active.id}','top10',false)">No</button>
+    </div></div>
+    <div class="le-row"><div class="le-row-lbl">RMAC Ready?</div><div class="le-row-btns">
+      <button type="button" class="le-yn ${rmac===true?'yes':''}" ${submitted?'disabled':''} onclick="liveEvalSetFlag('${active.id}','rmac_ready',true)">Yes</button>
+      <button type="button" class="le-yn ${rmac===false?'no':''}" ${submitted?'disabled':''} onclick="liveEvalSetFlag('${active.id}','rmac_ready',false)">No</button>
+    </div></div>
+    <div class="le-row"><div class="le-row-lbl">Conference Ready?</div><div class="le-row-btns">
+      <button type="button" class="le-yn ${conf===true?'yes':''}" ${submitted?'disabled':''} onclick="liveEvalSetFlag('${active.id}','conference_ready',true)">Yes</button>
+      <button type="button" class="le-yn ${conf===false?'no':''}" ${submitted?'disabled':''} onclick="liveEvalSetFlag('${active.id}','conference_ready',false)">No</button>
+    </div></div>` : '';
+
+  const absentChips = active && isAbsent ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0">${ABSENT_REASONS.map(r => {
+    const on = (evRow.comments||'').trim() === r ? 'on' : '';
+    return `<button type="button" class="fchip ${on}" ${submitted?'disabled':''} onclick="liveEvalSetAbsentReason('${active.id}','${r.replace(/'/g,"\\'")}')">${r}</button>`;
+  }).join('')}</div>` : '';
+  const absentToggle = active && !submitted ? (isAbsent
+    ? `<button type="button" class="btn bsec bsm" style="margin-left:auto" onclick="liveEvalToggleAbsent('${active.id}')">↩ Restore eval</button>`
+    : `<button type="button" class="btn bsec bsm" style="margin-left:auto" onclick="liveEvalToggleAbsent('${active.id}')">🚫 Did not play</button>`) : '';
+
+  view.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+      <button type="button" class="btn bsec bsm" onclick="closeLiveEvalGame()">← Back</button>
+      <div style="font-family:'Oswald',sans-serif;font-size:14px;color:var(--tx);text-align:right">${g.day.replace(/, 2026/,'')}<br><span style="color:var(--or)">${g.time} · ${g.court}</span></div>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">${camps.length} camper${camps.length===1?'':'s'} · <span id="leSavedTxt">${savedTxt}</span>${submitted?' · 🔒 Locked':''}</div>
+
+    <div class="eval-card">
+      <div class="eval-cat" style="margin-bottom:8px">CREW FEEDBACK</div>
+      <textarea class="ftarea" id="leCrewNote" placeholder="Notes for the whole crew (visible to all campers in this game)..." ${submitted?'disabled':''} oninput="liveEvalCrewInput()" onblur="liveEvalCrewBlur()">${escapeHtml(crewNote)}</textarea>
+    </div>
+
+    <div class="le-tab-strip">${tabs}</div>
+
+    ${active ? `
+    <div class="eval-card" style="padding:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--tx)">${escapeHtml(active.first_name+' '+active.last_name)}${isAbsent?' <span style="font-size:11px;color:var(--red2);font-weight:700;letter-spacing:.08em;margin-left:6px">· DID NOT PLAY</span>':''}</div>
+        ${isAbsent?'':`<div style="font-size:11px;color:var(--tx3)">Avg <span style="color:var(--or);font-weight:700">${avg||'—'}</span></div>`}
+        ${absentToggle}
+      </div>
+      ${isAbsent ? `<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">Reason</div>${absentChips}` : ''}
+      ${catBlocks}
+      ${flagBtns}
+      <div style="margin-top:12px">
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">${isAbsent?'Notes (optional)':`Notes for ${escapeHtml(active.first_name)}`}</div>
+        <textarea class="ftarea" id="leCamperNotes" placeholder="${isAbsent?'Add any context (e.g. came late, hurt ankle in 2nd half)...':`Individual notes (only ${escapeHtml(active.first_name)} sees these)...`}" ${submitted?'disabled':''} oninput="liveEvalNotesInput()" onblur="liveEvalNotesBlur()">${escapeHtml(evRow.comments||'')}</textarea>
+      </div>
+    </div>` : '<div class="empty"><span class="ei">📋</span><div class="et">No campers in this game</div></div>'}
+
+    ${submitted ? `<div style="margin-top:12px;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center;font-size:12px;color:var(--tx2)">🔒 This game is locked.</div>`
+      : `<button class="btn bor" style="width:100%;padding:14px;margin-top:14px;font-family:'Oswald',sans-serif;font-size:18px;letter-spacing:.1em" id="leSubmitBtn" onclick="liveEvalSubmit()">SUBMIT EVALUATIONS</button>`}
+  `;
+}
+
+function liveEvalEnsureEval(camperId){
+  const k = String(camperId);
+  if (!_liveEval.evals[k]) _liveEval.evals[k] = { id:null, scores:{}, comments:'', status:'in_progress' };
+  return _liveEval.evals[k];
+}
+
+function liveEvalSetTab(idx){
+  liveEvalNotesBlur(); liveEvalCrewBlur();
+  _liveEval.activeIdx = idx;
+  renderLiveEvalGameView();
+}
+
+function liveEvalSetScore(camperId, key, value){
+  if (_liveEval.isSubmitted) return;
+  const ev = liveEvalEnsureEval(camperId);
+  ev.scores = { ...(ev.scores||{}), [key]:value };
+  liveEvalSaveEvalRow(camperId);
+  renderLiveEvalGameView();
+}
+
+function liveEvalSetFlag(camperId, key, val){
+  if (_liveEval.isSubmitted) return;
+  const ev = liveEvalEnsureEval(camperId);
+  ev.scores = { ...(ev.scores||{}), [key]: val };
+  liveEvalSaveEvalRow(camperId);
+  renderLiveEvalGameView();
+}
+
+function liveEvalToggleAbsent(camperId){
+  if (_liveEval.isSubmitted) return;
+  const ev = liveEvalEnsureEval(camperId);
+  if (ev.status === 'absent'){ ev.status = 'in_progress'; }
+  else { ev.status = 'absent'; ev.scores = {}; }
+  liveEvalSaveEvalRow(camperId);
+  renderLiveEvalGameView();
+}
+
+function liveEvalSetAbsentReason(camperId, reason){
+  if (_liveEval.isSubmitted) return;
+  const ev = liveEvalEnsureEval(camperId);
+  ev.comments = (ev.comments||'').trim() === reason ? '' : reason;
+  liveEvalSaveEvalRow(camperId);
+  renderLiveEvalGameView();
+}
+
+function liveEvalNotesInput(){
+  if (_liveEval.isSubmitted) return;
+  const ta = document.getElementById('leCamperNotes'); if (!ta) return;
+  const camp = _liveEval.game?.campers[_liveEval.activeIdx]; if (!camp) return;
+  const ev = liveEvalEnsureEval(camp.id);
+  ev.comments = ta.value;
+  liveEvalScheduleIdleSave('camper-'+camp.id, () => liveEvalSaveEvalRow(camp.id));
+}
+function liveEvalNotesBlur(){
+  const ta = document.getElementById('leCamperNotes'); if (!ta) return;
+  const camp = _liveEval.game?.campers[_liveEval.activeIdx]; if (!camp) return;
+  const ev = liveEvalEnsureEval(camp.id);
+  ev.comments = ta.value;
+  liveEvalCancelIdleSave('camper-'+camp.id);
+  liveEvalSaveEvalRow(camp.id);
+}
+function liveEvalCrewInput(){
+  if (_liveEval.isSubmitted) return;
+  const ta = document.getElementById('leCrewNote'); if (!ta) return;
+  if (!_liveEval.crew) _liveEval.crew = { id:null, note:'', status:'in_progress' };
+  _liveEval.crew.note = ta.value;
+  liveEvalScheduleIdleSave('crew', liveEvalSaveCrewNote);
+}
+function liveEvalCrewBlur(){
+  const ta = document.getElementById('leCrewNote'); if (!ta) return;
+  if (!_liveEval.crew) _liveEval.crew = { id:null, note:'', status:'in_progress' };
+  _liveEval.crew.note = ta.value;
+  liveEvalCancelIdleSave('crew');
+  liveEvalSaveCrewNote();
+}
+function liveEvalScheduleIdleSave(key, fn){
+  liveEvalCancelIdleSave(key);
+  _liveEval.saveTimers[key] = setTimeout(() => { delete _liveEval.saveTimers[key]; fn(); }, 5000);
+}
+function liveEvalCancelIdleSave(key){
+  if (_liveEval.saveTimers[key]){ clearTimeout(_liveEval.saveTimers[key]); delete _liveEval.saveTimers[key]; }
+}
+
+async function liveEvalSaveEvalRow(camperId){
+  const g = _liveEval.game; if (!g) return;
+  const ev = liveEvalEnsureEval(camperId);
+  const isAbsent = ev.status === 'absent';
+  const vs = CFG.CATS.map(c => ev.scores?.[catKey(c)]).filter(v => v != null);
+  const overall = isAbsent ? null : (vs.length ? (vs.reduce((a,b)=>a+b,0)/vs.length) : null);
+  const payload = {
+    camper_id: camperId,
+    clinician_name: g.clinicianName,
+    eval_date: g.date,
+    court: g.court,
+    eval_time: g.time,
+    scores: isAbsent ? {} : (ev.scores || {}),
+    comments: ev.comments || '',
+    overall_score: overall,
+    status: isAbsent ? 'absent' : 'in_progress'
+  };
+  try {
+    if (ev.id){
+      await supa('evaluations','PATCH', payload, `?id=eq.${ev.id}`);
+    } else {
+      const r = await supa('evaluations','POST', payload, '?select=id');
+      const row = Array.isArray(r) ? r[0] : r;
+      if (row?.id) ev.id = row.id;
+    }
+    _liveEval.lastSavedAt = Date.now();
+    const el = document.getElementById('leSavedTxt'); if (el) el.textContent = 'Saved just now';
+  } catch(e){
+    console.error('liveEval save failed', e);
+    const el = document.getElementById('leSavedTxt'); if (el) el.textContent = 'Save failed — retry';
+  }
+}
+
+async function liveEvalSaveCrewNote(){
+  const g = _liveEval.game; if (!g) return;
+  if (!_liveEval.crew) return;
+  const payload = {
+    clinician_name: g.clinicianName,
+    eval_date: g.date,
+    court: g.court,
+    eval_time: g.time,
+    note: _liveEval.crew.note || '',
+    status: _liveEval.crew.status || 'in_progress'
+  };
+  try {
+    if (_liveEval.crew.id){
+      await supa('crew_notes','PATCH', payload, `?id=eq.${_liveEval.crew.id}`);
+    } else {
+      try {
+        const r = await supa('crew_notes','POST', payload, '?select=id');
+        const row = Array.isArray(r) ? r[0] : r;
+        if (row?.id) _liveEval.crew.id = row.id;
+      } catch(insErr){
+        await supa('crew_notes','PATCH', payload,
+          `?clinician_name=eq.${encodeURIComponent(g.clinicianName)}&eval_date=eq.${g.date}&court=eq.${encodeURIComponent(g.court)}&eval_time=eq.${encodeURIComponent(g.time)}`);
+      }
+    }
+    _liveEval.lastSavedAt = Date.now();
+    const el = document.getElementById('leSavedTxt'); if (el) el.textContent = 'Saved just now';
+  } catch(e){
+    console.error('liveEval crew save failed', e);
+    const el = document.getElementById('leSavedTxt'); if (el) el.textContent = 'Save failed — retry';
+  }
+}
+
+async function liveEvalSubmit(){
+  const g = _liveEval.game; if (!g) return;
+  const missing = [];
+  g.campers.forEach(c => {
+    const ev = _liveEval.evals[String(c.id)];
+    if (ev && ev.status === 'absent') return;
+    const filled = ev ? CFG.CATS.filter(cat => ev.scores?.[catKey(cat)] != null).length : 0;
+    if (filled < CFG.CATS.length) missing.push(c.first_name+' '+c.last_name);
+  });
+  if (missing.length){
+    toast('Score all categories (or mark Did Not Play) for: '+missing.join(', '), true);
+    return;
+  }
+  const absentCount = g.campers.filter(c => _liveEval.evals[String(c.id)]?.status === 'absent').length;
+  const scoredCount = g.campers.length - absentCount;
+  const summary = absentCount
+    ? `${scoredCount} eval${scoredCount===1?'':'s'} + ${absentCount} marked DNP`
+    : `${g.campers.length} camper${g.campers.length===1?'':'s'}`;
+  const ok = await cf(`Submit ${summary}? Scored campers will get a push notification that a new eval was posted.`,'Submit','Cancel');
+  if (!ok) return;
+  const btn = document.getElementById('leSubmitBtn'); if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  Object.keys(_liveEval.saveTimers).forEach(k => liveEvalCancelIdleSave(k));
+  try {
+    for (const c of g.campers){
+      const ev = liveEvalEnsureEval(c.id);
+      const wasAbsent = ev.status === 'absent';
+      if (!wasAbsent) ev.status = 'submitted';
+      const vs = CFG.CATS.map(cat => ev.scores?.[catKey(cat)]).filter(v => v != null);
+      const overall = wasAbsent ? null : (vs.length ? vs.reduce((a,b)=>a+b,0)/vs.length : null);
+      const payload = { camper_id:c.id, clinician_name:g.clinicianName, eval_date:g.date, court:g.court, eval_time:g.time, scores:wasAbsent?{}:(ev.scores||{}), comments:ev.comments||'', overall_score:overall, status:wasAbsent?'absent':'submitted' };
+      if (ev.id){ await supa('evaluations','PATCH', payload, `?id=eq.${ev.id}`); }
+      else { const r = await supa('evaluations','POST', payload, '?select=id'); const row = Array.isArray(r)?r[0]:r; if (row?.id) ev.id = row.id; }
+    }
+    if (_liveEval.crew){ _liveEval.crew.status = 'submitted'; await liveEvalSaveCrewNote(); }
+    await loadAll();
+    for (const c of g.campers){
+      if (_liveEval.evals[String(c.id)]?.status === 'absent') continue;
+      try { await pushEvalToCamper(c.id, null); } catch(e){}
+      await new Promise(r => setTimeout(r, 150));
+    }
+    _liveEval.isSubmitted = true;
+    toast(absentCount ? `✓ Submitted (${scoredCount} eval${scoredCount===1?'':'s'}, ${absentCount} DNP)` : '✓ Evaluations submitted');
+    renderLiveEvalGameView();
+  } catch(e){
+    console.error('liveEval submit failed', e);
+    toast('Submit failed — try again', true);
+    if (btn){ btn.disabled = false; btn.textContent = 'SUBMIT EVALUATIONS'; }
+  }
+}
+
 // ═══ TOAST / CONFIRM ═══
 function toast(msg,err){const t=document.getElementById('toast');t.textContent=msg;t.className='show'+(err?' error':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='',2800);}
 let _cfR=null;
@@ -1709,7 +2182,7 @@ function sView(v){
   document.getElementById('sv-'+v).classList.add('on');
   const btn=document.getElementById('sb-'+v);if(btn)btn.classList.add('on');
   // Highlight More btn for drawer items
-  const drawerViewsS=['schedule','myprofile','campinfo','staffchat'];
+  const drawerViewsS=['schedule','liveeval','myprofile','campinfo','staffchat'];
   if(drawerViewsS.includes(v)){const mb=document.getElementById('sb-more-btn');if(mb)mb.classList.add('on');}
   if(v==='evaluate')populateStaffEvalForm();
   if(v==='history')renderStaffHistory();
@@ -1717,6 +2190,7 @@ function sView(v){
   if(v==='chat'){markChatRead();renderChat('Staff');}
   if(v==='campinfo')renderCampInfoViewer('sv');
   if(v==='schedule')renderClinicianSchedule();
+  if(v==='liveeval')renderLiveEvalGameList();
   if(v==='myprofile')renderMyProfile('staff');
 }
 function populateStaffEvalForm(){
@@ -3799,9 +4273,10 @@ function clinicianEvalProgress(clinicianName, opts){
   const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
   const target = norm(clinicianName);
   const clIds = clinicians.filter(c => norm(c.name) === target).map(c => String(c.id));
-  if (!clIds.length) return { totalAssigned: 0, totalSubmitted: 0, totalPast: 0, missingPast: 0, missingPastSlots: [] };
+  if (!clIds.length) return { totalAssigned: 0, totalSubmitted: 0, totalPast: 0, missingPast: 0, missingPastSlots: [], readySlots: [] };
   let totalAssigned = 0, totalSubmitted = 0, totalPast = 0, missingPast = 0;
   const missingPastSlots = [];
+  const readySlots = [];
   for (const s of scheduleData) {
     const assignedClins = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
       .filter(Boolean).map(String);
@@ -3816,9 +4291,27 @@ function clinicianEvalProgress(clinicianName, opts){
       e.court === s.court &&
       e.eval_time === s.time_slot
     );
-    // VH1 doesn't track per-eval status — any matching row is "submitted".
-    const allSubmitted = camperIds.every(cid => slotEvals.find(e => String(e.camper_id) === String(cid)));
+    // A row counts as "done" if its status is null/'submitted'/'absent'.
+    // In-progress drafts (Live Eval) do NOT count — otherwise the BY
+    // CLINICIAN tracker would mis-report past-due slots as complete.
+    const isDone = (e) => !e.status || e.status === 'submitted' || e.status === 'absent';
+    const allSubmitted = camperIds.every(cid => {
+      const ev = slotEvals.find(e => String(e.camper_id) === String(cid));
+      return ev && isDone(ev);
+    });
+    // "Ready" slots — every assigned camper has an in_progress draft with all
+    // CFG.CATS scored. These can be force-submitted by admin via Close Out.
+    const readySlot = !allSubmitted && camperIds.every(cid => {
+      const ev = slotEvals.find(e => String(e.camper_id) === String(cid));
+      if (!ev) return false;
+      if (ev.status === 'submitted' || ev.status === 'absent') return true;
+      return CFG.CATS.every(cat => ev.scores?.[cat.toLowerCase().replace(/\s+/g,'_')] != null);
+    }) && camperIds.some(cid => {
+      const ev = slotEvals.find(e => String(e.camper_id) === String(cid));
+      return ev && ev.status === 'in_progress';
+    });
     if (allSubmitted) totalSubmitted++;
+    else if (readySlot) readySlots.push(s);
     if (date) {
       const slotStart = new Date(`${date}T00:00:00`);
       slotStart.setMinutes(slotStart.getMinutes() + timeToMinutes(s.time_slot) + slotPastMin);
@@ -3828,7 +4321,7 @@ function clinicianEvalProgress(clinicianName, opts){
       }
     }
   }
-  return { totalAssigned, totalSubmitted, totalPast, missingPast, missingPastSlots };
+  return { totalAssigned, totalSubmitted, totalPast, missingPast, missingPastSlots, readySlots };
 }
 
 function clinicianHasEmailOnFile(clinicianName){
@@ -3904,6 +4397,52 @@ async function remindOneClinician(name){
   else toast('Reminder failed: '+(r.reason||'unknown'), true);
 }
 
+// Force-submits in-progress drafts for a clinician's "ready" slots — every
+// camper is fully scored but the clinician never tapped Submit. Pushes each
+// scored camper after the flip.
+async function closeOutClinicianReady(name){
+  const p = clinicianEvalProgress(name);
+  if (!p.readySlots || !p.readySlots.length){ toast('No ready slots to close out for this clinician'); return; }
+  const list = p.readySlots
+    .map(s => `  • ${s.day.replace(/, 2026/,'')} · ${s.time_slot} · ${s.court}`)
+    .join('\n');
+  const ok = await cf(`Close out ${p.readySlots.length} ready slot${p.readySlots.length===1?'':'s'} for ${name}?\n\n${list}\n\nCampers in submitted slots will get a push notification.`,'Close Out','Cancel');
+  if (!ok) return;
+  let closed = 0, failed = 0;
+  const camperIdsToNotify = new Set();
+  for (const s of p.readySlots){
+    const date = SCH_DAY_TO_DATE[s.day] || null;
+    const slotEvals = evaluations.filter(e =>
+      e.clinician_name === name &&
+      e.eval_date === date &&
+      e.court === s.court &&
+      e.eval_time === s.time_slot
+    );
+    for (const e of slotEvals){
+      if (e.status !== 'in_progress') continue;
+      const vs = CFG.CATS.map(cat => e.scores?.[cat.toLowerCase().replace(/\s+/g,'_')]).filter(v => v != null);
+      const overall = vs.length ? vs.reduce((a,b)=>a+b,0)/vs.length : null;
+      try{
+        await supa('evaluations','PATCH', { status:'submitted', overall_score: overall }, `?id=eq.${e.id}`);
+        closed++;
+        camperIdsToNotify.add(String(e.camper_id));
+      }catch(err){
+        console.error('closeOut PATCH failed', e.id, err);
+        failed++;
+      }
+    }
+  }
+  await loadAll();
+  for (const cid of camperIdsToNotify){
+    try{ await pushEvalToCamper(cid, null); }catch(_){}
+    await new Promise(r=>setTimeout(r,150));
+  }
+  renderEvalTrackerByClinician();
+  toast(failed
+    ? `✓ Closed ${closed} eval${closed===1?'':'s'} · ${failed} failed`
+    : `✓ Closed out ${closed} eval${closed===1?'':'s'}`);
+}
+
 function showReminderResults(sentTo, noEmail, failed){
   let msg='';
   if(sentTo.length) msg+=`✓ Emailed ${sentTo.length} clinician${sentTo.length===1?'':'s'}\n`;
@@ -3969,9 +4508,15 @@ function renderEvalTrackerByClinician(){
     const remindBtn = r.missingPast > 0 && hasEmail
       ? `<button class="btn bsec bsm" style="flex-shrink:0" onclick="event.stopPropagation();remindOneClinician('${r.name.replace(/'/g, "\\'")}')" type="button">✉️ Remind</button>`
       : '';
+    const closeBtn = r.readySlots && r.readySlots.length
+      ? `<button class="btn bor bsm" style="flex-shrink:0" onclick="event.stopPropagation();closeOutClinicianReady('${r.name.replace(/'/g, "\\'")}')" type="button" title="Slots fully scored but never submitted">✓ Close ${r.readySlots.length}</button>`
+      : '';
     const pastNote = r.missingPast > 0
       ? `<span style="color:var(--red2);font-weight:700">· ${r.missingPast} past-due</span>`
       : (r.totalSubmitted === r.totalAssigned ? '<span style="color:var(--grn)">· all done ✓</span>' : '');
+    const readyNote = r.readySlots && r.readySlots.length
+      ? `<span style="color:var(--or);font-weight:700"> · ${r.readySlots.length} ready to close</span>`
+      : '';
     const noEmailNote = !hasEmail ? '<span style="color:var(--tx3)"> · no email on file</span>' : '';
     html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px 12px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'
@@ -3982,11 +4527,12 @@ function renderEvalTrackerByClinician(){
       +   '</span>'
       +   '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">'
       +     '<span style="font-family:\'Oswald\',sans-serif;font-size:14px;color:var(--or)">'+r.totalSubmitted+' / '+r.totalAssigned+'</span>'
+      +     closeBtn
       +     remindBtn
       +   '</div>'
       + '</div>'
       + '<div style="height:5px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:4px"><div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px"></div></div>'
-      + '<div style="font-size:10px;color:var(--tx3)">'+pct+'% complete '+pastNote+noEmailNote+'</div>'
+      + '<div style="font-size:10px;color:var(--tx3)">'+pct+'% complete '+pastNote+readyNote+noEmailNote+'</div>'
       + '</div>';
   });
   html += '</div>';
@@ -4395,6 +4941,10 @@ function renderClinicianSchedule() {
     const coClinLine = coClinNames.length ? `<div style="font-size:11px;color:var(--tx3);margin-top:4px">With ${coClinNames.join(' & ')}</div>` : '';
 
     const firstCamperId = camperIds[0] || '';
+    const liveStatus = liveEvalGameStatus(s, evaluations);
+    const liveBadge = liveStatus==='submitted' ? '<span style="color:var(--grn);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">✓ Submitted</span>'
+      : liveStatus==='in_progress' ? '<span style="color:var(--or);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase">⏳ In progress</span>'
+      : '';
     html += `<div class="sch-card" style="cursor:pointer;border-color:var(--or);opacity:0.95;transition:opacity .15s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.95'">
       <div class="sch-card-meta">${s.time_slot}</div>
       <div class="sch-card-court">${s.court}</div>
@@ -4409,6 +4959,10 @@ function renderClinicianSchedule() {
             <button onclick="event.stopPropagation();openEvalFromSchedule('${id}','${s.court}','${s.time_slot}','${s.day}')" style="background:var(--or);color:#fff;border:none;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.08em;padding:4px 10px;cursor:pointer;font-family:Oswald,sans-serif;text-transform:uppercase;flex-shrink:0">Eval</button>
           </div>` : '';
         }).filter(Boolean).join('')}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px">
+        <div>${liveBadge}</div>
+        <button onclick="event.stopPropagation();openLiveEvalFromSchedule('${s.id}')" style="background:var(--or);color:#000;border:none;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.08em;padding:8px 14px;cursor:pointer;font-family:Oswald,sans-serif;text-transform:uppercase">📋 Live Eval</button>
       </div>
     </div>`;
   });
