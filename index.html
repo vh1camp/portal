@@ -4403,11 +4403,16 @@ function renderDailyView(){
       const clObjs = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
         .map(id => clinicians.find(x => x.id === id))
         .filter(Boolean);
-      const clNames = clObjs.map(c => c.name || (c.first_name+' '+c.last_name)).filter(Boolean);
-      const clName = clNames.length ? clNames.join(' & ') : '—';
       const evals1 = c1 ? evaluations.filter(e=>e.camper_id===c1.id).length : 0;
       const evals2 = c2 ? evaluations.filter(e=>e.camper_id===c2.id).length : 0;
-      html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px"><div style="font-family:\'Oswald\',sans-serif;font-size:16px;color:var(--or);margin-bottom:6px">'+s.court+'</div>'+(c1?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c1.first_name+' '+c1.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals1+' eval'+(evals1!==1?'s':'')+'</span></div>':'')+(c2?'<div style="font-size:12px;color:var(--tx);font-weight:600;display:flex;justify-content:space-between">'+c2.first_name+' '+c2.last_name+'<span style="font-size:10px;color:var(--tx3)">'+evals2+' eval'+(evals2!==1?'s':'')+'</span></div>':'')+(c3?'<div style="font-size:12px;color:var(--tx3)">'+c3.first_name+' '+c3.last_name+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--b2)">'+(clNames.length>1?'Clinicians: ':'Clinician: ')+clName+'</div></div>';
+      const evals3 = c3 ? evaluations.filter(e=>e.camper_id===c3.id).length : 0;
+      const camperRow = (cmp, n) => cmp
+        ? `<div style="font-size:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:2px"><span onclick="openCamperProfile('${cmp.id}')" style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cmp.first_name} ${cmp.last_name}</span><span style="font-size:10px;color:var(--tx3);flex-shrink:0">${n} eval${n!==1?'s':''}</span></div>`
+        : '';
+      const clinNames = clObjs.length
+        ? clObjs.map(cl => `<span onclick="openClinicianDetail('${cl.id}')" style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px">${cl.name||((cl.first_name||'')+' '+(cl.last_name||''))}</span>`).join(' &amp; ')
+        : '<span style="color:var(--tx3)">—</span>';
+      html += '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px"><div style="font-family:\'Oswald\',sans-serif;font-size:16px;color:var(--or);margin-bottom:6px">'+s.court+'</div>'+camperRow(c1,evals1)+camperRow(c2,evals2)+camperRow(c3,evals3)+'<div style="font-size:10px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--b2)">'+(clObjs.length>1?'Clinicians: ':'Clinician: ')+clinNames+'</div></div>';
     });
     html += '</div></div>';
   });
