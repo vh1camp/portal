@@ -686,11 +686,16 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div id="cMyProfileCon"></div>
 </div>
 <div class="view" id="cv-chat">
+<div style="display:flex;gap:0;margin-bottom:10px;border:1px solid var(--b2);border-radius:var(--r);overflow:hidden">
+  <button id="camperChatTab-general" onclick="switchCamperChatRoom('general')" style="flex:1;padding:10px;background:var(--or);color:#000;border:none;font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">CAMP CHAT</button>
+  <button id="camperChatTab-admin" onclick="switchCamperChatRoom('admin')" style="flex:1;padding:10px;background:var(--gray2);color:var(--tx2);border:none;border-left:1px solid var(--b2);font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer;position:relative">ADMIN <span class="badge-dot" id="dmCamperDot" style="top:6px;right:8px;position:absolute"></span></button>
+</div>
+<div id="camperChatRoomLabel" style="font-size:11px;color:var(--tx3);margin-bottom:10px">Visible to everyone — campers, staff, and admin</div>
 <div class="chat-wrap">
 <div class="chat-messages" id="chatMsgsCamper"></div>
 <div class="chat-input-row">
 <textarea class="chat-input" id="chatInputCamper" placeholder="Message the camp..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('camper');}"></textarea>
-<button class="chat-send" onclick="sendChat('camper')">➤</button>
+<button class="chat-send" id="camperChatSendBtn" onclick="sendChat('camper')">➤</button>
 </div>
 </div>
 </div>
@@ -699,21 +704,21 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <!-- STAFF PORTAL -->
 <div class="portal" id="pStaff">
 <nav class="bnav on" id="navS">
+<button class="bb" id="sb-campinfo" onclick="sView('campinfo')" type="button">
+  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+  <span class="bl">Camp Info</span>
+</button>
+<button class="bb" id="sb-schedule" onclick="sView('schedule')" type="button">
+  <div class="bb-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+  <span class="bl">Schedule</span>
+</button>
 <button class="bb" id="sb-history" onclick="sView('history')" type="button">
   <div class="bb-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
   <span class="bl">My Evals</span>
 </button>
-<button class="bb" id="sb-roster" onclick="sView('roster')" type="button">
-  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></svg></div>
-  <span class="bl">Roster</span>
-</button>
 <button class="bb" id="sb-chat" onclick="sView('chat')" type="button">
   <div class="bb-icon" style="position:relative"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span class="badge-dot" id="chatDotS" style="top:0;right:0"></span></div>
   <span class="bl">Chat</span>
-</button>
-<button class="bb" id="sb-campinfo" onclick="sView('campinfo')" type="button">
-  <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
-  <span class="bl">Camp Info</span>
 </button>
 <button class="bb" id="sb-more-btn" onclick="openMoreS()" type="button">
   <div class="bb-icon"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg></div>
@@ -725,13 +730,9 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="more-drawer" id="moreDrawerS">
   <div class="more-drawer-handle"></div>
   <div class="more-drawer-grid">
-    <button class="more-item" id="sb-schedule" onclick="sView('schedule');closeMoreS()" type="button">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-      <span>Schedule</span>
-    </button>
-    <button class="more-item" id="sb-liveeval" onclick="sView('liveeval');closeMoreS()" type="button">
-      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      <span>Live Eval</span>
+    <button class="more-item" id="sb-roster" onclick="sView('roster');closeMoreS()" type="button">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></svg>
+      <span>Roster</span>
     </button>
     <button class="more-item" id="sb-myprofile" onclick="sView('myprofile');closeMoreS()" type="button">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -769,7 +770,8 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="followup" id="seConfFollowup"><div class="yn-row"><div class="yn-lbl">Conference Ready</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('conference','yes',this)">Yes</button><button class="yn-btn" onclick="setYN('conference','no',this)">No</button></div></div></div>
 <div class="yn-row" style="margin-bottom:0"><div class="yn-lbl">Top 10 Camper</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('top10','yes',this)">Yes</button><button class="yn-btn" onclick="setYN('top10','no',this)">No</button></div></div>
 </div>
-<div class="eval-card"><div class="eval-cat" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">Comments<button type="button" id="seMicBtn" class="mic-btn" onclick="toggleVoiceInput('seComments','seMicBtn')" title="Voice to text">🎤</button></div><textarea class="ftarea" id="seComments" placeholder="Additional observations..."></textarea></div>
+<div class="eval-card"><div class="eval-cat" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">Camper Feedback<button type="button" id="seMicBtn" class="mic-btn" onclick="toggleVoiceInput('seComments','seMicBtn')" title="Voice to text">🎤</button></div><div style="font-size:11px;color:var(--tx3);margin-bottom:6px">👤 Camper + admin can see this</div><textarea class="ftarea" id="seComments" placeholder="Feedback the camper will see in their results..."></textarea></div>
+<div class="eval-card"><div class="eval-cat" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">🔒 Admin-Only Feedback<button type="button" id="seAdminMicBtn" class="mic-btn" onclick="toggleVoiceInput('seAdminNotes','seAdminMicBtn')" title="Voice to text">🎤</button></div><div style="font-size:11px;color:var(--tx3);margin-bottom:6px">🔒 Only admin sees this · NOT visible to camper</div><textarea class="ftarea" id="seAdminNotes" placeholder="Private feedback to camp admin about this camper..."></textarea></div>
 <div class="overall-card"><div class="overall-lbl">CURRENT AVERAGE</div><div class="overall-val" id="seOverall">—</div></div>
 <button class="btn bor" style="width:100%;padding:16px;font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:.1em" id="seSubmitBtn" onclick="submitStaffEval()">SUBMIT EVALUATION</button>
 <div id="seStatus" style="margin-top:10px"></div>
@@ -869,6 +871,10 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
       <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
       Eval Tracker
     </button>
+    <button class="admin-more-item" id="atab-messages" onclick="aTabMore('messages')" type="button">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Messages <span class="badge-dot" id="dmAdminDot" style="position:relative;top:-6px;right:0"></span>
+    </button>
     <button class="admin-more-item" id="atab-emailblast" onclick="aTabMore('emailblast')" type="button">
       <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       Email Blast
@@ -886,12 +892,12 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <!-- Overlay to close dropdown -->
 <div class="amd-overlay" id="amdOverlay" onclick="closeAdminMoreMenu()"></div>
 <div class="tc on" id="at-overview">
-<div class="sg4">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
 <div class="sc sor"><div class="sn" id="asc">0</div><div class="sl">Campers</div></div>
-<div class="sc sblu"><div class="sn" id="asg">0</div><div class="sl">Staff</div></div>
-<div class="sc sgrn"><div class="sn" id="ase">0</div><div class="sl">Evals</div></div>
 <div class="sc spur"><div class="sn" id="ascl">0</div><div class="sl">Clinicians</div></div>
+<div class="sc sgrn"><div class="sn" id="ase">0</div><div class="sl">Evals</div></div>
 </div>
+<div id="avMessageBoard" style="margin-bottom:14px"></div>
 <div class="twrap">
 <div style="padding:10px 12px;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:.06em;border-bottom:1px solid var(--b2)">RECENT EVALUATIONS</div>
 <table><thead><tr><th>Camper</th><th>Clinician</th><th>Score</th><th>Date</th></tr></thead><tbody id="arecentbody"><tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:18px">None yet</td></tr></tbody></table>
@@ -901,6 +907,16 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <button class="btn bsec" style="width:100%;justify-content:center;padding:13px" onclick="aTab('evaluate',document.getElementById('atab-evaluate'))" type="button">Submit Evaluation</button>
 <button class="btn bsec" style="width:100%;justify-content:center;padding:13px" onclick="aTab('rankings',document.getElementById('atab-rankings'))" type="button">View Rankings</button>
 </div>
+</div>
+<div class="tc" id="at-messages">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
+  <div class="stitle" style="margin:0">DIRECT <span>MESSAGES</span></div>
+  <div style="display:flex;gap:6px">
+    <button class="btn bor bsm" onclick="openNewAdminDm()" type="button">+ New Message</button>
+    <button class="btn bsec bsm" onclick="renderAdminInbox()" type="button" id="dmInboxBackBtn" style="display:none">← Inbox</button>
+  </div>
+</div>
+<div id="dmAdminPane"></div>
 </div>
 <div class="tc" id="at-campers">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
@@ -944,7 +960,8 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="followup" id="aeConfFollowup"><div class="yn-row"><div class="yn-lbl">Conference Ready</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('conference','yes',this,'ae')">Yes</button><button class="yn-btn" onclick="setYN('conference','no',this,'ae')">No</button></div></div></div>
 <div class="yn-row" style="margin-bottom:0"><div class="yn-lbl">Top 10 Camper</div><div class="yn-btns"><button class="yn-btn" onclick="setYN('top10','yes',this,'ae')">Yes</button><button class="yn-btn" onclick="setYN('top10','no',this,'ae')">No</button></div></div>
 </div>
-<div class="eval-card"><div class="eval-cat" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">Comments<button type="button" id="aeMicBtn" class="mic-btn" onclick="toggleVoiceInput('aeComments','aeMicBtn')" title="Voice to text">🎤</button></div><textarea class="ftarea" id="aeComments" placeholder="Additional observations..."></textarea></div>
+<div class="eval-card"><div class="eval-cat" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">Camper Feedback<button type="button" id="aeMicBtn" class="mic-btn" onclick="toggleVoiceInput('aeComments','aeMicBtn')" title="Voice to text">🎤</button></div><div style="font-size:11px;color:var(--tx3);margin-bottom:6px">👤 Camper + admin can see this</div><textarea class="ftarea" id="aeComments" placeholder="Feedback the camper will see in their results..."></textarea></div>
+<div class="eval-card"><div class="eval-cat" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">🔒 Admin-Only Feedback<button type="button" id="aeAdminMicBtn" class="mic-btn" onclick="toggleVoiceInput('aeAdminNotes','aeAdminMicBtn')" title="Voice to text">🎤</button></div><div style="font-size:11px;color:var(--tx3);margin-bottom:6px">🔒 Only admin sees this · NOT visible to camper</div><textarea class="ftarea" id="aeAdminNotes" placeholder="Private feedback to camp admin about this camper..."></textarea></div>
 <div class="overall-card"><div class="overall-lbl">CURRENT AVERAGE</div><div class="overall-val" id="aeOverall">—</div></div>
 <button class="btn bor" style="width:100%;padding:16px;font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:.1em" id="aeSubmitBtn" onclick="submitAdminEval()">SUBMIT & EMAIL CAMPER</button>
 <div id="aeStatus" style="margin-top:10px"></div>
@@ -1357,6 +1374,7 @@ async function loadAll(){
     await loadChat();
     await loadPushSubs();
     await loadMessageBoard();
+    await loadDirectMessages();
   }catch(e){console.error('loadAll error:',e);}
 }
 
@@ -1620,7 +1638,7 @@ async function openLiveEvalGame(rowOrIdx){
   try {
     const existing = await supa('evaluations','GET',null,
       `?select=*&clinician_name=eq.${encodeURIComponent(matched.name)}&eval_date=eq.${date}&court=eq.${encodeURIComponent(g.court)}&eval_time=eq.${encodeURIComponent(g.time_slot)}`);
-    (existing||[]).forEach(e => { _liveEval.evals[String(e.camper_id)] = { id:e.id, scores:e.scores||{}, comments:e.comments||'', status:e.status||'submitted', overall:e.overall_score }; });
+    (existing||[]).forEach(e => { _liveEval.evals[String(e.camper_id)] = { id:e.id, scores:e.scores||{}, comments:e.comments||'', admin_notes:e.admin_notes||'', status:e.status||'submitted', overall:e.overall_score }; });
   } catch(e){}
   try {
     const crews = await supa('crew_notes','GET',null,
@@ -1722,8 +1740,9 @@ function renderLiveEvalGameView(){
     <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">${camps.length} camper${camps.length===1?'':'s'} · <span id="leSavedTxt">${savedTxt}</span>${submitted?' · 🔒 Locked':''}</div>
 
     <div class="eval-card">
-      <div class="eval-cat" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">CREW FEEDBACK<button type="button" id="leCrewMic" class="mic-btn" onclick="toggleVoiceInput('leCrewNote','leCrewMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
-      <textarea class="ftarea" id="leCrewNote" placeholder="Notes for the whole crew (visible to all campers in this game)..." ${submitted?'disabled':''} oninput="liveEvalCrewInput()" onblur="liveEvalCrewBlur()">${escapeHtml(crewNote)}</textarea>
+      <div class="eval-cat" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">CREW FEEDBACK<button type="button" id="leCrewMic" class="mic-btn" onclick="toggleVoiceInput('leCrewNote','leCrewMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">👥 Visible to all campers in this game</div>
+      <textarea class="ftarea" id="leCrewNote" placeholder="Notes for the whole crew..." ${submitted?'disabled':''} oninput="liveEvalCrewInput()" onblur="liveEvalCrewBlur()">${escapeHtml(crewNote)}</textarea>
     </div>
 
     <div class="le-tab-strip">${tabs}</div>
@@ -1739,9 +1758,15 @@ function renderLiveEvalGameView(){
       ${catBlocks}
       ${flagBtns}
       <div style="margin-top:12px">
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">${isAbsent?'Notes (optional)':`Notes for ${escapeHtml(active.first_name)}`}<button type="button" id="leCamperMic" class="mic-btn" onclick="toggleVoiceInput('leCamperNotes','leCamperMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
-        <textarea class="ftarea" id="leCamperNotes" placeholder="${isAbsent?'Add any context (e.g. came late, hurt ankle in 2nd half)...':`Individual notes (only ${escapeHtml(active.first_name)} sees these)...`}" ${submitted?'disabled':''} oninput="liveEvalNotesInput()" onblur="liveEvalNotesBlur()">${escapeHtml(evRow.comments||'')}</textarea>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between"><strong>${isAbsent?'Notes':`Camper Feedback — ${escapeHtml(active.first_name)}`}</strong><button type="button" id="leCamperMic" class="mic-btn" onclick="toggleVoiceInput('leCamperNotes','leCamperMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">👤 ${isAbsent?'Context note for admin':`Camper + admin can see this`}</div>
+        <textarea class="ftarea" id="leCamperNotes" placeholder="${isAbsent?'Add any context (e.g. came late, hurt ankle in 2nd half)...':`Feedback ${escapeHtml(active.first_name)} will see in their results...`}" ${submitted?'disabled':''} oninput="liveEvalNotesInput()" onblur="liveEvalNotesBlur()">${escapeHtml(evRow.comments||'')}</textarea>
       </div>
+      ${isAbsent ? '' : `<div style="margin-top:12px">
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between"><strong>🔒 Admin-Only Feedback</strong><button type="button" id="leAdminNotesMic" class="mic-btn" onclick="toggleVoiceInput('leAdminNotes','leAdminNotesMic')" title="Voice to text" ${submitted?'disabled':''}>🎤</button></div>
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:6px">🔒 Only admin sees this · NOT visible to ${escapeHtml(active.first_name)}</div>
+        <textarea class="ftarea" id="leAdminNotes" placeholder="Private feedback to camp admin about ${escapeHtml(active.first_name)}..." ${submitted?'disabled':''} oninput="liveEvalAdminNotesInput()" onblur="liveEvalAdminNotesBlur()">${escapeHtml(evRow.admin_notes||'')}</textarea>
+      </div>`}
     </div>` : '<div class="empty"><span class="ei">📋</span><div class="et">No campers in this game</div></div>'}
 
     ${submitted ? `<div style="margin-top:12px;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center;font-size:12px;color:var(--tx2)">🔒 This game is locked.</div>`
@@ -1751,7 +1776,7 @@ function renderLiveEvalGameView(){
 
 function liveEvalEnsureEval(camperId){
   const k = String(camperId);
-  if (!_liveEval.evals[k]) _liveEval.evals[k] = { id:null, scores:{}, comments:'', status:'in_progress' };
+  if (!_liveEval.evals[k]) _liveEval.evals[k] = { id:null, scores:{}, comments:'', admin_notes:'', status:'in_progress' };
   return _liveEval.evals[k];
 }
 
@@ -1810,6 +1835,22 @@ function liveEvalNotesBlur(){
   liveEvalCancelIdleSave('camper-'+camp.id);
   liveEvalSaveEvalRow(camp.id);
 }
+function liveEvalAdminNotesInput(){
+  if (_liveEval.isSubmitted) return;
+  const ta = document.getElementById('leAdminNotes'); if (!ta) return;
+  const camp = _liveEval.game?.campers[_liveEval.activeIdx]; if (!camp) return;
+  const ev = liveEvalEnsureEval(camp.id);
+  ev.admin_notes = ta.value;
+  liveEvalScheduleIdleSave('admin-'+camp.id, () => liveEvalSaveEvalRow(camp.id));
+}
+function liveEvalAdminNotesBlur(){
+  const ta = document.getElementById('leAdminNotes'); if (!ta) return;
+  const camp = _liveEval.game?.campers[_liveEval.activeIdx]; if (!camp) return;
+  const ev = liveEvalEnsureEval(camp.id);
+  ev.admin_notes = ta.value;
+  liveEvalCancelIdleSave('admin-'+camp.id);
+  liveEvalSaveEvalRow(camp.id);
+}
 function liveEvalCrewInput(){
   if (_liveEval.isSubmitted) return;
   const ta = document.getElementById('leCrewNote'); if (!ta) return;
@@ -1846,6 +1887,7 @@ async function liveEvalSaveEvalRow(camperId){
     eval_time: g.time,
     scores: isAbsent ? {} : (ev.scores || {}),
     comments: ev.comments || '',
+    admin_notes: ev.admin_notes || '',
     overall_score: overall,
     status: isAbsent ? 'absent' : 'in_progress'
   };
@@ -1926,7 +1968,7 @@ async function liveEvalSubmit(){
       if (!wasAbsent) ev.status = 'submitted';
       const vs = CFG.CATS.map(cat => ev.scores?.[catKey(cat)]).filter(v => v != null);
       const overall = wasAbsent ? null : (vs.length ? vs.reduce((a,b)=>a+b,0)/vs.length : null);
-      const payload = { camper_id:c.id, clinician_name:g.clinicianName, eval_date:g.date, court:g.court, eval_time:g.time, scores:wasAbsent?{}:(ev.scores||{}), comments:ev.comments||'', overall_score:overall, status:wasAbsent?'absent':'submitted' };
+      const payload = { camper_id:c.id, clinician_name:g.clinicianName, eval_date:g.date, court:g.court, eval_time:g.time, scores:wasAbsent?{}:(ev.scores||{}), comments:ev.comments||'', admin_notes:ev.admin_notes||'', overall_score:overall, status:wasAbsent?'absent':'submitted' };
       if (ev.id){ await supa('evaluations','PATCH', payload, `?id=eq.${ev.id}`); }
       else { const r = await supa('evaluations','POST', payload, '?select=id'); const row = Array.isArray(r)?r[0]:r; if (row?.id) ev.id = row.id; }
     }
@@ -2273,7 +2315,7 @@ function cView(v){
   if(v==='results')renderCamperResults();
   if(v==='profiles'){renderCamperProfiles('');}
   if(v==='myprofile')renderMyProfile('camper');
-  if(v==='chat'){markChatRead();renderChat('Camper');}
+  if(v==='chat'){markChatRead();renderChat('Camper');renderCamperChatPane();}
   if(v==='campinfo')renderCampInfoViewer('cv');
   if(v==='schedule')renderCamperSchedule();
 }
@@ -2302,8 +2344,26 @@ function renderCamperResults(){
   let h=`<div style="text-align:center;padding:16px 0"><div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);margin-bottom:5px">YOUR CAMP RANKING</div><div>${medal}<span style="font-family:Oswald,sans-serif;font-size:64px;color:var(--or)">${rank}</span><span style="font-family:Oswald,sans-serif;font-size:24px;color:var(--tx2)">${sfx}</span></div><div style="font-size:13px;color:var(--tx2);margin-top:3px">out of ${sorted.length} ranked officials</div></div>`;
   h+=`<div class="sg2"><div class="sc sor" style="text-align:center"><div class="sn">${me.overall.toFixed(1)}</div><div class="sl">Avg / 10</div></div><div class="sc sgrn" style="text-align:center"><div class="sn">${me.evalCount}</div><div class="sl">Evaluations</div></div></div>`;
   h+='<div class="card" style="padding:14px;margin-bottom:12px">';
-  CFG.CATS.forEach(cat=>{const v=me.catAverages[cat]||0;const col=v>=8?'var(--grn)':v>=5?'var(--or)':'var(--red2)';const pct=(v/10*100).toFixed(0);h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:11px;color:var(--tx2);width:80px;text-align:right;flex-shrink:0">${cat.length>8?cat.substring(0,8):cat}</span><div style="flex:1;height:6px;background:var(--gray3);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--or);width:${pct}%;border-radius:3px"></div></div><span style="font-size:11px;color:${col};width:28px;flex-shrink:0">${v.toFixed(1)}</span></div>`;});
+  CFG.CATS.forEach(cat=>{const v=me.catAverages[cat]||0;const col=v>=8?'var(--grn)':v>=5?'var(--or)':'var(--red2)';const pct=(v/10*100).toFixed(0);h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:11px;color:var(--tx2);width:90px;text-align:right;flex-shrink:0;line-height:1.2;word-break:break-word">${cat}</span><div style="flex:1;height:6px;background:var(--gray3);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--or);width:${pct}%;border-radius:3px"></div></div><span style="font-size:11px;color:${col};width:28px;flex-shrink:0">${v.toFixed(1)}</span></div>`;});
   h+='</div>';
+  // Per-eval breakdown: clinician, date/court/time, score, comments. NEVER
+  // includes admin_notes — those are camp-staff-only.
+  const sortedEvals = myE.slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  h+='<div style="font-family:\'Oswald\',sans-serif;font-size:13px;letter-spacing:.08em;color:var(--or);margin:14px 0 8px">YOUR EVALUATIONS</div>';
+  sortedEvals.forEach(ev => {
+    const slotMeta=[];
+    if(ev.eval_date)slotMeta.push(ev.eval_date);
+    if(ev.court)slotMeta.push('Court '+ev.court);
+    if(ev.eval_time)slotMeta.push(ev.eval_time);
+    h+=`<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:600;color:var(--tx)">${escapeHtml(ev.clinician_name||'—')}</div>
+        <div style="font-family:'Oswald',sans-serif;font-size:20px;color:var(--or);line-height:1">${(ev.overall_score||0).toFixed(1)}</div>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">${slotMeta.map(escapeHtml).join(' · ')||''}</div>
+      ${ev.comments && ev.comments.trim() ? `<div style="background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>` : '<div style="font-size:11px;color:var(--tx3);font-style:italic">No notes</div>'}
+    </div>`;
+  });
   con.innerHTML=h;
 }
 
@@ -2325,7 +2385,7 @@ function sView(v){
   document.getElementById('sv-'+v).classList.add('on');
   const btn=document.getElementById('sb-'+v);if(btn)btn.classList.add('on');
   // Highlight More btn for drawer items
-  const drawerViewsS=['schedule','liveeval','myprofile'];
+  const drawerViewsS=['roster','liveeval','myprofile','clinicians'];
   if(drawerViewsS.includes(v)){const mb=document.getElementById('sb-more-btn');if(mb)mb.classList.add('on');}
   if(v==='evaluate')populateStaffEvalForm();
   if(v==='history')renderStaffHistory();
@@ -2400,6 +2460,8 @@ function editStaffEval(evId){
     document.getElementById('seCourt').value = e.court || '';
     document.getElementById('seTime').value = to24Hour(e.eval_time || '');
     document.getElementById('seComments').value = e.comments || '';
+    const seAdmEdit = document.getElementById('seAdminNotes');
+    if (seAdmEdit) seAdmEdit.value = e.admin_notes || '';
     const stEl = document.getElementById('seStatus');
     if (stEl) stEl.innerHTML = '<div style="font-size:11px;color:var(--or);font-weight:700;letter-spacing:.06em;padding:6px 10px;background:var(--ord);border:1px solid var(--orb);border-radius:6px;display:inline-block">✏️ EDITING — submit will overwrite this evaluation</div>';
     const btn = document.getElementById('seSubmitBtn');
@@ -2449,8 +2511,8 @@ function updateOverallScore(pfx){
 }
 function resetEvalForm(pfx){
   CFG.CATS.forEach((_,i)=>{document.querySelectorAll(`#${pfx}ScB_${i} .score-box`).forEach(b=>b.classList.remove('sel'));document.getElementById(`${pfx}ScD_${i}`).textContent='—';});
-  if(pfx==='se'){document.getElementById('seComments').value='';document.getElementById('seDate').value=new Date().toISOString().split('T')[0];document.getElementById('seCourt').value='';document.getElementById('seTime').value='';document.getElementById('seStatus').innerHTML='';ynState={rmac:null,conference:null,top10:null};_editingEvalId=null;const seBtn=document.getElementById('seSubmitBtn');if(seBtn)seBtn.textContent='SUBMIT EVALUATION';}
-  if(pfx==='ae'){document.getElementById('aeComments').value='';document.getElementById('aeDate').value=new Date().toISOString().split('T')[0];document.getElementById('aeCourt').value='';document.getElementById('aeTime').value='';document.getElementById('aeStatus').innerHTML='';ynStateAe={rmac:null,conference:null,top10:null};}
+  if(pfx==='se'){document.getElementById('seComments').value='';const seAdm=document.getElementById('seAdminNotes');if(seAdm)seAdm.value='';document.getElementById('seDate').value=new Date().toISOString().split('T')[0];document.getElementById('seCourt').value='';document.getElementById('seTime').value='';document.getElementById('seStatus').innerHTML='';ynState={rmac:null,conference:null,top10:null};_editingEvalId=null;const seBtn=document.getElementById('seSubmitBtn');if(seBtn)seBtn.textContent='SUBMIT EVALUATION';}
+  if(pfx==='ae'){document.getElementById('aeComments').value='';const aeAdm=document.getElementById('aeAdminNotes');if(aeAdm)aeAdm.value='';document.getElementById('aeDate').value=new Date().toISOString().split('T')[0];document.getElementById('aeCourt').value='';document.getElementById('aeTime').value='';document.getElementById('aeStatus').innerHTML='';ynStateAe={rmac:null,conference:null,top10:null};}
   document.querySelectorAll(`#${pfx}YnCard .yn-btn`).forEach(b=>b.classList.remove('yes','no'));
   const fu=document.getElementById(pfx+'ConfFollowup');if(fu)fu.classList.remove('show');
   updateOverallScore(pfx);
@@ -2478,9 +2540,10 @@ async function submitStaffEval(){
   const scores={};CFG.CATS.forEach((cat,i)=>{scores[cat.toLowerCase().replace(/\s+/g,'_')]=getScoreVal('se',i);});
   scores.rmac_ready=ynState.rmac;scores.conference_ready=ynState.conference;scores.top10=ynState.top10;
   const comments=document.getElementById('seComments').value.trim();
+  const adminNotes=document.getElementById('seAdminNotes')?.value.trim()||'';
   const overall=parseFloat(document.getElementById('seOverall').textContent);
   const isEdit=!!_editingEvalId;
-  const payload={camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,overall_score:overall};
+  const payload={camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,admin_notes:adminNotes,overall_score:overall};
   try{
     if(isEdit){
       await supa('evaluations','PATCH',payload,`?id=eq.${_editingEvalId}`);
@@ -2508,12 +2571,13 @@ async function submitAdminEval(){
   const scores={};CFG.CATS.forEach((cat,i)=>{scores[cat.toLowerCase().replace(/\s+/g,'_')]=getScoreVal('ae',i);});
   scores.rmac_ready=ynStateAe.rmac;scores.conference_ready=ynStateAe.conference;scores.top10=ynStateAe.top10;
   const comments=document.getElementById('aeComments').value.trim();
+  const adminNotes=document.getElementById('aeAdminNotes')?.value.trim()||'';
   const overall=parseFloat(document.getElementById('aeOverall').textContent);
   const evalDate=document.getElementById('aeDate').value;
   const court=document.getElementById('aeCourt').value;
   const time=normalizeTime12(document.getElementById('aeTime').value);
   try{
-    await supa('evaluations','POST',{camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,overall_score:overall});
+    await supa('evaluations','POST',{camper_id:cid,clinician_name:clinName,eval_date:evalDate||null,court:court||null,eval_time:time||null,scores,comments,admin_notes:adminNotes,overall_score:overall});
     st.innerHTML='<div class="email-ok">✓ Evaluation saved</div>';
     try{await pushEvalToCamper(cid,null);}catch(_){}
     const camper=campers.find(c=>c.id===cid);
@@ -2592,7 +2656,7 @@ function aTab(name,btn){
   _aTabActions(name);
 }
 function _aTabActions(name){
-  if(name==='overview'){updateAdminStats();renderRecentEvals();}
+  if(name==='overview'){updateAdminStats();renderRecentEvals();renderMessageBoard('av');}
   if(name==='campers'){camperSortCol='name';camperSortDir=1;document.querySelectorAll('.sort-arrow').forEach(a=>{a.classList.remove('active');a.textContent='';});const sa=document.getElementById('sa-name');if(sa){sa.textContent='↑';sa.classList.add('active');}renderAdminCampers();}
   if(name==='staff'){renderAdminClinicians();}
   if(name==='evaluate'){populateAdminForms();}
@@ -2605,10 +2669,10 @@ function _aTabActions(name){
   if(name==='dailyview'){renderDailyView();}
   if(name==='evaltracker'){renderEvalTracker();}
   if(name==='settings'){renderAdminMessageBoard();}
+  if(name==='messages'){renderAdminInbox();}
 }
 function updateAdminStats(){
   document.getElementById('asc').textContent=campers.length;
-  document.getElementById('asg').textContent=staffList.length;
   document.getElementById('ase').textContent=evaluations.length;
   document.getElementById('ascl').textContent=clinicians.length;
 }
@@ -2891,6 +2955,35 @@ function buildClinicianEmailHTML(first,last,username,password){
 }
 function viewClinicianRankings(name){rankClinician=name;rankSort='overall';aTab('rankings',document.querySelector('.atab[onclick*="rankings"]'));renderAdminRankings();}
 
+// Camper-safe clinician profile. Shows bio + role + conference, no evals
+// and no admin_notes. Used from camper Schedule + Clinicians page so a
+// camper can see who their clinician is without seeing private feedback.
+function openClinicianBio(clinicianId){
+  const cl = clinicians.find(c => String(c.id) === String(clinicianId));
+  if (!cl){ toast('Clinician not found', true); return; }
+  const name = cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+  const initials = (name.split(' ').map(w=>w[0]||'').join('')).substring(0,2).toUpperCase();
+  const imgWrap = document.getElementById('cpmImgWrap');
+  if (imgWrap){
+    imgWrap.innerHTML = cl.photo
+      ? `<img class="pmod-img" src="${cl.photo}" alt="${name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
+      : `<div class="pmod-initials">${initials}</div>`;
+  }
+  let body = '<div style="padding:16px 16px 0">';
+  body += `<div class="pmod-name">${escapeHtml(name)}</div>`;
+  const meta = [];
+  if (cl.role) meta.push(cl.role);
+  if (cl.conference) meta.push(cl.conference);
+  if (cl.city) meta.push(cl.city + (cl.state?', '+cl.state:''));
+  if (meta.length) body += `<div class="pmod-meta">${meta.map(escapeHtml).join(' · ')}</div>`;
+  if (cl.bio) body += `<div class="pmod-bio">${escapeHtml(cl.bio)}</div>`;
+  else body += '<div style="font-size:13px;color:var(--tx3);padding:10px 0">No bio yet.</div>';
+  body += `<div style="padding:8px 0 32px"><button class="btn bsec" style="width:100%" onclick="closeModal('mClinicianProfile')">Close</button></div>`;
+  body += '</div>';
+  document.getElementById('cpmBody').innerHTML = body;
+  openModal('mClinicianProfile');
+}
+
 // Opens a fullscreen modal showing every eval this clinician has submitted,
 // grouped by camper, with score bars + comments inline. Layout mirrors the
 // camper profile modal pattern.
@@ -2952,6 +3045,9 @@ function openClinicianDetail(clinicianId){
         }
         if (ev.comments && ev.comments.trim()){
           body += `<div style="margin-top:8px;background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>`;
+        }
+        if (ev.admin_notes && ev.admin_notes.trim()){
+          body += `<div style="margin-top:8px;background:rgba(0,0,0,.04);border-left:3px solid #b91c1c;padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap"><div style="font-size:10px;font-weight:700;color:#b91c1c;letter-spacing:.08em;margin-bottom:4px">🔒 ADMIN ONLY</div>${escapeHtml(ev.admin_notes)}</div>`;
         }
       });
       body += '</div>';
@@ -3614,6 +3710,16 @@ function startChatBackgroundPoll(){
   _chatPollTimer=setInterval(async()=>{
     const prevLatestId=chatMessages.length?chatMessages[chatMessages.length-1].id:null;
     await loadChat();
+    await loadDirectMessages();
+    // If admin DM thread or inbox is visible, re-render.
+    if (CR === 'admin'){
+      const onMessages = document.getElementById('at-messages')?.classList.contains('on');
+      if (onMessages){
+        if (_adminDmThreadId) renderAdminDmThread(); else renderAdminInbox();
+      }
+    } else if (CR === 'camper' && _camperChatRoom === 'admin'){
+      renderCamperChatPane();
+    }
     if(chatActiveSuffix){
       renderChatMessages(chatActiveSuffix);
     } else {
@@ -3670,6 +3776,10 @@ function renderChat(suffix){
 }
 
 async function sendChat(role){
+  // Camper chat view has a top toggle for general vs admin DM. Fork early
+  // when admin pill is selected so the message goes to direct_messages
+  // instead of the broadcast chat table.
+  if (role === 'camper' && _camperChatRoom === 'admin'){ return sendCamperDm(); }
   const suffix=role==='camper'?'Camper':role==='staffroom'?'StaffRoom':role==='staff'?'Staff':'Admin';
   const input=document.getElementById('chatInput'+suffix);
   const msg=input.value.trim();
@@ -3722,6 +3832,296 @@ async function sendChatPushBlast(msg,from){
   }catch(e){toast('Push failed',true);}
 }
 
+
+// ═══ DIRECT MESSAGES ═══
+// Admin <-> camper 1-on-1 chats. Each row in direct_messages has a
+// camper_id (always the camper side) plus sender_role 'admin' or 'camper'
+// and a content blob. Multi-recipient broadcast = N inserts.
+let directMessages = [];
+let directMessagesLatestCreatedAt = null;
+let _adminDmThreadId = null;       // currently-open thread on the admin Messages tab
+let _camperChatRoom = 'general';   // camper Chat view: 'general' (camp chat) or 'admin'
+
+async function loadDirectMessages(){
+  try{
+    let q='?order=created_at.asc&limit=500';
+    if(directMessagesLatestCreatedAt){
+      q='?order=created_at.asc&limit=500&created_at=gt.'+encodeURIComponent(directMessagesLatestCreatedAt);
+    }
+    const rows=await supa('direct_messages','GET',null,q);
+    if(directMessagesLatestCreatedAt){
+      if(rows&&rows.length)directMessages=directMessages.concat(rows);
+    } else {
+      directMessages=rows||[];
+    }
+    if(directMessages.length){
+      directMessagesLatestCreatedAt=directMessages[directMessages.length-1].created_at;
+    }
+    updateDmBadges();
+  }catch(e){ console.warn('DM load error',e); }
+}
+
+function updateDmBadges(){
+  // Admin badge — any unread by admin
+  const adminUnread = directMessages.some(m => !m.read_by_admin && m.sender_role==='camper');
+  const adminDot = document.getElementById('dmAdminDot');
+  if (adminDot) adminDot.classList.toggle('show', !!adminUnread);
+  // Camper badge — any unread by THIS camper
+  if (CR === 'camper' && CU){
+    const camperUnread = directMessages.some(m => String(m.camper_id)===String(CU.id) && !m.read_by_camper && m.sender_role==='admin');
+    const camperDot = document.getElementById('dmCamperDot');
+    if (camperDot) camperDot.classList.toggle('show', !!camperUnread);
+  }
+}
+
+function _dmThreadFor(camperId){
+  return directMessages
+    .filter(m => String(m.camper_id) === String(camperId))
+    .sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+}
+function _dmThreadCamperIds(){
+  // Distinct camper ids that have at least one DM, sorted by most recent.
+  const lastByCamper = {};
+  directMessages.forEach(m => {
+    const k = String(m.camper_id);
+    if (!lastByCamper[k] || new Date(m.created_at) > new Date(lastByCamper[k].created_at)) lastByCamper[k] = m;
+  });
+  return Object.keys(lastByCamper).sort((a,b) => new Date(lastByCamper[b].created_at) - new Date(lastByCamper[a].created_at));
+}
+
+// ── ADMIN INBOX ────────────────────────────────────────────
+function renderAdminInbox(){
+  _adminDmThreadId = null;
+  const back = document.getElementById('dmInboxBackBtn');
+  if (back) back.style.display = 'none';
+  const pane = document.getElementById('dmAdminPane');
+  if (!pane) return;
+  const ids = _dmThreadCamperIds();
+  if (!ids.length){
+    pane.innerHTML = '<div class="empty"><span class="ei">💬</span><div class="et">No conversations yet</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">Tap + New Message to start one.</div></div>';
+    return;
+  }
+  pane.innerHTML = ids.map(cid => {
+    const thread = _dmThreadFor(cid);
+    const last = thread[thread.length - 1];
+    const c = campers.find(x => String(x.id) === String(cid));
+    const name = c ? (c.first_name+' '+c.last_name) : '(unknown camper)';
+    const preview = (last.content || '').slice(0, 80) + ((last.content||'').length > 80 ? '…' : '');
+    const senderTag = last.sender_role === 'admin' ? 'You: ' : '';
+    const unread = thread.filter(m => !m.read_by_admin && m.sender_role==='camper').length;
+    const dt = new Date(last.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div onclick="openAdminDmThread('${cid}')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px;${unread?'border-left:3px solid var(--or)':''}">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+          <div style="font-weight:600;color:var(--tx)">${escapeHtml(name)}</div>
+          <div style="font-size:10px;color:var(--tx3);flex-shrink:0">${dt}</div>
+        </div>
+        <div style="font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(senderTag+preview)}</div>
+      </div>
+      ${unread ? `<div style="background:var(--or);color:#000;font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;border-radius:10px;padding:2px 8px;flex-shrink:0">${unread}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openAdminDmThread(camperId){
+  _adminDmThreadId = String(camperId);
+  // Mark every camper-sent message in this thread as read by admin.
+  const unreadIds = directMessages
+    .filter(m => String(m.camper_id)===String(camperId) && !m.read_by_admin && m.sender_role==='camper')
+    .map(m => m.id);
+  if (unreadIds.length){
+    Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_admin:true},`?id=eq.${id}`).catch(()=>{})))
+      .then(() => { unreadIds.forEach(id => { const m = directMessages.find(x => x.id===id); if (m) m.read_by_admin = true; }); updateDmBadges(); });
+  }
+  renderAdminDmThread();
+}
+
+function renderAdminDmThread(){
+  if (!_adminDmThreadId) return renderAdminInbox();
+  const back = document.getElementById('dmInboxBackBtn');
+  if (back) back.style.display = 'inline-flex';
+  const pane = document.getElementById('dmAdminPane');
+  if (!pane) return;
+  const c = campers.find(x => String(x.id) === String(_adminDmThreadId));
+  const name = c ? (c.first_name+' '+c.last_name) : '(unknown camper)';
+  const thread = _dmThreadFor(_adminDmThreadId);
+  const msgs = thread.map(m => {
+    const isMine = m.sender_role === 'admin';
+    const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||name)} · ${dt}</div></div>`;
+  }).join('') || '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages in this thread yet.</div>';
+  pane.innerHTML = `
+    <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);margin-bottom:8px">${escapeHtml(name)}</div>
+    <div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 320px)">
+      <div class="chat-messages" id="dmAdminMessages">${msgs}</div>
+      <div class="chat-input-row" style="display:flex;align-items:center;gap:8px">
+        <textarea class="chat-input" id="dmAdminInput" placeholder="Reply to ${escapeHtml(name)}..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminDm();}"></textarea>
+        <button class="chat-send" onclick="sendAdminDm()">➤</button>
+      </div>
+    </div>`;
+  // Scroll to bottom on render
+  const m = document.getElementById('dmAdminMessages');
+  if (m) m.scrollTop = m.scrollHeight;
+}
+
+async function sendAdminDm(){
+  if (!_adminDmThreadId) return;
+  const input = document.getElementById('dmAdminInput');
+  if (!input) return;
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  const payload = {
+    camper_id: String(_adminDmThreadId),
+    sender_role: 'admin',
+    sender_name: ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim(),
+    content,
+    read_by_admin: true,   // admin obviously read what they wrote
+    read_by_camper: false
+  };
+  try{
+    const r = await supa('direct_messages','POST', payload, '?select=*');
+    const row = Array.isArray(r) ? r[0] : r;
+    if (row) directMessages.push(row);
+    renderAdminDmThread();
+    // Push the camper.
+    try {
+      await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        title: `${CFG.CAMP_NAME} — Message from Admin`,
+        body: content.length > 140 ? content.slice(0,137)+'…' : content,
+        url: '/',
+        tag: 'dm-'+_adminDmThreadId,
+        user_id: String(_adminDmThreadId)
+      })});
+    } catch(_){ }
+  } catch(e){ toast('Send failed', true); input.value = content; }
+}
+
+// "+ New Message" — pick recipients, fan out
+function openNewAdminDm(){
+  const camperOpts = [...campers]
+    .sort((a,b) => (a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase()))
+    .map(c => `<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--b2);cursor:pointer"><input type="checkbox" class="dmRecip" value="${c.id}" style="accent-color:var(--or)"><span style="font-size:13px">${escapeHtml(c.first_name+' '+c.last_name)}</span></label>`).join('');
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="overlay on" id="mNewDm" style="display:flex">
+      <div class="modal" style="max-width:420px">
+        <div class="mhd"><div class="mtitle">NEW MESSAGE</div><button class="mclose" onclick="document.getElementById('mNewDm').remove()" type="button">✕</button></div>
+        <div class="mbody">
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Pick one or more campers. Each gets their own private thread.</div>
+          <div style="max-height:220px;overflow-y:auto;border:1px solid var(--b2);border-radius:var(--rs);padding:6px 10px;margin-bottom:10px">${camperOpts || '<div style="font-size:12px;color:var(--tx3);padding:8px 0">No campers</div>'}</div>
+          <textarea class="ftarea" id="dmNewContent" placeholder="Type your message..." style="min-height:80px;margin-bottom:10px"></textarea>
+          <div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="document.getElementById('mNewDm').remove()" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="sendNewAdminDm()" type="button">Send</button></div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap.firstElementChild);
+}
+async function sendNewAdminDm(){
+  const recipIds = Array.from(document.querySelectorAll('#mNewDm .dmRecip:checked')).map(el => el.value);
+  const content = document.getElementById('dmNewContent').value.trim();
+  if (!recipIds.length){ toast('Pick at least one camper', true); return; }
+  if (!content){ toast('Type a message first', true); return; }
+  const senderName = ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim();
+  let sent = 0, failed = 0;
+  for (const cid of recipIds){
+    try{
+      const r = await supa('direct_messages','POST', {
+        camper_id: String(cid),
+        sender_role: 'admin',
+        sender_name: senderName,
+        content,
+        read_by_admin: true,
+        read_by_camper: false
+      }, '?select=*');
+      const row = Array.isArray(r) ? r[0] : r;
+      if (row) directMessages.push(row);
+      sent++;
+      try {
+        await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          title: `${CFG.CAMP_NAME} — Message from Admin`,
+          body: content.length > 140 ? content.slice(0,137)+'…' : content,
+          url: '/', tag: 'dm-'+cid, user_id: String(cid)
+        })});
+      } catch(_){ }
+      await new Promise(r => setTimeout(r, 100));
+    } catch(e){ failed++; }
+  }
+  document.getElementById('mNewDm')?.remove();
+  toast(failed ? `Sent to ${sent} · ${failed} failed` : `📩 Sent to ${sent} camper${sent===1?'':'s'}`);
+  renderAdminInbox();
+}
+
+// ── CAMPER SIDE ────────────────────────────────────────────
+function switchCamperChatRoom(room){
+  _camperChatRoom = room;
+  const isAdmin = room === 'admin';
+  const gen = document.getElementById('camperChatTab-general');
+  const adm = document.getElementById('camperChatTab-admin');
+  if (gen){ gen.style.background = isAdmin ? 'var(--gray2)' : 'var(--or)'; gen.style.color = isAdmin ? 'var(--tx2)' : '#000'; }
+  if (adm){ adm.style.background = isAdmin ? 'var(--or)' : 'var(--gray2)'; adm.style.color = isAdmin ? '#000' : 'var(--tx2)'; }
+  const label = document.getElementById('camperChatRoomLabel');
+  if (label) label.textContent = isAdmin ? '🔒 Private — only you and admin can see this' : 'Visible to everyone — campers, staff, and admin';
+  const input = document.getElementById('chatInputCamper');
+  if (input) input.placeholder = isAdmin ? 'Message admin privately...' : 'Message the camp...';
+  renderCamperChatPane();
+  // If switching to admin, mark unread admin messages as read.
+  if (isAdmin && CU){
+    const unreadIds = directMessages
+      .filter(m => String(m.camper_id)===String(CU.id) && !m.read_by_camper && m.sender_role==='admin')
+      .map(m => m.id);
+    if (unreadIds.length){
+      Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_camper:true},`?id=eq.${id}`).catch(()=>{})))
+        .then(() => { unreadIds.forEach(id => { const m = directMessages.find(x => x.id===id); if (m) m.read_by_camper = true; }); updateDmBadges(); });
+    }
+  }
+}
+
+function renderCamperChatPane(){
+  // When the camper chat view is showing the Admin pill, render the DM
+  // thread into chatMsgsCamper instead of letting renderChat('Camper') run.
+  const con = document.getElementById('chatMsgsCamper');
+  if (!con) return;
+  if (_camperChatRoom === 'admin'){
+    if (!CU){ con.innerHTML = ''; return; }
+    const thread = _dmThreadFor(CU.id);
+    if (!thread.length){
+      con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet. Send admin a note — they will see it.</div>';
+      return;
+    }
+    con.innerHTML = thread.map(m => {
+      const isMine = m.sender_role === 'camper';
+      const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'Admin')} · ${dt}</div></div>`;
+    }).join('');
+    con.scrollTop = con.scrollHeight;
+  } else {
+    // Defer to general chat renderer.
+    renderChatMessages('Camper');
+  }
+}
+
+async function sendCamperDm(){
+  const input = document.getElementById('chatInputCamper');
+  if (!input || !CU) return;
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  const payload = {
+    camper_id: String(CU.id),
+    sender_role: 'camper',
+    sender_name: (CU.first_name+(CU.last_name?' '+CU.last_name:'')).trim(),
+    content,
+    read_by_camper: true,
+    read_by_admin: false
+  };
+  try{
+    const r = await supa('direct_messages','POST', payload, '?select=*');
+    const row = Array.isArray(r) ? r[0] : r;
+    if (row) directMessages.push(row);
+    renderCamperChatPane();
+  } catch(e){ toast('Send failed', true); input.value = content; }
+}
 
 // ═══ EMAIL BLAST ═══
 let _blastAttachData = null;
@@ -4594,7 +4994,7 @@ function renderCliniciansPage(containerId){
     const imgHtml = cl.photo
       ? '<img src="'+cl.photo+'" alt="'+name+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--orb)" onerror="this.style.display=\'none\'">'
       : '<div style="width:64px;height:64px;border-radius:50%;background:var(--ord);border:2px solid var(--orb);display:flex;align-items:center;justify-content:center;font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+initials+'</div>';
-    return '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;display:flex;gap:14px;align-items:flex-start"><div style="flex-shrink:0">'+imgHtml+'</div><div style="flex:1;min-width:0"><div style="font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+name+'</div>'+(cl.role?'<div style="font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</div>':'')+(cl.city?'<div style="font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</div>':'')+(cl.bio?'<div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px">'+cl.bio+'</div>':'')+(cl.conference?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</div></div></div>';
+    return '<div onclick="openClinicianBio(\''+cl.id+'\')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color .15s,transform .15s" onmouseover="this.style.borderColor=\'var(--or)\'" onmouseout="this.style.borderColor=\'var(--b2)\'"><div style="flex-shrink:0">'+imgHtml+'</div><div style="flex:1;min-width:0"><div style="font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+name+'</div>'+(cl.role?'<div style="font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</div>':'')+(cl.city?'<div style="font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</div>':'')+(cl.bio?'<div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px">'+cl.bio+'</div>':'')+(cl.conference?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</div></div></div>';
   }).join('');
 }
 
@@ -5395,28 +5795,31 @@ function renderCamperSchedule() {
       lastDay = s.day;
     }
 
-    // Get partner names
+    // Partner camper objects (so we can wire each to a clickable profile)
     const allIds = [s.camper_1_id, s.camper_2_id, s.camper_3_id].filter(Boolean);
-    const partners = allIds.filter(id => id !== CU.id).map(id => {
-      const c = campers.find(x => x.id === id);
-      return c ? c.first_name + ' ' + c.last_name : '';
-    }).filter(Boolean);
+    const partners = allIds.filter(id => id !== CU.id)
+      .map(id => campers.find(x => x.id === id))
+      .filter(Boolean);
 
-    // Clinician name(s) — show all up to four
-    const clinNames = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
+    // Clinician objects (up to four), each clickable to bio
+    const clinObjs = [s.clinician_id, s.clinician_2_id, s.clinician_3_id, s.clinician_4_id]
       .map(id => clinicians.find(x => x.id === id))
-      .filter(Boolean)
-      .map(cl => cl.name || (cl.first_name + ' ' + cl.last_name));
-    const clinName = clinNames.join(' & ');
+      .filter(Boolean);
+    const clinHTML = clinObjs.length
+      ? clinObjs.map(cl => {
+          const n = cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+          return `<span onclick="openClinicianBio('${cl.id}')" style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px">${n}</span>`;
+        }).join(' &amp; ')
+      : '';
 
     html += `<div class="sch-card">
       <div class="sch-card-meta">${s.time_slot}</div>
       <div class="sch-card-court">${s.court}</div>
       <div class="sch-card-names">
         <div class="sch-card-name" style="color:var(--or)">${CU.first_name} ${CU.last_name}</div>
-        ${partners.map(p => `<div class="sch-card-name">${p}</div>`).join('')}
+        ${partners.map(p => `<div class="sch-card-name"><span onclick="openCamperProfile('${p.id}')" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--or);text-decoration-thickness:1px;text-underline-offset:3px">${p.first_name} ${p.last_name}</span></div>`).join('')}
       </div>
-      ${clinName ? `<div class="sch-card-clinician">${clinNames.length>1?'Clinicians: ':'Clinician: '}${clinName}</div>` : ''}
+      ${clinHTML ? `<div class="sch-card-clinician">${clinObjs.length>1?'Clinicians: ':'Clinician: '}${clinHTML}</div>` : ''}
     </div>`;
   });
 
