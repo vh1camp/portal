@@ -4258,7 +4258,7 @@ function renderCamperChatPane(){
   if (!con) return;
   if (_camperChatRoom === 'admin'){
     if (!CU){ con.innerHTML = ''; return; }
-    const thread = _dmThreadFor(CU.id);
+    const thread = _dmThreadFor('camper', CU.id);
     if (!thread.length){
       con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet. Send admin a note — they will see it.</div>';
       return;
