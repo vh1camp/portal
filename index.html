@@ -1376,6 +1376,7 @@ async function loadAll(){
     await loadPushSubs();
     await loadMessageBoard();
     await loadDirectMessages();
+    await loadChatRooms();
   }catch(e){console.error('loadAll error:',e);}
 }
 
@@ -3641,47 +3642,30 @@ function switchStaffChatRoom(room){
     else if (room === 'staff') input.placeholder = 'Message staff only...';
     else input.placeholder = 'Message the camp...';
   }
+  if (room === 'admin') _staffOpenRoomId = null;
   renderStaffChatPane();
-  // Mark admin DMs to this clinician as read on switch.
-  if (room === 'admin'){
-    const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
-    if (matched && matched.id){
-      const unreadIds = directMessages
-        .filter(m => _dmRoleOf(m)==='clinician' && String(m.camper_id)===String(matched.id) && !m.read_by_camper && m.sender_role==='admin')
-        .map(m => m.id);
-      if (unreadIds.length){
-        Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_camper:true},`?id=eq.${id}`).catch(()=>{})))
-          .then(() => { unreadIds.forEach(id => { const m = directMessages.find(x => x.id===id); if (m) m.read_by_camper = true; }); updateDmBadges(); });
-      }
-    }
-  }
 }
 
-// When the staff Admin pill is on, render the DM thread instead of
-// the general chat. Matches camper-side renderCamperChatPane.
 function renderStaffChatPane(){
   const con = document.getElementById('chatMsgsStaff');
   if (!con) return;
-  if (_staffChatRoom === 'admin'){
-    const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
-    if (!matched || !matched.id){
-      con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">Your staff record is not linked to a clinician profile yet — admin DMs will appear here once it is.</div>';
-      return;
-    }
-    const thread = _dmThreadFor('clinician', matched.id);
-    if (!thread.length){
-      con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet. Send admin a note — they will see it.</div>';
-      return;
-    }
-    con.innerHTML = thread.map(m => {
-      const isMine = m.sender_role === 'clinician';
-      const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'Admin')} · ${dt}</div></div>`;
-    }).join('');
-    con.scrollTop = con.scrollHeight;
-  } else {
-    renderChat('Staff');
+  if (_staffChatRoom !== 'admin'){ renderChat('Staff'); return; }
+  const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
+  if (!matched || !matched.id){
+    con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">Your staff record is not linked to a clinician profile yet — admin DMs will appear here once it is.</div>';
+    return;
   }
+  const myToken = _tokenFor('clinician', matched.id);
+  const myRooms = roomsForToken(myToken);
+  if (!myRooms.length){
+    con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No conversations yet. Admin will start a thread when they need to reach you.</div>';
+    return;
+  }
+  if (!_staffOpenRoomId){
+    if (myRooms.length === 1){ _staffOpenRoomId = String(myRooms[0].id); }
+    else { return _renderRoomList(con, myRooms, myToken, 'clinician'); }
+  }
+  _renderRoomThread(con, _staffOpenRoomId, myToken, 'clinician');
 }
 
 async function sendStaffDm(){
@@ -3691,8 +3675,15 @@ async function sendStaffDm(){
   if (!matched || !matched.id){ toast('Your staff record is not linked to a clinician profile', true); return; }
   const content = input.value.trim();
   if (!content) return;
+  let roomId = _staffOpenRoomId;
+  if (!roomId){
+    const my = roomsForToken(_tokenFor('clinician', matched.id));
+    if (my.length){ roomId = my[0].id; _staffOpenRoomId = String(roomId); }
+    else { roomId = await findOrCreate1to1Room('clinician', matched.id); _staffOpenRoomId = String(roomId); }
+  }
   input.value = '';
   const payload = {
+    room_id: roomId,
     camper_id: String(matched.id),
     recipient_role: 'clinician',
     sender_role: 'clinician',
@@ -3705,6 +3696,7 @@ async function sendStaffDm(){
     const r = await supa('direct_messages','POST', payload, '?select=*');
     const row = Array.isArray(r) ? r[0] : r;
     if (row) directMessages.push(row);
+    bumpRoomLastMessage(roomId);
     renderStaffChatPane();
   } catch(e){ toast('Send failed', true); input.value = content; }
 }
@@ -3786,11 +3778,12 @@ function startChatBackgroundPoll(){
     const prevLatestId=chatMessages.length?chatMessages[chatMessages.length-1].id:null;
     await loadChat();
     await loadDirectMessages();
+    await loadChatRooms();
     // If admin DM thread or inbox is visible, re-render.
     if (CR === 'admin'){
       const onMessages = document.getElementById('at-messages')?.classList.contains('on');
       if (onMessages){
-        if (_adminDmThreadKey) renderAdminDmThread(); else renderAdminInbox();
+        if (_adminDmThreadRoomId) renderAdminDmThread(); else renderAdminInbox();
       }
     } else if (CR === 'camper' && _camperChatRoom === 'admin'){
       renderCamperChatPane();
@@ -3912,13 +3905,17 @@ async function sendChatPushBlast(msg,from){
 }
 
 
-// ═══ DIRECT MESSAGES ═══
-// Admin <-> camper 1-on-1 chats. Each row in direct_messages has a
-// camper_id (always the camper side) plus sender_role 'admin' or 'camper'
-// and a content blob. Multi-recipient broadcast = N inserts.
+// ═══ DIRECT MESSAGES + ROOMS ═══
+// chat_rooms is the source of truth for who's in each conversation.
+// direct_messages.room_id ties each message to a room. 1:1 chats are
+// rooms with 2 members (admin + the other party); groups have 3+.
 let directMessages = [];
 let directMessagesLatestCreatedAt = null;
-let _adminDmThreadKey = null;      // "role:id" of currently-open thread on the admin Messages tab
+let chatRooms = [];
+let chatRoomsLatestUpdatedAt = null;
+let _adminDmThreadRoomId = null;   // open room on admin Messages tab
+let _camperOpenRoomId = null;      // open room on camper ADMIN pill
+let _staffOpenRoomId = null;       // open room on staff ADMIN pill
 let _camperChatRoom = 'general';   // camper Chat view: 'general' (camp chat) or 'admin'
 
 async function loadDirectMessages(){
@@ -3940,23 +3937,129 @@ async function loadDirectMessages(){
   }catch(e){ console.warn('DM load error',e); }
 }
 
+async function loadChatRooms(){
+  // Refresh the full room list every poll. Rooms are far less numerous
+  // than messages, so a since-filter isn't worth the complexity yet.
+  try{
+    const rows = await supa('chat_rooms','GET',null,'?order=last_message_at.desc&limit=500');
+    chatRooms = rows || [];
+  }catch(e){ console.warn('Rooms load error', e); chatRooms = []; }
+}
+
+// ── Room helpers ───────────────────────────────────────────
+function _tokenFor(role, id){ return role === 'admin' ? 'admin' : (role + ':' + String(id)); }
+function _tokenName(token, room){
+  if (token === 'admin') return 'Admin';
+  if (room && room.member_names && room.member_names[token]) return room.member_names[token];
+  const i = token.indexOf(':');
+  const role = token.slice(0,i), id = token.slice(i+1);
+  if (role === 'camper'){
+    const c = campers.find(x => String(x.id) === String(id));
+    return c ? (c.first_name + ' ' + c.last_name) : '(camper)';
+  }
+  if (role === 'clinician'){
+    const cl = clinicians.find(x => String(x.id) === String(id));
+    return cl ? (cl.name || ((cl.first_name||'') + ' ' + (cl.last_name||'')).trim()) : '(clinician)';
+  }
+  return '(unknown)';
+}
+
+function roomsForToken(token){
+  return chatRooms.filter(r => Array.isArray(r.members) && r.members.includes(token))
+    .sort((a,b) => new Date(b.last_message_at||b.created_at) - new Date(a.last_message_at||a.created_at));
+}
+function roomMessages(roomId){
+  return directMessages
+    .filter(m => String(m.room_id) === String(roomId))
+    .sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+}
+function roomDisplayName(room, myToken){
+  if (!room || !Array.isArray(room.members)) return '(unknown)';
+  const others = room.members.filter(t => t !== myToken);
+  if (!others.length) return room.title || '(empty)';
+  const names = others.map(t => _tokenName(t, room));
+  if (room.title) return room.title;
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return names.join(' & ');
+  return names.slice(0,2).join(', ') + ` + ${names.length - 2} more`;
+}
+function roomIcon(room){
+  if (!room || !Array.isArray(room.members)) return '👤';
+  const otherCount = room.members.length - 1; // minus admin
+  if (otherCount > 1) return '👥';
+  // 1:1 — figure out role of the one other member
+  const other = room.members.find(t => t !== 'admin');
+  if (other && other.startsWith('clinician:')) return '🏀';
+  return '👤';
+}
+
+async function findOrCreate1to1Room(role, id){
+  const recipToken = _tokenFor(role, id);
+  const existing = chatRooms.find(r =>
+    Array.isArray(r.members) && r.members.length === 2 &&
+    r.members.includes('admin') && r.members.includes(recipToken));
+  if (existing) return existing.id;
+  const recipName = _tokenName(recipToken, null);
+  const memberNames = { admin: 'Admin' };
+  memberNames[recipToken] = recipName;
+  const r = await supa('chat_rooms','POST',{
+    members: ['admin', recipToken],
+    member_names: memberNames,
+    last_message_at: new Date().toISOString()
+  },'?select=*');
+  const row = Array.isArray(r) ? r[0] : r;
+  if (row) chatRooms.push(row);
+  return row.id;
+}
+
+async function createGroupRoom(participants){
+  // participants: [{role,id,name}, ...] excluding admin (admin always added)
+  const members = ['admin', ...participants.map(p => _tokenFor(p.role, p.id))];
+  const memberNames = { admin: 'Admin' };
+  participants.forEach(p => { memberNames[_tokenFor(p.role, p.id)] = p.name; });
+  const r = await supa('chat_rooms','POST',{
+    members,
+    member_names: memberNames,
+    last_message_at: new Date().toISOString()
+  },'?select=*');
+  const row = Array.isArray(r) ? r[0] : r;
+  if (row) chatRooms.push(row);
+  return row.id;
+}
+
+async function bumpRoomLastMessage(roomId){
+  try{
+    await supa('chat_rooms','PATCH',{ last_message_at: new Date().toISOString() }, `?id=eq.${roomId}`);
+    const r = chatRooms.find(x => String(x.id) === String(roomId));
+    if (r) r.last_message_at = new Date().toISOString();
+  } catch(_){}
+}
+
 function updateDmBadges(){
-  // Admin badge — any unread by admin (camper-sent or clinician-sent)
+  // Admin badge — any unread message in any room
   const adminUnread = directMessages.some(m => !m.read_by_admin && m.sender_role!=='admin');
   const adminDot = document.getElementById('dmAdminDot');
   if (adminDot) adminDot.classList.toggle('show', !!adminUnread);
-  // Camper badge — any admin-sent unread for THIS camper
+  // Camper badge — any non-self unread message in any room they're a member of
   if (CR === 'camper' && CU){
-    const camperUnread = directMessages.some(m => _dmRoleOf(m)==='camper' && String(m.camper_id)===String(CU.id) && !m.read_by_camper && m.sender_role==='admin');
+    const myToken = _tokenFor('camper', CU.id);
+    const myRooms = new Set(roomsForToken(myToken).map(r => String(r.id)));
+    const camperUnread = directMessages.some(m =>
+      myRooms.has(String(m.room_id)) && !m.read_by_camper && m.sender_role !== 'camper'
+    );
     const camperDot = document.getElementById('dmCamperDot');
     if (camperDot) camperDot.classList.toggle('show', !!camperUnread);
   }
-  // Staff/clinician badge — any admin-sent unread for the matched clinician
+  // Staff/clinician badge — match by clinician name
   if ((CR === 'staff' || CR === 'clinician') && typeof findMatchingClinician === 'function'){
     const matched = findMatchingClinician();
     const staffDot = document.getElementById('dmStaffDot');
     if (matched && matched.id && staffDot){
-      const unread = directMessages.some(m => _dmRoleOf(m)==='clinician' && String(m.camper_id)===String(matched.id) && !m.read_by_camper && m.sender_role==='admin');
+      const myToken = _tokenFor('clinician', matched.id);
+      const myRooms = new Set(roomsForToken(myToken).map(r => String(r.id)));
+      const unread = directMessages.some(m =>
+        myRooms.has(String(m.room_id)) && !m.read_by_camper && m.sender_role !== 'clinician'
+      );
       staffDot.classList.toggle('show', !!unread);
     }
   }
@@ -3991,33 +4094,31 @@ function _dmRecipientName(role, id){
   return cl ? (cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim()) : '(unknown clinician)';
 }
 
-// ── ADMIN INBOX ────────────────────────────────────────────
+// ── ADMIN INBOX (room-based) ───────────────────────────────
 function renderAdminInbox(){
-  _adminDmThreadKey = null;
+  _adminDmThreadRoomId = null;
   const back = document.getElementById('dmInboxBackBtn');
   if (back) back.style.display = 'none';
   const pane = document.getElementById('dmAdminPane');
   if (!pane) return;
-  const keys = _dmThreadKeys();
-  if (!keys.length){
+  const rooms = roomsForToken('admin');
+  if (!rooms.length){
     pane.innerHTML = '<div class="empty"><span class="ei">💬</span><div class="et">No conversations yet</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">Tap + New Message to start one.</div></div>';
     return;
   }
-  pane.innerHTML = keys.map(key => {
-    const { role, id } = _dmParseKey(key);
-    const thread = _dmThreadFor(role, id);
-    const last = thread[thread.length - 1];
-    const name = _dmRecipientName(role, id);
-    const roleIcon = role === 'clinician' ? '🏀' : '👤';
-    const roleLabel = role === 'clinician' ? 'Clinician' : 'Camper';
-    const preview = (last.content || '').slice(0, 80) + ((last.content||'').length > 80 ? '…' : '');
-    const senderTag = last.sender_role === 'admin' ? 'You: ' : '';
-    const unread = thread.filter(m => !m.read_by_admin && m.sender_role!=='admin').length;
-    const dt = new Date(last.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div onclick="openAdminDmThread('${role}','${id}')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px;${unread?'border-left:3px solid var(--or)':''}">
+  pane.innerHTML = rooms.map(room => {
+    const msgs = roomMessages(room.id);
+    const last = msgs[msgs.length - 1];
+    const name = roomDisplayName(room, 'admin');
+    const icon = roomIcon(room);
+    const preview = last ? ((last.content || '').slice(0, 80) + ((last.content||'').length > 80 ? '…' : '')) : '(no messages yet)';
+    const senderTag = last && last.sender_role === 'admin' ? 'You: ' : (last ? `${(last.sender_name||'').split(' ')[0]||''}: ` : '');
+    const unread = msgs.filter(m => !m.read_by_admin && m.sender_role!=='admin').length;
+    const dt = last ? new Date(last.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div onclick="openAdminDmRoom('${room.id}')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px;${unread?'border-left:3px solid var(--or)':''}">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
-          <div style="font-weight:600;color:var(--tx);display:flex;align-items:center;gap:6px"><span title="${roleLabel}" style="font-size:14px">${roleIcon}</span>${escapeHtml(name)}</div>
+          <div style="font-weight:600;color:var(--tx);display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:14px;flex-shrink:0">${icon}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span></div>
           <div style="font-size:10px;color:var(--tx3);flex-shrink:0">${dt}</div>
         </div>
         <div style="font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(senderTag+preview)}</div>
@@ -4027,11 +4128,11 @@ function renderAdminInbox(){
   }).join('');
 }
 
-function openAdminDmThread(role, recipientId){
-  _adminDmThreadKey = _dmKey(role, recipientId);
-  // Mark every recipient-sent message in this thread as read by admin.
+function openAdminDmRoom(roomId){
+  _adminDmThreadRoomId = String(roomId);
+  // Mark every non-admin-sent message in this room as read by admin.
   const unreadIds = directMessages
-    .filter(m => _dmRoleOf(m)===role && String(m.camper_id)===String(recipientId) && !m.read_by_admin && m.sender_role!=='admin')
+    .filter(m => String(m.room_id)===String(roomId) && !m.read_by_admin && m.sender_role!=='admin')
     .map(m => m.id);
   if (unreadIds.length){
     Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_admin:true},`?id=eq.${id}`).catch(()=>{})))
@@ -4041,24 +4142,28 @@ function openAdminDmThread(role, recipientId){
 }
 
 function renderAdminDmThread(){
-  if (!_adminDmThreadKey) return renderAdminInbox();
+  if (!_adminDmThreadRoomId) return renderAdminInbox();
   const back = document.getElementById('dmInboxBackBtn');
   if (back) back.style.display = 'inline-flex';
   const pane = document.getElementById('dmAdminPane');
   if (!pane) return;
-  const { role, id } = _dmParseKey(_adminDmThreadKey);
-  const name = _dmRecipientName(role, id);
-  const roleIcon = role === 'clinician' ? '🏀' : '👤';
-  const thread = _dmThreadFor(role, id);
-  const msgs = thread.map(m => {
+  const room = chatRooms.find(r => String(r.id) === String(_adminDmThreadRoomId));
+  if (!room){ pane.innerHTML = '<div class="empty"><span class="ei">💬</span><div class="et">Room not found</div></div>'; return; }
+  const name = roomDisplayName(room, 'admin');
+  const icon = roomIcon(room);
+  const others = room.members.filter(t => t !== 'admin');
+  const memberLine = others.map(t => `<span style="font-size:11px;color:var(--tx2);background:var(--gray2);border:1px solid var(--b2);border-radius:12px;padding:2px 8px;margin-right:4px;display:inline-block">${escapeHtml(_tokenName(t, room))}</span>`).join('');
+  const msgs = roomMessages(_adminDmThreadRoomId);
+  const msgsHtml = msgs.map(m => {
     const isMine = m.sender_role === 'admin';
     const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||name)} · ${dt}</div></div>`;
-  }).join('') || '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages in this thread yet.</div>';
+    return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'?')} · ${dt}</div></div>`;
+  }).join('') || '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet.</div>';
   pane.innerHTML = `
-    <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);margin-bottom:8px;display:flex;align-items:center;gap:6px">${roleIcon} ${escapeHtml(name)}</div>
-    <div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 320px)">
-      <div class="chat-messages" id="dmAdminMessages">${msgs}</div>
+    <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);margin-bottom:6px;display:flex;align-items:center;gap:6px">${icon} ${escapeHtml(name)}</div>
+    <div style="margin-bottom:8px">${memberLine}</div>
+    <div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 340px)">
+      <div class="chat-messages" id="dmAdminMessages">${msgsHtml}</div>
       <div class="chat-input-row" style="display:flex;align-items:center;gap:8px">
         <textarea class="chat-input" id="dmAdminInput" placeholder="Reply to ${escapeHtml(name)}..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAdminDm();}"></textarea>
         <button class="chat-send" onclick="sendAdminDm()">➤</button>
@@ -4069,18 +4174,21 @@ function renderAdminDmThread(){
 }
 
 async function sendAdminDm(){
-  if (!_adminDmThreadKey) return;
+  if (!_adminDmThreadRoomId) return;
   const input = document.getElementById('dmAdminInput');
   if (!input) return;
   const content = input.value.trim();
   if (!content) return;
   input.value = '';
-  const { role, id } = _dmParseKey(_adminDmThreadKey);
+  const room = chatRooms.find(r => String(r.id) === String(_adminDmThreadRoomId));
+  if (!room){ toast('Room not found', true); return; }
+  const senderName = ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim();
   const payload = {
-    camper_id: String(id),
-    recipient_role: role,
+    room_id: room.id,
+    camper_id: '',
+    recipient_role: 'camper',
     sender_role: 'admin',
-    sender_name: ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim(),
+    sender_name: senderName,
     content,
     read_by_admin: true,
     read_by_camper: false
@@ -4089,36 +4197,47 @@ async function sendAdminDm(){
     const r = await supa('direct_messages','POST', payload, '?select=*');
     const row = Array.isArray(r) ? r[0] : r;
     if (row) directMessages.push(row);
+    bumpRoomLastMessage(room.id);
     renderAdminDmThread();
-    // Push the recipient. Push fan-out is by user_id matching the
-    // push_subscriptions row, which is set to the camper.id or staff.id
-    // at subscribe time. For clinicians we push their matching staff row
-    // by name (push_subscriptions.display_name index from Wave 3).
-    try {
-      const pushPayload = {
-        title: `${CFG.CAMP_NAME} — Message from Admin`,
-        body: content.length > 140 ? content.slice(0,137)+'…' : content,
-        url: '/',
-        tag: 'dm-'+id
-      };
-      if (role === 'camper'){
-        pushPayload.user_id = String(id);
-      } else {
-        // Push to staff who match this clinician name (best-effort; staff
-        // who haven't subscribed simply won't get pushed).
-        const cl = clinicians.find(x => String(x.id) === String(id));
-        if (cl){
-          const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
-          const matches = (await supa('push_subscriptions','GET',null,`?select=user_id&display_name=ilike.${encodeURIComponent(norm(cl.name))}`)) || [];
-          const ids = [...new Set(matches.map(x => x.user_id).filter(Boolean))];
-          if (ids.length) pushPayload.user_ids = ids;
-        }
-      }
-      if (pushPayload.user_id || (pushPayload.user_ids && pushPayload.user_ids.length)){
-        await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pushPayload)});
-      }
-    } catch(_){ }
+    pushRoomMembers(room, content);
   } catch(e){ toast('Send failed', true); input.value = content; }
+}
+
+// Push every non-admin member of a room. Best-effort; users who haven't
+// subscribed via the 🔔 Notify button just don't get pushed.
+async function pushRoomMembers(room, content){
+  if (!room || !Array.isArray(room.members)) return;
+  const others = room.members.filter(t => t !== 'admin');
+  const directIds = []; const nameTokens = [];
+  others.forEach(t => {
+    const i = t.indexOf(':');
+    const role = t.slice(0,i); const id = t.slice(i+1);
+    if (role === 'camper') directIds.push(String(id));
+    else if (role === 'clinician') nameTokens.push(t);
+  });
+  // For clinician members, look up which staff push_subscription rows
+  // match each clinician's display name.
+  const clinicianUserIds = [];
+  for (const t of nameTokens){
+    const id = t.slice('clinician:'.length);
+    const cl = clinicians.find(x => String(x.id) === String(id));
+    if (!cl) continue;
+    try{
+      const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+      const matches = (await supa('push_subscriptions','GET',null,`?select=user_id&display_name=ilike.${encodeURIComponent(norm(cl.name))}`)) || [];
+      matches.forEach(x => { if (x.user_id) clinicianUserIds.push(x.user_id); });
+    } catch(_){}
+  }
+  const allIds = [...new Set([...directIds, ...clinicianUserIds])];
+  if (!allIds.length) return;
+  try{
+    await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      title: `${CFG.CAMP_NAME} — New message`,
+      body: content.length > 140 ? content.slice(0,137)+'…' : content,
+      url: '/', tag: 'dm-'+room.id,
+      user_ids: allIds
+    })});
+  } catch(_){}
 }
 
 // "+ New Message" — combined campers + clinicians, alphabetized, with search
@@ -4129,7 +4248,7 @@ function openNewAdminDm(){
       <div class="modal" style="max-width:480px">
         <div class="mhd"><div class="mtitle">NEW MESSAGE</div><button class="mclose" onclick="document.getElementById('mNewDm').remove()" type="button">✕</button></div>
         <div class="mbody">
-          <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Pick one or more recipients. Each gets their own private thread.</div>
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Pick one recipient for a private 1:1, or multiple to start a group chat — everyone in the group sees each other's replies.</div>
           <div class="swrap" style="width:100%;margin-bottom:8px"><span class="sicon">🔍</span><input class="sinput" style="width:100%" type="text" id="dmNewSearch" placeholder="Search by name..." oninput="renderNewDmList(this.value)"></div>
           <div id="dmNewList" style="max-height:280px;overflow-y:auto;border:1px solid var(--b2);border-radius:var(--rs);padding:6px 10px;margin-bottom:10px"></div>
           <textarea class="ftarea" id="dmNewContent" placeholder="Type your message..." style="min-height:80px;margin-bottom:10px"></textarea>
@@ -4177,53 +4296,52 @@ function renderNewDmList(filter){
 
 async function sendNewAdminDm(){
   const recips = Array.from(document.querySelectorAll('#mNewDm .dmRecip:checked'))
-    .map(el => ({ id: el.value, role: el.dataset.role }));
+    .map(el => {
+      const id = el.value, role = el.dataset.role;
+      const name = role === 'camper'
+        ? (campers.find(x => String(x.id)===String(id)) || {}).first_name + ' ' + ((campers.find(x => String(x.id)===String(id)) || {}).last_name || '')
+        : (() => { const cl = clinicians.find(x => String(x.id)===String(id)); return cl ? (cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim()) : ''; })();
+      return { id, role, name: (name || '').trim() };
+    });
   const content = document.getElementById('dmNewContent').value.trim();
   if (!recips.length){ toast('Pick at least one recipient', true); return; }
   if (!content){ toast('Type a message first', true); return; }
   const senderName = ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim();
-  let sent = 0, failed = 0;
-  for (const r of recips){
-    try{
-      const ins = await supa('direct_messages','POST', {
-        camper_id: String(r.id),
-        recipient_role: r.role,
-        sender_role: 'admin',
-        sender_name: senderName,
-        content,
-        read_by_admin: true,
-        read_by_camper: false
-      }, '?select=*');
-      const row = Array.isArray(ins) ? ins[0] : ins;
-      if (row) directMessages.push(row);
-      sent++;
-      // Push fan-out
-      try {
-        const pushPayload = {
-          title: `${CFG.CAMP_NAME} — Message from Admin`,
-          body: content.length > 140 ? content.slice(0,137)+'…' : content,
-          url: '/', tag: 'dm-'+r.id
-        };
-        if (r.role === 'camper'){ pushPayload.user_id = String(r.id); }
-        else {
-          const cl = clinicians.find(x => String(x.id) === String(r.id));
-          if (cl){
-            const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
-            const matches = (await supa('push_subscriptions','GET',null,`?select=user_id&display_name=ilike.${encodeURIComponent(norm(cl.name))}`)) || [];
-            const ids = [...new Set(matches.map(x => x.user_id).filter(Boolean))];
-            if (ids.length) pushPayload.user_ids = ids;
-          }
-        }
-        if (pushPayload.user_id || (pushPayload.user_ids && pushPayload.user_ids.length)){
-          await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pushPayload)});
-        }
-      } catch(_){ }
-      await new Promise(r => setTimeout(r, 100));
-    } catch(e){ failed++; }
+  try{
+    let roomId;
+    if (recips.length === 1){
+      // 1:1 — find existing room or create one
+      roomId = await findOrCreate1to1Room(recips[0].role, recips[0].id);
+    } else {
+      // Multi-select → ONE group room with all recipients + admin
+      roomId = await createGroupRoom(recips);
+    }
+    if (!roomId){ toast('Could not create room', true); return; }
+    const ins = await supa('direct_messages','POST', {
+      room_id: roomId,
+      camper_id: '',
+      recipient_role: 'camper',
+      sender_role: 'admin',
+      sender_name: senderName,
+      content,
+      read_by_admin: true,
+      read_by_camper: false
+    }, '?select=*');
+    const row = Array.isArray(ins) ? ins[0] : ins;
+    if (row) directMessages.push(row);
+    bumpRoomLastMessage(roomId);
+    // Push everyone in the new room
+    const room = chatRooms.find(r => String(r.id) === String(roomId));
+    if (room) pushRoomMembers(room, content);
+    document.getElementById('mNewDm')?.remove();
+    toast(recips.length > 1 ? `📩 Group chat started with ${recips.length} recipients` : `📩 Sent`);
+    // Open the room we just created
+    _adminDmThreadRoomId = String(roomId);
+    renderAdminDmThread();
+  } catch(e){
+    console.error('sendNewAdminDm failed', e);
+    toast('Send failed', true);
   }
-  document.getElementById('mNewDm')?.remove();
-  toast(failed ? `Sent to ${sent} · ${failed} failed` : `📩 Sent to ${sent} recipient${sent===1?'':'s'}`);
-  renderAdminInbox();
 }
 
 // ── CAMPER SIDE ────────────────────────────────────────────
@@ -4235,54 +4353,103 @@ function switchCamperChatRoom(room){
   if (gen){ gen.style.background = isAdmin ? 'var(--gray2)' : 'var(--or)'; gen.style.color = isAdmin ? 'var(--tx2)' : '#000'; }
   if (adm){ adm.style.background = isAdmin ? 'var(--or)' : 'var(--gray2)'; adm.style.color = isAdmin ? '#000' : 'var(--tx2)'; }
   const label = document.getElementById('camperChatRoomLabel');
-  if (label) label.textContent = isAdmin ? '🔒 Private — only you and admin can see this' : 'Visible to everyone — campers, staff, and admin';
+  if (label) label.textContent = isAdmin ? '🔒 Direct messages with admin & groups' : 'Visible to everyone — campers, staff, and admin';
   const input = document.getElementById('chatInputCamper');
   if (input) input.placeholder = isAdmin ? 'Message admin privately...' : 'Message the camp...';
+  // Reset open-room when entering Admin pill so user sees the list first
+  // (auto-opens if they have only one room).
+  if (isAdmin) _camperOpenRoomId = null;
   renderCamperChatPane();
-  // If switching to admin, mark unread admin messages as read.
-  if (isAdmin && CU){
-    const unreadIds = directMessages
-      .filter(m => String(m.camper_id)===String(CU.id) && !m.read_by_camper && m.sender_role==='admin')
-      .map(m => m.id);
-    if (unreadIds.length){
-      Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_camper:true},`?id=eq.${id}`).catch(()=>{})))
-        .then(() => { unreadIds.forEach(id => { const m = directMessages.find(x => x.id===id); if (m) m.read_by_camper = true; }); updateDmBadges(); });
-    }
-  }
 }
 
 function renderCamperChatPane(){
-  // When the camper chat view is showing the Admin pill, render the DM
-  // thread into chatMsgsCamper instead of letting renderChat('Camper') run.
   const con = document.getElementById('chatMsgsCamper');
   if (!con) return;
-  if (_camperChatRoom === 'admin'){
-    if (!CU){ con.innerHTML = ''; return; }
-    const thread = _dmThreadFor('camper', CU.id);
-    if (!thread.length){
-      con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet. Send admin a note — they will see it.</div>';
-      return;
-    }
-    con.innerHTML = thread.map(m => {
-      const isMine = m.sender_role === 'camper';
-      const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'Admin')} · ${dt}</div></div>`;
-    }).join('');
-    con.scrollTop = con.scrollHeight;
-  } else {
-    // Defer to general chat renderer.
-    renderChatMessages('Camper');
+  if (_camperChatRoom !== 'admin'){ renderChatMessages('Camper'); return; }
+  if (!CU){ con.innerHTML = ''; return; }
+  const myToken = _tokenFor('camper', CU.id);
+  const myRooms = roomsForToken(myToken);
+  if (!myRooms.length){
+    con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No conversations yet. An admin will start a thread with you when they need to.</div>';
+    return;
   }
+  // If only one room, auto-open. Otherwise show a list.
+  if (!_camperOpenRoomId){
+    if (myRooms.length === 1){ _camperOpenRoomId = String(myRooms[0].id); }
+    else { return _renderRoomList(con, myRooms, myToken, 'camper'); }
+  }
+  _renderRoomThread(con, _camperOpenRoomId, myToken, 'camper');
 }
+
+function _renderRoomList(con, rooms, myToken, side){
+  con.innerHTML = '<div style="font-family:\'Oswald\',sans-serif;font-size:12px;letter-spacing:.08em;color:var(--or);padding:10px 12px 4px">YOUR CONVERSATIONS</div>' + rooms.map(room => {
+    const msgs = roomMessages(room.id);
+    const last = msgs[msgs.length - 1];
+    const name = roomDisplayName(room, myToken);
+    const icon = roomIcon(room);
+    const preview = last ? ((last.content || '').slice(0, 70) + ((last.content||'').length > 70 ? '…' : '')) : '(no messages yet)';
+    const senderTag = last && (last.sender_role === side) ? 'You: ' : (last ? `${(last.sender_name||'').split(' ')[0]||''}: ` : '');
+    const unread = msgs.filter(m => !m.read_by_camper && m.sender_role!==side).length;
+    return `<div onclick="${side==='camper'?'openCamperRoom':'openStaffRoom'}('${room.id}')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:10px 12px;margin:0 8px 8px;cursor:pointer;${unread?'border-left:3px solid var(--or)':''}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:14px">${icon}</span><span style="font-weight:600;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>${unread?`<span style="background:var(--or);color:#000;font-size:10px;font-weight:700;border-radius:8px;padding:1px 6px;margin-left:auto">${unread}</span>`:''}</div>
+      <div style="font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(senderTag+preview)}</div>
+    </div>`;
+  }).join('');
+}
+
+function _renderRoomThread(con, roomId, myToken, side){
+  const room = chatRooms.find(r => String(r.id) === String(roomId));
+  if (!room){ con.innerHTML = '<div style="padding:20px;color:var(--tx3);font-size:13px">Conversation not found</div>'; return; }
+  const name = roomDisplayName(room, myToken);
+  const icon = roomIcon(room);
+  const myRooms = roomsForToken(myToken);
+  const showBack = myRooms.length > 1;
+  const msgs = roomMessages(roomId);
+  // Mark unread as read for me
+  const unreadIds = msgs.filter(m => !m.read_by_camper && m.sender_role !== side).map(m => m.id);
+  if (unreadIds.length){
+    Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_camper:true},`?id=eq.${id}`).catch(()=>{})))
+      .then(() => { unreadIds.forEach(id => { const m = directMessages.find(x => x.id===id); if (m) m.read_by_camper = true; }); updateDmBadges(); });
+  }
+  const backFn = side === 'camper' ? 'closeCamperRoom' : 'closeStaffRoom';
+  const header = `<div style="padding:8px 10px;display:flex;align-items:center;gap:8px;background:var(--gray);border-bottom:1px solid var(--b2)">
+    ${showBack ? `<button class="btn bsec bsm" onclick="${backFn}()" type="button">← Back</button>` : ''}
+    <span style="font-size:14px">${icon}</span>
+    <span style="font-family:'Oswald',sans-serif;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>
+  </div>`;
+  const msgsHtml = msgs.map(m => {
+    const isMine = m.sender_role === side;
+    const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'?')} · ${dt}</div></div>`;
+  }).join('') || '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet.</div>';
+  con.innerHTML = header + msgsHtml;
+  con.scrollTop = con.scrollHeight;
+}
+
+function openCamperRoom(roomId){ _camperOpenRoomId = String(roomId); renderCamperChatPane(); }
+function closeCamperRoom(){ _camperOpenRoomId = null; renderCamperChatPane(); }
+function openStaffRoom(roomId){ _staffOpenRoomId = String(roomId); renderStaffChatPane(); }
+function closeStaffRoom(){ _staffOpenRoomId = null; renderStaffChatPane(); }
 
 async function sendCamperDm(){
   const input = document.getElementById('chatInputCamper');
   if (!input || !CU) return;
   const content = input.value.trim();
   if (!content) return;
+  let roomId = _camperOpenRoomId;
+  // If no room is open yet (camper messaging admin first), find or create
+  // a 1:1 with admin.
+  if (!roomId){
+    const myToken = _tokenFor('camper', CU.id);
+    const my = roomsForToken(myToken);
+    if (my.length){ roomId = my[0].id; _camperOpenRoomId = String(roomId); }
+    else { roomId = await findOrCreate1to1Room('camper', CU.id); _camperOpenRoomId = String(roomId); }
+  }
   input.value = '';
   const payload = {
+    room_id: roomId,
     camper_id: String(CU.id),
+    recipient_role: 'camper',
     sender_role: 'camper',
     sender_name: (CU.first_name+(CU.last_name?' '+CU.last_name:'')).trim(),
     content,
@@ -4293,6 +4460,7 @@ async function sendCamperDm(){
     const r = await supa('direct_messages','POST', payload, '?select=*');
     const row = Array.isArray(r) ? r[0] : r;
     if (row) directMessages.push(row);
+    bumpRoomLastMessage(roomId);
     renderCamperChatPane();
   } catch(e){ toast('Send failed', true); input.value = content; }
 }
