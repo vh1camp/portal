@@ -4841,6 +4841,15 @@ function renderMyProfile(role){
       <label class="flabel">Conference(s)</label>
       <input class="finput" id="mpConf" value="${CU.conference||''}" placeholder="RMAC, Region 9...">
     </div>
+    ${role==='staff' ? `
+    <div style="margin-bottom:10px">
+      <label class="flabel">1/4 Zip Size <span style="color:var(--red2)">*</span></label>
+      <select class="finput" id="mpQzSize">
+        <option value="">— Select size —</option>
+        ${['XS','S','M','L','XL','XXL','XXXL'].map(s => `<option value="${s}" ${CU.quarter_zip_size===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      ${!CU.quarter_zip_size ? '<div style="font-size:11px;color:var(--red2);margin-top:4px">⚠ Please pick a size — required for camp gear orders</div>' : ''}
+    </div>` : ''}
     <div style="margin-bottom:16px">
       <label class="flabel">Bio / Resume</label>
       <textarea class="finput" id="mpBio" rows="5" style="resize:vertical;min-height:90px" placeholder="Tell us about yourself...">${CU.bio||''}</textarea>
@@ -4899,6 +4908,14 @@ async function saveMyProfile(role){
   const first=document.getElementById('mpFirst')?.value.trim();
   const last=document.getElementById('mpLast')?.value.trim();
   if(!first||!last){status.textContent='Name is required.';status.style.color='var(--red2)';return;}
+  // Required: 1/4 zip size for clinicians/staff (camp gear ordering).
+  const qzSize = role === 'staff' ? (document.getElementById('mpQzSize')?.value || '') : '';
+  if (role === 'staff' && !qzSize){
+    status.textContent = '1/4 zip size is required.';
+    status.style.color = 'var(--red2)';
+    toast('Pick a 1/4 zip size before saving', true);
+    return;
+  }
   const photoUrl=document.getElementById('mpPhotoUrl')?.value.trim();
   // Use uploaded base64 if available, then URL field, then existing photo
   const photo=CU._pendingPhoto||(photoUrl&&photoUrl.startsWith('http')?photoUrl:(CU.photo||null));
@@ -4909,7 +4926,8 @@ async function saveMyProfile(role){
     phone:document.getElementById('mpPhone')?.value.trim()||null,
     conference:document.getElementById('mpConf')?.value.trim()||null,
     bio:document.getElementById('mpBio')?.value.trim()||null,
-    photo:photo||null
+    photo:photo||null,
+    quarter_zip_size: qzSize || null
   };
   try{
     const table=role==='staff'?'staff':'campers';
@@ -4925,6 +4943,7 @@ async function saveMyProfile(role){
     await tryPatch({first_name:first,last_name:last,city:data.city,state:data.state,bio:data.bio},'name/city/state/bio');
     if(data.phone!==null) await tryPatch({phone:data.phone},'phone');
     if(data.conference!==null) await tryPatch({conference:data.conference},'conference');
+    if(role==='staff' && data.quarter_zip_size!==null) await tryPatch({quarter_zip_size:data.quarter_zip_size},'1/4 zip size');
     if(data.photo){
       try{
         await supa(table,'PATCH',{photo:data.photo},`?id=eq.${CU.id}`);
@@ -4949,7 +4968,8 @@ async function saveMyProfile(role){
             photo: data.photo || null,
             city: data.city,
             state: data.state,
-            conference: data.conference
+            conference: data.conference,
+            quarter_zip_size: data.quarter_zip_size
           };
           try { await supa('clinicians','PATCH', clinPayload, `?id=eq.${matched.id}`); }
           catch(bulkErr){
