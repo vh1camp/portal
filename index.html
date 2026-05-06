@@ -2486,7 +2486,6 @@ function renderStaffRoster(filter){
       <div class="pcard-body">
         <div class="pcard-name">${c.first_name} ${c.last_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
-        <div class="pcard-type">${c.type||'Non-Staff'}</div>
       </div>
     </div>`;
   }).join('');
@@ -3228,14 +3227,12 @@ function renderProfiles(search){
     const initials=(c.first_name?.[0]||'')+(c.last_name?.[0]||'');
     const imgHtml=c.photo?`<img src="${c.photo}" alt="${c.first_name}" onerror="this.parentElement.innerHTML='<div class=pcard-initials>${initials}</div>'">`:`<div class="pcard-initials">${initials}</div>`;
     const loc=formatLocation(c);
-    const typeLabel=c.type||'Non-Staff';
     const evalStatus=evals?`${evals} eval${evals!==1?'s':''} · Avg <strong style="color:var(--or)">${avg}</strong>`:'<span style="color:var(--tx3)">Not yet evaluated</span>';
     return`<div class="pcard" onclick="openProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
         <div class="pcard-name">${c.first_name} ${c.last_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
-        <div class="pcard-type">${typeLabel}</div>
         <div class="pcard-eval">${evalStatus}</div>
       </div>
     </div>`;
@@ -4364,7 +4361,6 @@ function renderCamperProfiles(search){
       <div class="pcard-body">
         <div class="pcard-name">${c.first_name} ${c.last_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
-        <div class="pcard-type">${c.type||'Non-Staff'}</div>
       </div>
     </div>`;
   }).join('');
