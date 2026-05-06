@@ -4935,6 +4935,32 @@ async function saveMyProfile(role){
       }
     }
     CU._pendingPhoto=null;
+    // Mirror to the matching clinicians lookup row so the public profile
+    // (the one campers see when they tap a clinician card) updates with
+    // the same bio/photo/contact info. Match is by name, same as the
+    // existing findMatchingClinician helper.
+    if (role==='staff' || role==='clinician'){
+      try{
+        const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
+        if (matched && matched.id){
+          const clinPayload = {
+            name: (first+' '+last).trim(),
+            bio: data.bio,
+            photo: data.photo || null,
+            city: data.city,
+            state: data.state,
+            conference: data.conference
+          };
+          try { await supa('clinicians','PATCH', clinPayload, `?id=eq.${matched.id}`); }
+          catch(bulkErr){
+            // Per-field fallback in case one column is missing on clinicians
+            for (const k of Object.keys(clinPayload)){
+              try { await supa('clinicians','PATCH', { [k]: clinPayload[k] }, `?id=eq.${matched.id}`); } catch(_){}
+            }
+          }
+        }
+      } catch(syncErr){ console.warn('Clinician sync failed:', syncErr); }
+    }
     // Refresh display name in header
     document.getElementById('uName').textContent=CU.first_name+' '+(CU.last_name||'');
     await loadAll();
