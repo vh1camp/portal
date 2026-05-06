@@ -813,8 +813,9 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="view" id="sv-chat">
 <div style="display:flex;gap:0;margin-bottom:10px;border:1px solid var(--b2);border-radius:var(--r);overflow:hidden">
-  <button id="staffChatTab-general" onclick="switchStaffChatRoom('general')" style="flex:1;padding:10px;background:var(--or);color:#000;border:none;font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">CAMP CHAT</button>
-  <button id="staffChatTab-staff" onclick="switchStaffChatRoom('staff')" style="flex:1;padding:10px;background:var(--gray2);color:var(--tx2);border:none;border-left:1px solid var(--b2);font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer">STAFF ROOM 🔒</button>
+  <button id="staffChatTab-general" onclick="switchStaffChatRoom('general')" style="flex:1;padding:10px;background:var(--or);color:#000;border:none;font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer">CAMP</button>
+  <button id="staffChatTab-staff" onclick="switchStaffChatRoom('staff')" style="flex:1;padding:10px;background:var(--gray2);color:var(--tx2);border:none;border-left:1px solid var(--b2);font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer">STAFF 🔒</button>
+  <button id="staffChatTab-admin" onclick="switchStaffChatRoom('admin')" style="flex:1;padding:10px;background:var(--gray2);color:var(--tx2);border:none;border-left:1px solid var(--b2);font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer;position:relative">ADMIN <span class="badge-dot" id="dmStaffDot" style="top:6px;right:8px;position:absolute"></span></button>
 </div>
 <div id="staffChatRoomLabel" style="font-size:11px;color:var(--tx3);margin-bottom:10px">Visible to everyone — campers, staff, and admin</div>
 <div class="chat-wrap" style="height:calc(100dvh - 200px)">
@@ -2391,7 +2392,7 @@ function sView(v){
   if(v==='evaluate')populateStaffEvalForm();
   if(v==='history')renderStaffHistory();
   if(v==='roster')renderStaffRoster('');
-  if(v==='chat'){markChatRead();renderChat('Staff');}
+  if(v==='chat'){markChatRead();renderChat('Staff');renderStaffChatPane();}
   if(v==='campinfo')renderCampInfoViewer('sv');
   if(v==='schedule')renderClinicianSchedule();
   if(v==='liveeval')renderLiveEvalGameList();
@@ -3616,21 +3617,96 @@ function switchAdminChatRoom(room){
 // ── STAFF CHAT ROOM SWITCHER ───────────────────────────
 // Same toggle pattern as admin: one button on the staff bottom nav opens a
 // chat view with a top pill that flips between general and staff-only.
-let _staffChatRoom = 'general';
+let _staffChatRoom = 'general';   // 'general' | 'staff' | 'admin'
 function switchStaffChatRoom(room){
   _staffChatRoom = room;
-  const isStaff = room === 'staff';
-  const gen = document.getElementById('staffChatTab-general');
-  const stf = document.getElementById('staffChatTab-staff');
-  if (gen){ gen.style.background = isStaff ? 'var(--gray2)' : 'var(--or)'; gen.style.color = isStaff ? 'var(--tx2)' : '#000'; }
-  if (stf){ stf.style.background = isStaff ? 'var(--or)' : 'var(--gray2)'; stf.style.color = isStaff ? '#000' : 'var(--tx2)'; }
+  const tabs = ['general','staff','admin'];
+  tabs.forEach(t => {
+    const el = document.getElementById('staffChatTab-'+t);
+    if (!el) return;
+    if (t === room){ el.style.background = 'var(--or)'; el.style.color = '#000'; }
+    else { el.style.background = 'var(--gray2)'; el.style.color = 'var(--tx2)'; }
+  });
   const label = document.getElementById('staffChatRoomLabel');
-  if (label) label.textContent = isStaff ? '🔒 Staff & clinicians only — campers cannot see this' : 'Visible to everyone — campers, staff, and admin';
+  if (label){
+    if (room === 'staff') label.textContent = '🔒 Staff & clinicians only — campers cannot see this';
+    else if (room === 'admin') label.textContent = '🔒 Private — only you and admin can see this';
+    else label.textContent = 'Visible to everyone — campers, staff, and admin';
+  }
   const send = document.getElementById('staffChatSendBtn');
-  if (send) send.style.background = isStaff ? '#e05a00' : 'var(--or)';
+  if (send) send.style.background = (room==='staff') ? '#e05a00' : 'var(--or)';
   const input = document.getElementById('chatInputStaff');
-  if (input) input.placeholder = isStaff ? 'Message staff only...' : 'Message the camp...';
-  renderChat('Staff');
+  if (input){
+    if (room === 'admin') input.placeholder = 'Message admin privately...';
+    else if (room === 'staff') input.placeholder = 'Message staff only...';
+    else input.placeholder = 'Message the camp...';
+  }
+  renderStaffChatPane();
+  // Mark admin DMs to this clinician as read on switch.
+  if (room === 'admin'){
+    const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
+    if (matched && matched.id){
+      const unreadIds = directMessages
+        .filter(m => _dmRoleOf(m)==='clinician' && String(m.camper_id)===String(matched.id) && !m.read_by_camper && m.sender_role==='admin')
+        .map(m => m.id);
+      if (unreadIds.length){
+        Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_camper:true},`?id=eq.${id}`).catch(()=>{})))
+          .then(() => { unreadIds.forEach(id => { const m = directMessages.find(x => x.id===id); if (m) m.read_by_camper = true; }); updateDmBadges(); });
+      }
+    }
+  }
+}
+
+// When the staff Admin pill is on, render the DM thread instead of
+// the general chat. Matches camper-side renderCamperChatPane.
+function renderStaffChatPane(){
+  const con = document.getElementById('chatMsgsStaff');
+  if (!con) return;
+  if (_staffChatRoom === 'admin'){
+    const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
+    if (!matched || !matched.id){
+      con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">Your staff record is not linked to a clinician profile yet — admin DMs will appear here once it is.</div>';
+      return;
+    }
+    const thread = _dmThreadFor('clinician', matched.id);
+    if (!thread.length){
+      con.innerHTML = '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet. Send admin a note — they will see it.</div>';
+      return;
+    }
+    con.innerHTML = thread.map(m => {
+      const isMine = m.sender_role === 'clinician';
+      const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'Admin')} · ${dt}</div></div>`;
+    }).join('');
+    con.scrollTop = con.scrollHeight;
+  } else {
+    renderChat('Staff');
+  }
+}
+
+async function sendStaffDm(){
+  const input = document.getElementById('chatInputStaff');
+  if (!input) return;
+  const matched = (typeof findMatchingClinician === 'function') ? findMatchingClinician() : null;
+  if (!matched || !matched.id){ toast('Your staff record is not linked to a clinician profile', true); return; }
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  const payload = {
+    camper_id: String(matched.id),
+    recipient_role: 'clinician',
+    sender_role: 'clinician',
+    sender_name: ((CU?.first_name||'')+(CU?.last_name?' '+CU.last_name:'')).trim() || matched.name,
+    content,
+    read_by_camper: true,
+    read_by_admin: false
+  };
+  try{
+    const r = await supa('direct_messages','POST', payload, '?select=*');
+    const row = Array.isArray(r) ? r[0] : r;
+    if (row) directMessages.push(row);
+    renderStaffChatPane();
+  } catch(e){ toast('Send failed', true); input.value = content; }
 }
 
 // ═══ CHAT ═══
@@ -3714,10 +3790,12 @@ function startChatBackgroundPoll(){
     if (CR === 'admin'){
       const onMessages = document.getElementById('at-messages')?.classList.contains('on');
       if (onMessages){
-        if (_adminDmThreadId) renderAdminDmThread(); else renderAdminInbox();
+        if (_adminDmThreadKey) renderAdminDmThread(); else renderAdminInbox();
       }
     } else if (CR === 'camper' && _camperChatRoom === 'admin'){
       renderCamperChatPane();
+    } else if ((CR === 'staff' || CR === 'clinician') && typeof _staffChatRoom !== 'undefined' && _staffChatRoom === 'admin'){
+      renderStaffChatPane();
     }
     if(chatActiveSuffix){
       renderChatMessages(chatActiveSuffix);
@@ -3779,6 +3857,8 @@ async function sendChat(role){
   // when admin pill is selected so the message goes to direct_messages
   // instead of the broadcast chat table.
   if (role === 'camper' && _camperChatRoom === 'admin'){ return sendCamperDm(); }
+  // Same fork for staff/clinician Chat view's ADMIN pill.
+  if (role === 'staff' && typeof _staffChatRoom !== 'undefined' && _staffChatRoom === 'admin'){ return sendStaffDm(); }
   const suffix=role==='camper'?'Camper':role==='staffroom'?'StaffRoom':role==='staff'?'Staff':'Admin';
   const input=document.getElementById('chatInput'+suffix);
   const msg=input.value.trim();
@@ -3838,7 +3918,7 @@ async function sendChatPushBlast(msg,from){
 // and a content blob. Multi-recipient broadcast = N inserts.
 let directMessages = [];
 let directMessagesLatestCreatedAt = null;
-let _adminDmThreadId = null;       // currently-open thread on the admin Messages tab
+let _adminDmThreadKey = null;      // "role:id" of currently-open thread on the admin Messages tab
 let _camperChatRoom = 'general';   // camper Chat view: 'general' (camp chat) or 'admin'
 
 async function loadDirectMessages(){
@@ -3861,58 +3941,83 @@ async function loadDirectMessages(){
 }
 
 function updateDmBadges(){
-  // Admin badge — any unread by admin
-  const adminUnread = directMessages.some(m => !m.read_by_admin && m.sender_role==='camper');
+  // Admin badge — any unread by admin (camper-sent or clinician-sent)
+  const adminUnread = directMessages.some(m => !m.read_by_admin && m.sender_role!=='admin');
   const adminDot = document.getElementById('dmAdminDot');
   if (adminDot) adminDot.classList.toggle('show', !!adminUnread);
-  // Camper badge — any unread by THIS camper
+  // Camper badge — any admin-sent unread for THIS camper
   if (CR === 'camper' && CU){
-    const camperUnread = directMessages.some(m => String(m.camper_id)===String(CU.id) && !m.read_by_camper && m.sender_role==='admin');
+    const camperUnread = directMessages.some(m => _dmRoleOf(m)==='camper' && String(m.camper_id)===String(CU.id) && !m.read_by_camper && m.sender_role==='admin');
     const camperDot = document.getElementById('dmCamperDot');
     if (camperDot) camperDot.classList.toggle('show', !!camperUnread);
   }
+  // Staff/clinician badge — any admin-sent unread for the matched clinician
+  if ((CR === 'staff' || CR === 'clinician') && typeof findMatchingClinician === 'function'){
+    const matched = findMatchingClinician();
+    const staffDot = document.getElementById('dmStaffDot');
+    if (matched && matched.id && staffDot){
+      const unread = directMessages.some(m => _dmRoleOf(m)==='clinician' && String(m.camper_id)===String(matched.id) && !m.read_by_camper && m.sender_role==='admin');
+      staffDot.classList.toggle('show', !!unread);
+    }
+  }
 }
 
-function _dmThreadFor(camperId){
+// Thread keys are "role:id" strings — role is 'camper' or 'clinician',
+// id is the recipient's camper.id or clinician.id. Legacy rows that
+// pre-date the recipient_role column default to 'camper'.
+function _dmRoleOf(m){ return (m.recipient_role||'camper'); }
+function _dmKey(role, id){ return role + ':' + String(id); }
+function _dmParseKey(key){ const i=key.indexOf(':'); return { role: key.slice(0,i), id: key.slice(i+1) }; }
+
+function _dmThreadFor(role, recipientId){
   return directMessages
-    .filter(m => String(m.camper_id) === String(camperId))
+    .filter(m => _dmRoleOf(m) === role && String(m.camper_id) === String(recipientId))
     .sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
 }
-function _dmThreadCamperIds(){
-  // Distinct camper ids that have at least one DM, sorted by most recent.
-  const lastByCamper = {};
+function _dmThreadKeys(){
+  const lastByKey = {};
   directMessages.forEach(m => {
-    const k = String(m.camper_id);
-    if (!lastByCamper[k] || new Date(m.created_at) > new Date(lastByCamper[k].created_at)) lastByCamper[k] = m;
+    const k = _dmKey(_dmRoleOf(m), m.camper_id);
+    if (!lastByKey[k] || new Date(m.created_at) > new Date(lastByKey[k].created_at)) lastByKey[k] = m;
   });
-  return Object.keys(lastByCamper).sort((a,b) => new Date(lastByCamper[b].created_at) - new Date(lastByCamper[a].created_at));
+  return Object.keys(lastByKey).sort((a,b) => new Date(lastByKey[b].created_at) - new Date(lastByKey[a].created_at));
+}
+function _dmRecipientName(role, id){
+  if (role === 'camper'){
+    const c = campers.find(x => String(x.id) === String(id));
+    return c ? (c.first_name+' '+c.last_name) : '(unknown camper)';
+  }
+  const cl = clinicians.find(x => String(x.id) === String(id));
+  return cl ? (cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim()) : '(unknown clinician)';
 }
 
 // ── ADMIN INBOX ────────────────────────────────────────────
 function renderAdminInbox(){
-  _adminDmThreadId = null;
+  _adminDmThreadKey = null;
   const back = document.getElementById('dmInboxBackBtn');
   if (back) back.style.display = 'none';
   const pane = document.getElementById('dmAdminPane');
   if (!pane) return;
-  const ids = _dmThreadCamperIds();
-  if (!ids.length){
+  const keys = _dmThreadKeys();
+  if (!keys.length){
     pane.innerHTML = '<div class="empty"><span class="ei">💬</span><div class="et">No conversations yet</div><div style="font-size:12px;color:var(--tx3);margin-top:6px">Tap + New Message to start one.</div></div>';
     return;
   }
-  pane.innerHTML = ids.map(cid => {
-    const thread = _dmThreadFor(cid);
+  pane.innerHTML = keys.map(key => {
+    const { role, id } = _dmParseKey(key);
+    const thread = _dmThreadFor(role, id);
     const last = thread[thread.length - 1];
-    const c = campers.find(x => String(x.id) === String(cid));
-    const name = c ? (c.first_name+' '+c.last_name) : '(unknown camper)';
+    const name = _dmRecipientName(role, id);
+    const roleIcon = role === 'clinician' ? '🏀' : '👤';
+    const roleLabel = role === 'clinician' ? 'Clinician' : 'Camper';
     const preview = (last.content || '').slice(0, 80) + ((last.content||'').length > 80 ? '…' : '');
     const senderTag = last.sender_role === 'admin' ? 'You: ' : '';
-    const unread = thread.filter(m => !m.read_by_admin && m.sender_role==='camper').length;
+    const unread = thread.filter(m => !m.read_by_admin && m.sender_role!=='admin').length;
     const dt = new Date(last.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div onclick="openAdminDmThread('${cid}')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px;${unread?'border-left:3px solid var(--or)':''}">
+    return `<div onclick="openAdminDmThread('${role}','${id}')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:10px;${unread?'border-left:3px solid var(--or)':''}">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
-          <div style="font-weight:600;color:var(--tx)">${escapeHtml(name)}</div>
+          <div style="font-weight:600;color:var(--tx);display:flex;align-items:center;gap:6px"><span title="${roleLabel}" style="font-size:14px">${roleIcon}</span>${escapeHtml(name)}</div>
           <div style="font-size:10px;color:var(--tx3);flex-shrink:0">${dt}</div>
         </div>
         <div style="font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(senderTag+preview)}</div>
@@ -3922,11 +4027,11 @@ function renderAdminInbox(){
   }).join('');
 }
 
-function openAdminDmThread(camperId){
-  _adminDmThreadId = String(camperId);
-  // Mark every camper-sent message in this thread as read by admin.
+function openAdminDmThread(role, recipientId){
+  _adminDmThreadKey = _dmKey(role, recipientId);
+  // Mark every recipient-sent message in this thread as read by admin.
   const unreadIds = directMessages
-    .filter(m => String(m.camper_id)===String(camperId) && !m.read_by_admin && m.sender_role==='camper')
+    .filter(m => _dmRoleOf(m)===role && String(m.camper_id)===String(recipientId) && !m.read_by_admin && m.sender_role!=='admin')
     .map(m => m.id);
   if (unreadIds.length){
     Promise.all(unreadIds.map(id => supa('direct_messages','PATCH',{read_by_admin:true},`?id=eq.${id}`).catch(()=>{})))
@@ -3936,21 +4041,22 @@ function openAdminDmThread(camperId){
 }
 
 function renderAdminDmThread(){
-  if (!_adminDmThreadId) return renderAdminInbox();
+  if (!_adminDmThreadKey) return renderAdminInbox();
   const back = document.getElementById('dmInboxBackBtn');
   if (back) back.style.display = 'inline-flex';
   const pane = document.getElementById('dmAdminPane');
   if (!pane) return;
-  const c = campers.find(x => String(x.id) === String(_adminDmThreadId));
-  const name = c ? (c.first_name+' '+c.last_name) : '(unknown camper)';
-  const thread = _dmThreadFor(_adminDmThreadId);
+  const { role, id } = _dmParseKey(_adminDmThreadKey);
+  const name = _dmRecipientName(role, id);
+  const roleIcon = role === 'clinician' ? '🏀' : '👤';
+  const thread = _dmThreadFor(role, id);
   const msgs = thread.map(m => {
     const isMine = m.sender_role === 'admin';
     const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
     return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||name)} · ${dt}</div></div>`;
   }).join('') || '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages in this thread yet.</div>';
   pane.innerHTML = `
-    <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);margin-bottom:8px">${escapeHtml(name)}</div>
+    <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);margin-bottom:8px;display:flex;align-items:center;gap:6px">${roleIcon} ${escapeHtml(name)}</div>
     <div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 320px)">
       <div class="chat-messages" id="dmAdminMessages">${msgs}</div>
       <div class="chat-input-row" style="display:flex;align-items:center;gap:8px">
@@ -3958,24 +4064,25 @@ function renderAdminDmThread(){
         <button class="chat-send" onclick="sendAdminDm()">➤</button>
       </div>
     </div>`;
-  // Scroll to bottom on render
   const m = document.getElementById('dmAdminMessages');
   if (m) m.scrollTop = m.scrollHeight;
 }
 
 async function sendAdminDm(){
-  if (!_adminDmThreadId) return;
+  if (!_adminDmThreadKey) return;
   const input = document.getElementById('dmAdminInput');
   if (!input) return;
   const content = input.value.trim();
   if (!content) return;
   input.value = '';
+  const { role, id } = _dmParseKey(_adminDmThreadKey);
   const payload = {
-    camper_id: String(_adminDmThreadId),
+    camper_id: String(id),
+    recipient_role: role,
     sender_role: 'admin',
     sender_name: ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim(),
     content,
-    read_by_admin: true,   // admin obviously read what they wrote
+    read_by_admin: true,
     read_by_camper: false
   };
   try{
@@ -3983,71 +4090,139 @@ async function sendAdminDm(){
     const row = Array.isArray(r) ? r[0] : r;
     if (row) directMessages.push(row);
     renderAdminDmThread();
-    // Push the camper.
+    // Push the recipient. Push fan-out is by user_id matching the
+    // push_subscriptions row, which is set to the camper.id or staff.id
+    // at subscribe time. For clinicians we push their matching staff row
+    // by name (push_subscriptions.display_name index from Wave 3).
     try {
-      await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      const pushPayload = {
         title: `${CFG.CAMP_NAME} — Message from Admin`,
         body: content.length > 140 ? content.slice(0,137)+'…' : content,
         url: '/',
-        tag: 'dm-'+_adminDmThreadId,
-        user_id: String(_adminDmThreadId)
-      })});
+        tag: 'dm-'+id
+      };
+      if (role === 'camper'){
+        pushPayload.user_id = String(id);
+      } else {
+        // Push to staff who match this clinician name (best-effort; staff
+        // who haven't subscribed simply won't get pushed).
+        const cl = clinicians.find(x => String(x.id) === String(id));
+        if (cl){
+          const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+          const matches = (await supa('push_subscriptions','GET',null,`?select=user_id&display_name=ilike.${encodeURIComponent(norm(cl.name))}`)) || [];
+          const ids = [...new Set(matches.map(x => x.user_id).filter(Boolean))];
+          if (ids.length) pushPayload.user_ids = ids;
+        }
+      }
+      if (pushPayload.user_id || (pushPayload.user_ids && pushPayload.user_ids.length)){
+        await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pushPayload)});
+      }
     } catch(_){ }
   } catch(e){ toast('Send failed', true); input.value = content; }
 }
 
-// "+ New Message" — pick recipients, fan out
+// "+ New Message" — combined campers + clinicians, alphabetized, with search
 function openNewAdminDm(){
-  const camperOpts = [...campers]
-    .sort((a,b) => (a.last_name+a.first_name).toLowerCase().localeCompare((b.last_name+b.first_name).toLowerCase()))
-    .map(c => `<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--b2);cursor:pointer"><input type="checkbox" class="dmRecip" value="${c.id}" style="accent-color:var(--or)"><span style="font-size:13px">${escapeHtml(c.first_name+' '+c.last_name)}</span></label>`).join('');
   const wrap = document.createElement('div');
   wrap.innerHTML = `
     <div class="overlay on" id="mNewDm" style="display:flex">
-      <div class="modal" style="max-width:420px">
+      <div class="modal" style="max-width:480px">
         <div class="mhd"><div class="mtitle">NEW MESSAGE</div><button class="mclose" onclick="document.getElementById('mNewDm').remove()" type="button">✕</button></div>
         <div class="mbody">
-          <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Pick one or more campers. Each gets their own private thread.</div>
-          <div style="max-height:220px;overflow-y:auto;border:1px solid var(--b2);border-radius:var(--rs);padding:6px 10px;margin-bottom:10px">${camperOpts || '<div style="font-size:12px;color:var(--tx3);padding:8px 0">No campers</div>'}</div>
+          <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Pick one or more recipients. Each gets their own private thread.</div>
+          <div class="swrap" style="width:100%;margin-bottom:8px"><span class="sicon">🔍</span><input class="sinput" style="width:100%" type="text" id="dmNewSearch" placeholder="Search by name..." oninput="renderNewDmList(this.value)"></div>
+          <div id="dmNewList" style="max-height:280px;overflow-y:auto;border:1px solid var(--b2);border-radius:var(--rs);padding:6px 10px;margin-bottom:10px"></div>
           <textarea class="ftarea" id="dmNewContent" placeholder="Type your message..." style="min-height:80px;margin-bottom:10px"></textarea>
           <div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="document.getElementById('mNewDm').remove()" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="sendNewAdminDm()" type="button">Send</button></div>
         </div>
       </div>
     </div>`;
   document.body.appendChild(wrap.firstElementChild);
+  renderNewDmList('');
 }
+
+// Build the combined recipient list. Filter is a case-insensitive
+// substring match against the displayed name. Carries selection state
+// across re-renders by reading existing checkboxes before redraw.
+function renderNewDmList(filter){
+  const list = document.getElementById('dmNewList');
+  if (!list) return;
+  // Preserve selection across filter changes.
+  const selected = new Set(Array.from(document.querySelectorAll('#mNewDm .dmRecip:checked')).map(el => el.dataset.role+':'+el.value));
+  const norm = s => (s||'').toLowerCase().trim();
+  const q = norm(filter);
+  const camperRows = (campers||[]).map(c => ({ role:'camper', id:c.id, name:(c.first_name+' '+c.last_name), sortKey:(c.last_name||'')+'|'+(c.first_name||'') }));
+  const clinRows = (clinicians||[]).map(cl => {
+    const n = cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+    const parts = n.trim().split(/\s+/);
+    const last = parts.length>1 ? parts[parts.length-1] : n;
+    return { role:'clinician', id:cl.id, name:n, sortKey:last+'|'+n };
+  });
+  const all = [...camperRows, ...clinRows]
+    .filter(r => !q || norm(r.name).includes(q))
+    .sort((a,b) => a.sortKey.toLowerCase().localeCompare(b.sortKey.toLowerCase()));
+  if (!all.length){
+    list.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px 0">No matches</div>';
+    return;
+  }
+  list.innerHTML = all.map(r => {
+    const key = r.role+':'+r.id;
+    const checked = selected.has(key) ? 'checked' : '';
+    const badge = r.role === 'clinician'
+      ? '<span style="font-size:10px;font-weight:700;color:var(--or);background:var(--ord);border:1px solid var(--orb);border-radius:4px;padding:1px 6px;margin-left:6px;letter-spacing:.06em">CLINICIAN</span>'
+      : '';
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--b2);cursor:pointer"><input type="checkbox" class="dmRecip" value="${r.id}" data-role="${r.role}" ${checked} style="accent-color:var(--or)"><span style="font-size:13px;display:flex;align-items:center">${escapeHtml(r.name)}${badge}</span></label>`;
+  }).join('');
+}
+
 async function sendNewAdminDm(){
-  const recipIds = Array.from(document.querySelectorAll('#mNewDm .dmRecip:checked')).map(el => el.value);
+  const recips = Array.from(document.querySelectorAll('#mNewDm .dmRecip:checked'))
+    .map(el => ({ id: el.value, role: el.dataset.role }));
   const content = document.getElementById('dmNewContent').value.trim();
-  if (!recipIds.length){ toast('Pick at least one camper', true); return; }
+  if (!recips.length){ toast('Pick at least one recipient', true); return; }
   if (!content){ toast('Type a message first', true); return; }
   const senderName = ((CU?.first_name||'Admin')+(CU?.last_name?' '+CU.last_name:'')).trim();
   let sent = 0, failed = 0;
-  for (const cid of recipIds){
+  for (const r of recips){
     try{
-      const r = await supa('direct_messages','POST', {
-        camper_id: String(cid),
+      const ins = await supa('direct_messages','POST', {
+        camper_id: String(r.id),
+        recipient_role: r.role,
         sender_role: 'admin',
         sender_name: senderName,
         content,
         read_by_admin: true,
         read_by_camper: false
       }, '?select=*');
-      const row = Array.isArray(r) ? r[0] : r;
+      const row = Array.isArray(ins) ? ins[0] : ins;
       if (row) directMessages.push(row);
       sent++;
+      // Push fan-out
       try {
-        await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        const pushPayload = {
           title: `${CFG.CAMP_NAME} — Message from Admin`,
           body: content.length > 140 ? content.slice(0,137)+'…' : content,
-          url: '/', tag: 'dm-'+cid, user_id: String(cid)
-        })});
+          url: '/', tag: 'dm-'+r.id
+        };
+        if (r.role === 'camper'){ pushPayload.user_id = String(r.id); }
+        else {
+          const cl = clinicians.find(x => String(x.id) === String(r.id));
+          if (cl){
+            const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+            const matches = (await supa('push_subscriptions','GET',null,`?select=user_id&display_name=ilike.${encodeURIComponent(norm(cl.name))}`)) || [];
+            const ids = [...new Set(matches.map(x => x.user_id).filter(Boolean))];
+            if (ids.length) pushPayload.user_ids = ids;
+          }
+        }
+        if (pushPayload.user_id || (pushPayload.user_ids && pushPayload.user_ids.length)){
+          await fetch(CFG.PUSH_FN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pushPayload)});
+        }
       } catch(_){ }
       await new Promise(r => setTimeout(r, 100));
     } catch(e){ failed++; }
   }
   document.getElementById('mNewDm')?.remove();
-  toast(failed ? `Sent to ${sent} · ${failed} failed` : `📩 Sent to ${sent} camper${sent===1?'':'s'}`);
+  toast(failed ? `Sent to ${sent} · ${failed} failed` : `📩 Sent to ${sent} recipient${sent===1?'':'s'}`);
   renderAdminInbox();
 }
 
