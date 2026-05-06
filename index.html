@@ -2318,6 +2318,7 @@ function cView(v){
   if(v==='chat'){markChatRead();renderChat('Camper');renderCamperChatPane();}
   if(v==='campinfo')renderCampInfoViewer('cv');
   if(v==='schedule')renderCamperSchedule();
+  if(v==='clinicians')renderCliniciansPage('cvClinicianGrid');
 }
 function renderCamperHome(){
   document.getElementById('cwname').textContent=CU.first_name+' '+CU.last_name;
@@ -2395,6 +2396,7 @@ function sView(v){
   if(v==='schedule')renderClinicianSchedule();
   if(v==='liveeval')renderLiveEvalGameList();
   if(v==='myprofile')renderMyProfile('staff');
+  if(v==='clinicians')renderCliniciansPage('svClinicianGrid');
 }
 function populateStaffEvalForm(){
   const s=document.getElementById('seCamper');
