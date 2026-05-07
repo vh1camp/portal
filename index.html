@@ -1256,7 +1256,11 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <label class="flabel" style="margin-top:10px">Email *</label><input class="finput" id="clEmail" placeholder="tommy@example.com" type="email">
 <div class="frow" style="margin-top:0"><div><label class="flabel">Username *</label><input class="finput" id="clUser" placeholder="tnunez" style="margin-bottom:0" autocomplete="off"></div><div><label class="flabel">Password *</label><input class="finput" id="clPass" placeholder="••••••" type="password" style="margin-bottom:0" autocomplete="new-password"></div></div>
 <label class="flabel" style="margin-top:10px">Role</label><select class="finput" id="clRole"><option>Clinician</option><option>Lead Clinician</option><option>Camp Director</option></select>
-<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin-bottom:10px;cursor:pointer"><input type="checkbox" id="clSendEmail" checked style="accent-color:var(--or)"> Send login credentials email</label>
+<div class="frow" style="margin-top:0"><div><label class="flabel">City</label><input class="finput" id="clCity" placeholder="Denver" style="margin-bottom:0"></div><div><label class="flabel">State</label><input class="finput" id="clState" placeholder="CO" maxlength="2" style="margin-bottom:0"></div></div>
+<label class="flabel" style="margin-top:10px">Conference(s)</label><input class="finput" id="clConf" placeholder="RMAC, Big Sky, etc.">
+<label class="flabel" style="margin-top:10px">Photo URL</label><input class="finput" id="clPhoto" placeholder="https://..." type="url">
+<label class="flabel" style="margin-top:10px">Bio / Resume</label><textarea class="ftarea" id="clBio" placeholder="Background, experience, tournaments..." style="min-height:80px"></textarea>
+<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tx2);margin-top:10px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="clSendEmail" checked style="accent-color:var(--or)"> Send login credentials email</label>
 <div class="ferr" id="clErr" style="display:none;color:var(--red2);font-size:12px;margin-bottom:8px"></div>
 <div style="display:flex;gap:8px"><button class="btn bsec" style="flex:1" onclick="closeModal('mClinician')" type="button">Cancel</button><button class="btn bor" style="flex:1" onclick="saveClinician()" id="clSaveBtn" type="button">Save &amp; Invite</button></div>
 </div></div></div>
@@ -2847,10 +2851,18 @@ function openEditClinician(clinicianId){
   _editStaffId=staff?staff.id:null;
   document.getElementById('clFirst').value=first;
   document.getElementById('clLast').value=last;
-  document.getElementById('clEmail').value='';
+  document.getElementById('clEmail').value=cl.email||'';
   document.getElementById('clUser').value=staff?staff.username:'';
   document.getElementById('clPass').value=staff?staff.password:'';
   if(staff&&document.getElementById('clRole'))document.getElementById('clRole').value=staff.role||'Evaluator';
+  // Profile fields — these live on the clinicians table directly so the
+  // public profile cards/modal show them.
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+  set('clCity', cl.city);
+  set('clState', cl.state);
+  set('clConf', cl.conference);
+  set('clPhoto', cl.photo);
+  set('clBio', cl.bio);
   document.getElementById('clModalTitle').textContent='EDIT CLINICIAN';
   document.getElementById('clSaveBtn').textContent='Save Changes';
   document.getElementById('clSendEmail').checked=false;
@@ -2864,7 +2876,7 @@ function resetClinicianModal(){
   document.getElementById('clModalTitle').textContent='ADD CLINICIAN';
   document.getElementById('clSaveBtn').textContent='Save & Invite';
   document.getElementById('clSendEmail').checked=true;
-  ['clFirst','clLast','clEmail','clUser','clPass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['clFirst','clLast','clEmail','clUser','clPass','clCity','clState','clConf','clPhoto','clBio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
 async function saveClinician(){
@@ -2874,6 +2886,14 @@ async function saveClinician(){
   const user=document.getElementById('clUser').value.trim().toLowerCase();
   const pass=document.getElementById('clPass').value;
   const role=document.getElementById('clRole').value;
+  // New profile fields — go directly into the clinicians table so the
+  // public profile cards/modal show them.
+  const city=document.getElementById('clCity')?.value.trim()||null;
+  const state=(document.getElementById('clState')?.value.trim()||'').toUpperCase()||null;
+  const conference=document.getElementById('clConf')?.value.trim()||null;
+  const photo=document.getElementById('clPhoto')?.value.trim()||null;
+  const bio=document.getElementById('clBio')?.value.trim()||null;
+  const profileFields={ city, state, conference, photo, bio, role };
   const errEl=document.getElementById('clErr');
   errEl.style.display='none';
   if(!first||!last){errEl.textContent='First and last name required.';errEl.style.display='block';return;}
@@ -2884,9 +2904,16 @@ async function saveClinician(){
     // ── EDIT MODE ──
     if(_editClinicianId){
       if(_editStaffId){
-        await supa('staff','PATCH',{first_name:first,last_name:last,username:user,password:pass,role},`?id=eq.${_editStaffId}`);
+        await supa('staff','PATCH',{first_name:first,last_name:last,username:user,password:pass,role,city,state,phone:null,conference,bio,photo},`?id=eq.${_editStaffId}`).catch(()=>{});
       }
-      await supa('clinicians','PATCH',{name:fullName},`?id=eq.${_editClinicianId}`);
+      const clinPatch={ name:fullName, ...profileFields, email: email||null };
+      try { await supa('clinicians','PATCH', clinPatch, `?id=eq.${_editClinicianId}`); }
+      catch(_){
+        // Per-field fallback if any column is missing on clinicians
+        for (const k of Object.keys(clinPatch)){
+          try { await supa('clinicians','PATCH', { [k]: clinPatch[k] }, `?id=eq.${_editClinicianId}`); } catch(__){}
+        }
+      }
       closeModal('mClinician');
       resetClinicianModal();
       toast('Clinician updated!');
@@ -2900,7 +2927,7 @@ async function saveClinician(){
       const inClinicians=clinicians.find(c=>c.name===(first+' '+last));
       if(!inClinicians){
         await supa('staff','PATCH',{first_name:first,last_name:last,password:pass,role},`?id=eq.${existing.id}`);
-        await supa('clinicians','POST',{name:first+' '+last});
+        await supa('clinicians','POST',{name:first+' '+last, email: email||null, ...profileFields});
         closeModal('mClinician');toast('Clinician re-added!');
         resetClinicianModal();
         await loadAll();renderAdminClinicians();updateAdminStats();populateAdminForms();
@@ -2909,7 +2936,7 @@ async function saveClinician(){
       errEl.textContent='Username already taken — choose a different one.';errEl.style.display='block';return;
     }
     await supa('staff','POST',{first_name:first,last_name:last,username:user,password:pass,role});
-    await supa('clinicians','POST',{name:fullName});
+    await supa('clinicians','POST',{name:fullName, email: email||null, ...profileFields});
     if(document.getElementById('clSendEmail').checked&&email){
       try{
         await fetch(CFG.SENDGRID_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
