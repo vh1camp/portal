@@ -4077,6 +4077,37 @@ async function bumpRoomLastMessage(roomId){
   } catch(_){}
 }
 
+// Find an existing room whose members exactly match the given set (any
+// order). Used so admin tagging the same group twice reuses one thread
+// instead of creating a parallel duplicate.
+function findRoomWithExactMembers(memberTokens){
+  const target = [...memberTokens].sort().join('|');
+  return chatRooms.find(r => {
+    if (!Array.isArray(r.members) || r.members.length !== memberTokens.length) return false;
+    return [...r.members].sort().join('|') === target;
+  });
+}
+
+// Delete a chat room. Available to any participant. Cascade to messages
+// is handled by the FK on direct_messages.room_id (on delete cascade).
+async function deleteChatRoom(roomId){
+  const ok = await cf('Delete this conversation? All messages will be removed for everyone in it. This cannot be undone.', 'Delete', 'Cancel');
+  if (!ok) return;
+  try{
+    await supa('chat_rooms','DELETE',null,`?id=eq.${roomId}`);
+    chatRooms = chatRooms.filter(r => String(r.id) !== String(roomId));
+    directMessages = directMessages.filter(m => String(m.room_id) !== String(roomId));
+    toast('Conversation deleted');
+    if (CR === 'admin'){ _adminDmThreadRoomId = null; renderAdminInbox(); }
+    else if (CR === 'camper'){ _camperOpenRoomId = null; renderCamperChatPane(); }
+    else if (CR === 'staff' || CR === 'clinician'){ _staffOpenRoomId = null; renderStaffChatPane(); }
+    updateDmBadges();
+  } catch(e){
+    console.error('Delete room failed', e);
+    toast('Could not delete — try again', true);
+  }
+}
+
 function updateDmBadges(){
   // Admin badge — any unread message in any room
   const adminUnread = directMessages.some(m => !m.read_by_admin && m.sender_role!=='admin');
@@ -4202,7 +4233,10 @@ function renderAdminDmThread(){
     return `<div class="chat-msg ${isMine?'mine':'other'}"><div class="chat-bubble">${escapeHtml(m.content||'')}</div><div class="chat-meta">${isMine?'You':escapeHtml(m.sender_name||'?')} · ${dt}</div></div>`;
   }).join('') || '<div style="font-size:13px;color:var(--tx3);text-align:center;padding:20px">No messages yet.</div>';
   pane.innerHTML = `
-    <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);margin-bottom:6px;display:flex;align-items:center;gap:6px">${icon} ${escapeHtml(name)}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">
+      <div style="font-family:'Oswald',sans-serif;font-size:18px;color:var(--or);display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${icon} ${escapeHtml(name)}</div>
+      <button class="btn bred bsm" type="button" onclick="deleteChatRoom('${room.id}')" title="Delete this conversation">🗑 Delete</button>
+    </div>
     <div style="margin-bottom:8px">${memberLine}</div>
     <div style="background:var(--gray2);border:1px solid var(--b2);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:calc(100dvh - 340px)">
       <div class="chat-messages" id="dmAdminMessages">${msgsHtml}</div>
@@ -4355,8 +4389,12 @@ async function sendNewAdminDm(){
       // 1:1 — find existing room or create one
       roomId = await findOrCreate1to1Room(recips[0].role, recips[0].id);
     } else {
-      // Multi-select → ONE group room with all recipients + admin
-      roomId = await createGroupRoom(recips);
+      // Multi-select → reuse an existing group room with the same exact
+      // members so admin tagging the same set twice doesn't fork into
+      // parallel threads. Otherwise create a new one.
+      const targetTokens = ['admin', ...recips.map(p => _tokenFor(p.role, p.id))];
+      const existing = findRoomWithExactMembers(targetTokens);
+      roomId = existing ? existing.id : await createGroupRoom(recips);
     }
     if (!roomId){ toast('Could not create room', true); return; }
     const ins = await supa('direct_messages','POST', {
@@ -4456,8 +4494,9 @@ function _renderRoomThread(con, roomId, myToken, side){
   const backFn = side === 'camper' ? 'closeCamperRoom' : 'closeStaffRoom';
   const header = `<div style="padding:8px 10px;display:flex;align-items:center;gap:8px;background:var(--gray);border-bottom:1px solid var(--b2)">
     ${showBack ? `<button class="btn bsec bsm" onclick="${backFn}()" type="button">← Back</button>` : ''}
-    <span style="font-size:14px">${icon}</span>
-    <span style="font-family:'Oswald',sans-serif;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span>
+    <span style="font-size:14px;flex-shrink:0">${icon}</span>
+    <span style="font-family:'Oswald',sans-serif;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(name)}</span>
+    <button class="btn bred bsm" onclick="deleteChatRoom('${roomId}')" type="button" title="Delete this conversation" style="flex-shrink:0">🗑</button>
   </div>`;
   const msgsHtml = msgs.map(m => {
     const isMine = m.sender_role === side;
