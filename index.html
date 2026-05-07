@@ -2962,29 +2962,44 @@ function viewClinicianRankings(name){rankClinician=name;rankSort='overall';aTab(
 // and no admin_notes. Used from camper Schedule + Clinicians page so a
 // camper can see who their clinician is without seeing private feedback.
 function openClinicianBio(clinicianId){
-  const cl = clinicians.find(c => String(c.id) === String(clinicianId));
-  if (!cl){ toast('Clinician not found', true); return; }
-  const name = cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim();
-  const initials = (name.split(' ').map(w=>w[0]||'').join('')).substring(0,2).toUpperCase();
-  const imgWrap = document.getElementById('cpmImgWrap');
-  if (imgWrap){
-    imgWrap.innerHTML = cl.photo
-      ? `<img class="pmod-img" src="${cl.photo}" alt="${name}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
-      : `<div class="pmod-initials">${initials}</div>`;
+  try {
+    const cl = clinicians.find(c => String(c.id) === String(clinicianId));
+    if (!cl){ toast('Clinician not found ('+clinicianId+')', true); return; }
+    const name = cl.name || ((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+    const initials = (name.split(' ').map(w=>w[0]||'').join('')).substring(0,2).toUpperCase();
+    const imgWrap = document.getElementById('cpmImgWrap');
+    if (imgWrap){
+      imgWrap.innerHTML = cl.photo
+        ? `<img class="pmod-img" src="${cl.photo}" alt="${escapeHtml(name)}" onerror="this.outerHTML='<div class=pmod-initials>${initials}</div>'">`
+        : `<div class="pmod-initials">${initials}</div>`;
+    }
+    let body = '<div style="padding:16px 16px 0">';
+    body += `<div class="pmod-name">${escapeHtml(name)}</div>`;
+    const meta = [];
+    if (cl.role) meta.push(cl.role);
+    if (cl.conference) meta.push(cl.conference);
+    if (cl.city) meta.push(cl.city + (cl.state?', '+cl.state:''));
+    if (meta.length) body += `<div class="pmod-meta">${meta.map(escapeHtml).join(' · ')}</div>`;
+    if (cl.bio) body += `<div class="pmod-bio">${escapeHtml(cl.bio)}</div>`;
+    else body += '<div style="font-size:13px;color:var(--tx3);padding:10px 0">No bio yet.</div>';
+    body += `<div style="padding:8px 0 32px"><button class="btn bsec" style="width:100%" onclick="closeModal('mClinicianProfile')">Close</button></div>`;
+    body += '</div>';
+    const cpmBody = document.getElementById('cpmBody');
+    if (!cpmBody){ toast('Profile modal element missing — please refresh', true); return; }
+    cpmBody.innerHTML = body;
+    // Force-show the modal element directly. Bypasses any stale openModal
+    // caching and guarantees the element is visible on iOS Safari.
+    const modal = document.getElementById('mClinicianProfile');
+    if (!modal){ toast('Profile modal not in DOM — please refresh', true); return; }
+    modal.style.display = 'block';
+    void modal.offsetHeight;  // force iOS reflow
+    const scroller = document.getElementById('mClinicianProfileScroll');
+    if (scroller) scroller.scrollTop = 0;
+    document.querySelectorAll('.bnav').forEach(n => n.style.display = 'none');
+  } catch(err){
+    console.error('openClinicianBio failed', err);
+    toast('Could not open profile: ' + (err && err.message ? err.message : 'unknown error'), true);
   }
-  let body = '<div style="padding:16px 16px 0">';
-  body += `<div class="pmod-name">${escapeHtml(name)}</div>`;
-  const meta = [];
-  if (cl.role) meta.push(cl.role);
-  if (cl.conference) meta.push(cl.conference);
-  if (cl.city) meta.push(cl.city + (cl.state?', '+cl.state:''));
-  if (meta.length) body += `<div class="pmod-meta">${meta.map(escapeHtml).join(' · ')}</div>`;
-  if (cl.bio) body += `<div class="pmod-bio">${escapeHtml(cl.bio)}</div>`;
-  else body += '<div style="font-size:13px;color:var(--tx3);padding:10px 0">No bio yet.</div>';
-  body += `<div style="padding:8px 0 32px"><button class="btn bsec" style="width:100%" onclick="closeModal('mClinicianProfile')">Close</button></div>`;
-  body += '</div>';
-  document.getElementById('cpmBody').innerHTML = body;
-  openModal('mClinicianProfile');
 }
 
 // Opens a fullscreen modal showing every eval this clinician has submitted,
@@ -5381,7 +5396,7 @@ function renderCliniciansPage(containerId){
     const imgHtml = cl.photo
       ? '<img src="'+cl.photo+'" alt="'+name+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--orb)" onerror="this.style.display=\'none\'">'
       : '<div style="width:64px;height:64px;border-radius:50%;background:var(--ord);border:2px solid var(--orb);display:flex;align-items:center;justify-content:center;font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+initials+'</div>';
-    return '<div role="button" tabindex="0" onclick="openClinicianBio(\''+cl.id+'\')" style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(232,98,26,.2)"><div style="flex-shrink:0;pointer-events:none">'+imgHtml+'</div><div style="flex:1;min-width:0;pointer-events:none"><div style="font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+name+'</div>'+(cl.role?'<div style="font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</div>':'')+(cl.city?'<div style="font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</div>':'')+(cl.bio?'<div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px">'+cl.bio+'</div>':'')+(cl.conference?'<div style="font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</div>':'')+'<div style="font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</div></div></div>';
+    return '<button type="button" onclick="openClinicianBio(\''+cl.id+'\')" style="display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(232,98,26,.2);font-family:inherit;color:inherit"><span style="flex-shrink:0;pointer-events:none">'+imgHtml+'</span><span style="flex:1;min-width:0;pointer-events:none;text-align:left"><span style="display:block;font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+name+'</span>'+(cl.role?'<span style="display:block;font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</span>':'')+(cl.city?'<span style="display:block;font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</span>':'')+(cl.bio?'<span style="display:block;font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px;white-space:pre-wrap">'+cl.bio+'</span>':'')+(cl.conference?'<span style="display:block;font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</span>':'')+'<span style="display:block;font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</span></span></button>';
   }).join('');
 }
 
