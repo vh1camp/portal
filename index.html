@@ -443,6 +443,14 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .le-yn.no{background:var(--red2);border-color:var(--red2);color:#fff}
 .le-yn:disabled{opacity:.6;cursor:not-allowed}
 
+/* MESSAGE BOARD COLLAPSE CARDS */
+.mboard-card{list-style:none}
+.mboard-card>summary{list-style:none;cursor:pointer}
+.mboard-card>summary::-webkit-details-marker{display:none}
+.mboard-card>summary::marker{content:""}
+.mboard-card .mboard-chev{transition:transform .15s ease}
+.mboard-card[open] .mboard-chev{transform:rotate(180deg)}
+
 /* VOICE-TO-TEXT MIC */
 .mic-btn{background:var(--gray2);border:1px solid var(--b2);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:transform .12s,background .15s,border-color .15s}
 .mic-btn:active{transform:scale(.92)}
@@ -1166,8 +1174,14 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="stitle" style="margin-bottom:10px">📌 MESSAGE <span>BOARD</span></div>
 <div class="card" style="padding:15px;margin-bottom:14px">
 <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Post a message visible to all campers + clinicians on the Camp Info tab.</div>
-<textarea class="finput" id="mboardInput" placeholder="Type your message..." style="min-height:80px;resize:vertical;margin-bottom:8px"></textarea>
-<button class="btn bor bsm" id="mboardPostBtn" style="width:100%;justify-content:center;padding:10px;margin-bottom:10px" onclick="postMessageBoard()" type="button">Post</button>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+  <label class="flabel" style="margin:0">Subject *</label>
+  <span id="mboardSubjectCounter" style="font-size:11px;color:var(--tx3)">0 / 80</span>
+</div>
+<input type="text" class="finput" id="mboardSubjectInput" maxlength="80" placeholder="e.g., Day 2 schedule update" oninput="updateMboardPostState()" style="margin-bottom:8px">
+<label class="flabel" style="margin-bottom:4px">Body</label>
+<textarea class="finput" id="mboardInput" placeholder="Full announcement text..." style="min-height:80px;resize:vertical;margin-bottom:8px"></textarea>
+<button class="btn bor bsm" id="mboardPostBtn" style="width:100%;justify-content:center;padding:10px;margin-bottom:10px;opacity:.5" onclick="postMessageBoard()" type="button" disabled>Post</button>
 <div id="adminMessageBoard"></div>
 </div>
 <div class="stitle" style="margin-bottom:10px">⚠️ DANGER <span>ZONE</span></div>
@@ -5141,7 +5155,8 @@ async function loadMessageBoard(){
 }
 function renderMessageBoard(prefix){
   // prefix='cv' for camper view, 'sv' for staff view. Admins view from the
-  // Settings tab via renderAdminMessageBoard.
+  // Settings tab via renderAdminMessageBoard. Cards are <details>/<summary>
+  // so they collapse by default — keeps the Camp Info tab tidy during camp.
   const con = document.getElementById(prefix+'MessageBoard');
   if (!con) return;
   if (!messageBoardMessages.length){
@@ -5151,46 +5166,83 @@ function renderMessageBoard(prefix){
   con.innerHTML = `
     <div style="font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:.08em;color:var(--or);margin-bottom:8px">📌 MESSAGE BOARD</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      ${messageBoardMessages.map(m => `
-        <div style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);padding:10px 12px">
-          <div style="font-size:13px;color:var(--tx);line-height:1.5;white-space:pre-wrap">${escapeHtml(m.content||'')}</div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:6px">${m.posted_by?escapeHtml(m.posted_by)+' · ':''}${new Date(m.created_at).toLocaleString()}</div>
-        </div>`).join('')}
+      ${messageBoardMessages.map(m => {
+        const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        const subj = m.subject || ((m.content||'').slice(0,60) + ((m.content||'').length>60?'…':''));
+        const byline = (m.posted_by ? escapeHtml(m.posted_by)+' · ' : '') + dt;
+        return `<details class="mboard-card" style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);overflow:hidden">
+          <summary style="padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700;color:var(--tx);line-height:1.4">${escapeHtml(subj)}</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:4px">${byline}</div>
+            </div>
+            <span class="mboard-chev" style="font-size:18px;color:var(--tx3);flex-shrink:0;line-height:1">▾</span>
+          </summary>
+          <div style="padding:10px 12px 12px;border-top:1px solid var(--b2);font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(m.content||'')}</div>
+        </details>`;
+      }).join('')}
     </div>`;
 }
 function renderAdminMessageBoard(){
+  // Admin's view in the Settings tab: shows every post with subject as
+  // a heading, body below, and a Del button per row. No collapse — admin
+  // wants to skim everything they've posted.
   const con = document.getElementById('adminMessageBoard');
   if (!con) return;
-  const rows = messageBoardMessages.map(m => `
-    <div style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+  const rows = messageBoardMessages.map(m => {
+    const subj = m.subject || ((m.content||'').slice(0,60) + ((m.content||'').length>60?'…':''));
+    const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const byline = (m.posted_by ? escapeHtml(m.posted_by)+' · ' : '') + dt;
+    return `<div style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;color:var(--tx);line-height:1.5;white-space:pre-wrap">${escapeHtml(m.content||'')}</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:6px">${m.posted_by?escapeHtml(m.posted_by)+' · ':''}${new Date(m.created_at).toLocaleString()}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--tx);line-height:1.4">${escapeHtml(subj)}</div>
+        <div style="font-size:10px;color:var(--tx3);margin:4px 0 6px">${byline}</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(m.content||'')}</div>
       </div>
       <button class="btn bred bsm" style="flex-shrink:0" onclick="deleteMessageBoardPost('${m.id}')">Del</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   con.innerHTML = (messageBoardMessages.length
     ? `<div style="margin-bottom:8px">${rows}</div>`
     : '<div style="font-size:12px;color:var(--tx3);padding:6px 0">No messages posted yet.</div>');
 }
+function updateMboardPostState(){
+  const subEl = document.getElementById('mboardSubjectInput');
+  const counter = document.getElementById('mboardSubjectCounter');
+  const btn = document.getElementById('mboardPostBtn');
+  if (!subEl) return;
+  const len = subEl.value.length;
+  const trimmed = subEl.value.trim();
+  if (counter) counter.textContent = `${len} / 80`;
+  if (btn){
+    btn.disabled = trimmed.length === 0;
+    btn.style.opacity = trimmed.length === 0 ? '.5' : '1';
+  }
+}
 async function postMessageBoard(){
+  const subEl = document.getElementById('mboardSubjectInput');
   const ta = document.getElementById('mboardInput');
-  if (!ta) return;
+  if (!ta || !subEl) return;
+  const subject = subEl.value.trim();
   const content = ta.value.trim();
-  if (!content){ toast('Type a message first', true); return; }
+  if (!subject){ toast('Subject is required', true); return; }
+  if (!content){ toast('Type a message body first', true); return; }
   const btn = document.getElementById('mboardPostBtn');
   if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
   try{
     await supa('messages','POST',{
+      subject,
       content,
       posted_by: ((CU?.first_name||'')+' '+(CU?.last_name||'')).trim() || 'Admin'
     });
+    subEl.value = '';
     ta.value = '';
     await loadMessageBoard();
     renderAdminMessageBoard();
     toast('📌 Message posted');
-  }catch(e){ toast('Post failed', true); }
-  if (btn){ btn.disabled = false; btn.textContent = 'Post'; }
+  }catch(e){ toast('Post failed: '+(e.message||'error'), true); }
+  if (btn){ btn.textContent = 'Post'; }
+  updateMboardPostState();
 }
 async function deleteMessageBoardPost(id){
   const ok = await cf('Delete this message?', 'Delete', 'Cancel');
