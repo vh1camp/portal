@@ -1415,6 +1415,7 @@ async function loadAll(){
     await loadChat();
     await loadPushSubs();
     await loadMessageBoard();
+    _mboardSig = _mboardSignature();
     await loadDirectMessages();
     await loadChatRooms();
   }catch(e){console.error('loadAll error:',e);}
@@ -3857,6 +3858,7 @@ function startChatBackgroundPoll(){
     await loadChat();
     await loadDirectMessages();
     await loadChatRooms();
+    await refreshMessageBoardIfChanged();
     // If admin DM thread or inbox is visible, re-render.
     if (CR === 'admin'){
       const onMessages = document.getElementById('at-messages')?.classList.contains('on');
@@ -4801,6 +4803,7 @@ document.addEventListener('visibilitychange',()=>{
   loadChat().then(()=>{
     if(chatActiveSuffix)renderChatMessages(chatActiveSuffix);
   });
+  refreshMessageBoardIfChanged();
   startChatBackgroundPoll();
 });
 
@@ -5169,18 +5172,45 @@ function renderCampInfoViewer(prefix){
 
 // ═══ MESSAGE BOARD ═══
 let messageBoardMessages = [];
+let _mboardSig = '';
 async function loadMessageBoard(){
   try{
     const rows = await supa('messages','GET',null,'?order=created_at.desc&limit=100');
     messageBoardMessages = rows||[];
   }catch(e){ messageBoardMessages = []; }
 }
+function _mboardSignature(){
+  const top = messageBoardMessages[0] || {};
+  return messageBoardMessages.length + '|' + (top.id||'') + '|' + (top.created_at||'');
+}
+function _renderVisibleMessageBoard(){
+  if (CR === 'camper' && document.getElementById('cv-campinfo')?.classList.contains('on'))
+    renderMessageBoard('cv');
+  else if ((CR === 'staff' || CR === 'clinician') && document.getElementById('sv-campinfo')?.classList.contains('on'))
+    renderMessageBoard('sv');
+  else if (CR === 'admin'){
+    if (document.getElementById('at-overview')?.classList.contains('on')) renderMessageBoard('av');
+    if (document.getElementById('at-settings')?.classList.contains('on')) renderAdminMessageBoard();
+  }
+}
+async function refreshMessageBoardIfChanged(){
+  await loadMessageBoard();
+  const sig = _mboardSignature();
+  if (sig !== _mboardSig){
+    _mboardSig = sig;
+    _renderVisibleMessageBoard();
+  }
+}
+let _openMboardIds = new Set();
 function renderMessageBoard(prefix){
   // prefix='cv' for camper view, 'sv' for staff view. Admins view from the
   // Settings tab via renderAdminMessageBoard. Cards are <details>/<summary>
   // so they collapse by default — keeps the Camp Info tab tidy during camp.
   const con = document.getElementById(prefix+'MessageBoard');
   if (!con) return;
+  // Capture which cards are currently open in any board so re-render (e.g.
+  // from a poll picking up new posts) doesn't collapse what the user is reading.
+  _openMboardIds = new Set([...document.querySelectorAll('.mboard-card[open]')].map(el => el.dataset.mid).filter(Boolean));
   if (!messageBoardMessages.length){
     con.innerHTML = `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:14px;text-align:center;color:var(--tx3);font-size:13px">📌 No messages yet — check back later.</div>`;
     return;
@@ -5192,7 +5222,8 @@ function renderMessageBoard(prefix){
         const dt = new Date(m.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
         const subj = m.subject || ((m.content||'').slice(0,60) + ((m.content||'').length>60?'…':''));
         const byline = (m.posted_by ? escapeHtml(m.posted_by)+' · ' : '') + dt;
-        return `<details class="mboard-card" style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);overflow:hidden">
+        const wasOpen = _openMboardIds.has(String(m.id)) ? ' open' : '';
+        return `<details class="mboard-card" data-mid="${m.id}"${wasOpen} style="background:var(--gray);border:1px solid var(--b2);border-left:3px solid var(--or);border-radius:var(--r);overflow:hidden">
           <summary style="padding:10px 12px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:700;color:var(--tx);line-height:1.4">${escapeHtml(subj)}</div>
@@ -5260,6 +5291,7 @@ async function postMessageBoard(){
     subEl.value = '';
     ta.value = '';
     await loadMessageBoard();
+    _mboardSig = _mboardSignature();
     renderAdminMessageBoard();
     toast('📌 Message posted');
   }catch(e){ toast('Post failed: '+(e.message||'error'), true); }
@@ -5272,6 +5304,7 @@ async function deleteMessageBoardPost(id){
   try{
     await supa('messages','DELETE',null,`?id=eq.${id}`);
     await loadMessageBoard();
+    _mboardSig = _mboardSignature();
     renderAdminMessageBoard();
     toast('Removed');
   }catch(e){ toast('Error', true); }
