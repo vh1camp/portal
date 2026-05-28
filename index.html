@@ -723,6 +723,14 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="view" id="cv-clinicians">
 <div class="stitle" style="margin-bottom:14px">CAMP <span>CLINICIANS</span></div>
+<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+  <select id="cvClinicianSort" class="finput" style="width:auto;margin:0;padding:8px 11px;font-size:12px" onchange="setClinSort(this.value)">
+    <option value="name-asc">Sort: Name (A–Z)</option>
+    <option value="name-desc">Sort: Name (Z–A)</option>
+    <option value="evals-desc">Sort: Most Evals</option>
+    <option value="evals-asc">Sort: Fewest Evals</option>
+  </select>
+</div>
 <div id="cvClinicianGrid" style="display:flex;flex-direction:column;gap:12px"></div>
 </div>
 <div class="view" id="cv-campinfo">
@@ -859,6 +867,14 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="view" id="sv-clinicians">
 <div class="stitle" style="margin-bottom:14px">CAMP <span>CLINICIANS</span></div>
+<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+  <select id="svClinicianSort" class="finput" style="width:auto;margin:0;padding:8px 11px;font-size:12px" onchange="setClinSort(this.value)">
+    <option value="name-asc">Sort: Name (A–Z)</option>
+    <option value="name-desc">Sort: Name (Z–A)</option>
+    <option value="evals-desc">Sort: Most Evals</option>
+    <option value="evals-asc">Sort: Fewest Evals</option>
+  </select>
+</div>
 <div id="svClinicianGrid" style="display:flex;flex-direction:column;gap:12px"></div>
 </div>
 <div class="view" id="sv-myprofile">
@@ -5597,18 +5613,43 @@ function renderEvalTracker(){
 // ═══════════════════════════════════════════════════════
 // FEATURE 4: CLINICIANS PAGE
 // ═══════════════════════════════════════════════════════
+let _clinSortMode = 'name-asc'; // name-asc | name-desc | evals-desc | evals-asc
+function setClinSort(mode){
+  _clinSortMode = mode;
+  // Keep both dropdowns in sync (only the visible one matters, but harmless).
+  ['cvClinicianSort','svClinicianSort'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = mode;
+  });
+  renderCliniciansPage('cvClinicianGrid');
+  renderCliniciansPage('svClinicianGrid');
+}
 function renderCliniciansPage(containerId){
   const con = document.getElementById(containerId);
   if(!con) return;
-  const list = [...clinicians].sort((a,b)=>lastFirst(a).toLowerCase().localeCompare(lastFirst(b).toLowerCase()));
-  if(!list.length){ con.innerHTML='<div class="empty"><span class="ei">👥</span><div class="et">No Clinicians Yet</div></div>'; return; }
-  con.innerHTML = list.map(cl=>{
-    // Eval lookup still uses the flat name string that's stored on evaluations.clinician_name.
+  // Reflect the active sort in this view's dropdown (e.g. on first render).
+  const sortSel = document.getElementById(containerId.replace('Grid','Sort'));
+  if(sortSel && sortSel.value !== _clinSortMode) sortSel.value = _clinSortMode;
+  const enriched = clinicians.map(cl=>{
     const evalLookup = cl.name||((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+    return {
+      cl,
+      evalLookup,
+      evalCount: evaluations.filter(e=>e.clinician_name===evalLookup).length,
+      sortName: lastFirst(cl).toLowerCase()
+    };
+  });
+  enriched.sort((a,b)=>{
+    if (_clinSortMode==='name-desc')  return b.sortName.localeCompare(a.sortName);
+    if (_clinSortMode==='evals-desc') return (b.evalCount-a.evalCount) || a.sortName.localeCompare(b.sortName);
+    if (_clinSortMode==='evals-asc')  return (a.evalCount-b.evalCount) || a.sortName.localeCompare(b.sortName);
+    return a.sortName.localeCompare(b.sortName); // name-asc default
+  });
+  if(!enriched.length){ con.innerHTML='<div class="empty"><span class="ei">👥</span><div class="et">No Clinicians Yet</div></div>'; return; }
+  con.innerHTML = enriched.map(({cl, evalLookup, evalCount})=>{
     const display = lastFirst(cl);
     const initials = ((cl.first_name||evalLookup.split(' ')[0]||'')[0]||'').toUpperCase()
                    + ((cl.last_name||evalLookup.split(' ').slice(-1)[0]||'')[0]||'').toUpperCase();
-    const evalCount = evaluations.filter(e=>e.clinician_name===evalLookup).length;
     const imgHtml = cl.photo
       ? '<img src="'+cl.photo+'" alt="'+evalLookup+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--orb)" onerror="this.style.display=\'none\'">'
       : '<div style="width:64px;height:64px;border-radius:50%;background:var(--ord);border:2px solid var(--orb);display:flex;align-items:center;justify-content:center;font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+initials+'</div>';
