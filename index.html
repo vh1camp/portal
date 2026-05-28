@@ -476,9 +476,36 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 
 <script>
 let _swReg=null;
+let _swReloadPrompted=false;
+function _watchNewWorker(sw){
+  if(!sw)return;
+  sw.addEventListener('statechange',()=>{
+    // A new SW reaching "installed" while another SW already controls the
+    // page = there's an update waiting. iOS standalone PWAs frequently
+    // don't fire controllerchange, so we trigger the prompt here too.
+    if(sw.state==='installed' && navigator.serviceWorker.controller && !_swReloadPrompted){
+      _swReloadPrompted=true;
+      showUpdateBanner();
+    }
+  });
+}
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
-    try{_swReg=await navigator.serviceWorker.register('sw.js');}catch(e){}
+    try{
+      _swReg=await navigator.serviceWorker.register('sw.js');
+      if(_swReg){
+        // A SW already waiting at boot (installed in a previous session) =
+        // prompt immediately. Belt-and-braces for iOS.
+        if(_swReg.waiting && navigator.serviceWorker.controller && !_swReloadPrompted){
+          _swReloadPrompted=true;
+          showUpdateBanner();
+        }
+        // Watch the worker currently installing, if any.
+        _watchNewWorker(_swReg.installing);
+        // And anything that starts installing later.
+        _swReg.addEventListener('updatefound',()=>_watchNewWorker(_swReg.installing));
+      }
+    }catch(e){}
     maybeShowIosInstallHint();
     // Forced update check whenever the app becomes visible (returning from
     // background) and once every 30 min. Catches the case where iOS PWAs
@@ -491,7 +518,6 @@ if('serviceWorker' in navigator){
   // When a new service worker takes control, surface a banner so the user
   // can refresh without losing in-progress state. We don't auto-reload —
   // a clinician mid-Live-Eval would lose their unsaved scores.
-  let _swReloadPrompted=false;
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
     if(_swReloadPrompted)return;
     _swReloadPrompted=true;
