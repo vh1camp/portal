@@ -2770,7 +2770,7 @@ function renderAdminCampers(filter){
     const ce=evaluations.filter(e=>e.camper_id===c.id);
     const avg=ce.length?(ce.reduce((s,e)=>s+(e.overall_score||0),0)/ce.length).toFixed(1):'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile('${c.id}')">${c.first_name} ${c.last_name}</span></td><td>${formatLocation(c)}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}" type="button">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}" type="button">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')" type="button">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report" type="button">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')" type="button">Del</button></div></td>`;
+    tr.innerHTML=`<td class="tdr ${i<3?'top':''}">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px" onclick="openCamperProfile('${c.id}')">${lastFirst(c)}</span></td><td>${formatLocation(c)}</td><td style="font-size:11px">${c.email||''}</td><td><span class="bdg bdo">${c.pin||'—'}</span></td><td><span class="bdg bdgray">${c.type||'Non-Staff'}</span></td><td>${ce.length}</td><td><span style="font-family:Oswald,sans-serif;font-size:17px;color:var(--or)">${avg}</span></td><td><div style="display:flex;gap:4px;flex-wrap:wrap">${c.email?`<button class="btn bsec bsm" title="Send PIN" onclick="sendPinEmail('${c.id}')" id="pinbtn-${c.id}" type="button">PIN</button>`:''}<button class="btn bsec bsm" title="Reset PIN" onclick="resetCamperPin('${c.id}')" id="resetpinbtn-${c.id}" type="button">Reset PIN</button><button class="btn bsec bsm" onclick="editCamper('${c.id}')" type="button">Edit</button><button class="btn bsec bsm" onclick="generateCamperReport('${c.id}')" title="PDF Report" type="button">📄</button><button class="btn bred bsm" onclick="delCamper('${c.id}')" type="button">Del</button></div></td>`;
     tbody.appendChild(tr);
   });
   // Keep arrow in sync
@@ -2872,7 +2872,7 @@ function renderAdminClinicians(filter){
   const list=q?clinicians.filter(c=>(c.name||'').toLowerCase().includes(q)):clinicians;
   if(!list.length){tbody.innerHTML='<tr><td colspan="3"><div class="empty"><span class="ei">🔍</span><div class="et">No matches</div></div></td></tr>';return;}
   tbody.innerHTML='';
-  list.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline" onclick="openClinicianDetail('${c.id}')">${c.name}</span></td><td><div style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')" type="button">Edit</button><button class="btn bred bsm" onclick="delClinician('${c.id}')" type="button">Del</button></div></td>`;tbody.appendChild(tr);});
+  list.forEach((c,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="tdr">${i+1}</td><td class="tdm"><span style="cursor:pointer;color:var(--or);text-decoration:underline" onclick="openClinicianDetail('${c.id}')">${lastFirst(c)}</span></td><td><div style="display:flex;gap:6px"><button class="btn bsec bsm" onclick="openEditClinician('${c.id}')" type="button">Edit</button><button class="btn bred bsm" onclick="delClinician('${c.id}')" type="button">Del</button></div></td>`;tbody.appendChild(tr);});
 }
 let _editClinicianId=null;
 let _editStaffId=null;
@@ -3312,7 +3312,7 @@ function renderProfiles(search){
     return`<div class="pcard" onclick="openProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
-        <div class="pcard-name">${c.first_name} ${c.last_name}</div>
+        <div class="pcard-name">${lastFirst(c)}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
         <div class="pcard-eval">${evalStatus}</div>
       </div>
@@ -4756,6 +4756,24 @@ function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 // "City, ST" string (or a freeform address) from an older import path.
 // Display de-dups so we render "Pueblo, CO" instead of
 // "Pueblo, CO, Pueblo, CO" without needing a data migration.
+// Format any person record as "Last, First". Supports rows with split
+// first_name/last_name (campers, staff) and rows with a single name column
+// (clinicians). Falls back gracefully on single-word or empty names.
+function lastFirst(rec){
+  if (!rec) return '';
+  const fn = (rec.first_name||'').trim();
+  const ln = (rec.last_name||'').trim();
+  if (ln || fn){
+    if (!ln) return fn;
+    if (!fn) return ln;
+    return ln + ', ' + fn;
+  }
+  const n = (rec.name||'').trim();
+  if (!n) return '';
+  const i = n.lastIndexOf(' ');
+  if (i < 0) return n;
+  return n.slice(i+1) + ', ' + n.slice(0,i);
+}
 function formatLocation(c){
   const city = (c?.city||'').trim();
   const state = (c?.state||'').trim();
@@ -5556,20 +5574,19 @@ function renderEvalTracker(){
 function renderCliniciansPage(containerId){
   const con = document.getElementById(containerId);
   if(!con) return;
-  const list = [...clinicians].sort((a,b)=>{
-    const an = a.name||(a.first_name||'')+' '+(a.last_name||'');
-    const bn = b.name||(b.first_name||'')+' '+(b.last_name||'');
-    return an.localeCompare(bn);
-  });
+  const list = [...clinicians].sort((a,b)=>lastFirst(a).toLowerCase().localeCompare(lastFirst(b).toLowerCase()));
   if(!list.length){ con.innerHTML='<div class="empty"><span class="ei">👥</span><div class="et">No Clinicians Yet</div></div>'; return; }
   con.innerHTML = list.map(cl=>{
-    const name = cl.name||(cl.first_name||'')+' '+(cl.last_name||'');
-    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-    const evalCount = evaluations.filter(e=>e.clinician_name===name).length;
+    // Eval lookup still uses the flat name string that's stored on evaluations.clinician_name.
+    const evalLookup = cl.name||((cl.first_name||'')+' '+(cl.last_name||'')).trim();
+    const display = lastFirst(cl);
+    const initials = ((cl.first_name||evalLookup.split(' ')[0]||'')[0]||'').toUpperCase()
+                   + ((cl.last_name||evalLookup.split(' ').slice(-1)[0]||'')[0]||'').toUpperCase();
+    const evalCount = evaluations.filter(e=>e.clinician_name===evalLookup).length;
     const imgHtml = cl.photo
-      ? '<img src="'+cl.photo+'" alt="'+name+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--orb)" onerror="this.style.display=\'none\'">'
+      ? '<img src="'+cl.photo+'" alt="'+evalLookup+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--orb)" onerror="this.style.display=\'none\'">'
       : '<div style="width:64px;height:64px;border-radius:50%;background:var(--ord);border:2px solid var(--orb);display:flex;align-items:center;justify-content:center;font-family:\'Oswald\',sans-serif;font-size:22px;color:var(--or)">'+initials+'</div>';
-    return '<button type="button" onclick="openClinicianBio(\''+cl.id+'\')" style="display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(232,98,26,.2);font-family:inherit;color:inherit"><span style="flex-shrink:0;pointer-events:none">'+imgHtml+'</span><span style="flex:1;min-width:0;pointer-events:none;text-align:left"><span style="display:block;font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+name+'</span>'+(cl.role?'<span style="display:block;font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</span>':'')+(cl.city?'<span style="display:block;font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</span>':'')+(cl.bio?'<span style="display:block;font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px;white-space:pre-wrap">'+cl.bio+'</span>':'')+(cl.conference?'<span style="display:block;font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</span>':'')+'<span style="display:block;font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</span></span></button>';
+    return '<button type="button" onclick="openClinicianBio(\''+cl.id+'\')" style="display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:16px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(232,98,26,.2);font-family:inherit;color:inherit"><span style="flex-shrink:0;pointer-events:none">'+imgHtml+'</span><span style="flex:1;min-width:0;pointer-events:none;text-align:left"><span style="display:block;font-family:\'Oswald\',sans-serif;font-size:18px;color:var(--white);letter-spacing:.04em">'+display+'</span>'+(cl.role?'<span style="display:block;font-size:11px;color:var(--or);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:2px">'+cl.role+'</span>':'')+(cl.city?'<span style="display:block;font-size:12px;color:var(--tx2);margin-top:3px">📍 '+cl.city+(cl.state?', '+cl.state:'')+'</span>':'')+(cl.bio?'<span style="display:block;font-size:12px;color:var(--tx2);line-height:1.6;margin-top:8px;white-space:pre-wrap">'+cl.bio+'</span>':'')+(cl.conference?'<span style="display:block;font-size:11px;color:var(--tx3);margin-top:6px">🏀 '+cl.conference+'</span>':'')+'<span style="display:block;font-size:10px;color:var(--tx3);margin-top:6px">'+evalCount+' evaluation'+(evalCount!==1?'s':'')+'</span></span></button>';
   }).join('');
 }
 
