@@ -2527,7 +2527,7 @@ function renderStaffRoster(filter){
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
-        <div class="pcard-name">${c.first_name} ${c.last_name}</div>
+        <div class="pcard-name">${c.last_name}, ${c.first_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
       </div>
     </div>`;
@@ -4822,7 +4822,7 @@ function renderCamperProfiles(search){
     return`<div class="pcard" onclick="openCamperProfile('${c.id}')">
       <div class="pcard-img">${imgHtml}</div>
       <div class="pcard-body">
-        <div class="pcard-name">${c.first_name} ${c.last_name}</div>
+        <div class="pcard-name">${c.last_name}, ${c.first_name}</div>
         ${loc?`<div class="pcard-loc">${loc}</div>`:''}
       </div>
     </div>`;
