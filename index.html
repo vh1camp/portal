@@ -1442,24 +1442,30 @@ async function supa(table,method,body,query){
 
 // ═══ DATA LOADING ═══
 async function loadAll(){
-  await loadSchedule();
+  // Everything in this block is independent; fan it out as one parallel
+  // batch instead of the old sequential chain that dragged login out to
+  // several seconds once chat/DM/messages tables filled up mid-camp.
   try{
-    [campers,evaluations,clinicians,staffList]=await Promise.all([
+    const settingsLoader=async()=>{
+      const sets=await supa('settings','GET',null,'');
+      settings={};(sets||[]).forEach(s=>settings[s.key]=s.value);
+    };
+    const [c,e,cl,st]=await Promise.all([
       supa('campers','GET',null,'?order=last_name.asc'),
       supa('evaluations','GET',null,'?order=created_at.desc'),
       supa('clinicians','GET',null,'?order=name.asc'),
-      supa('staff','GET',null,'?order=last_name.asc')
+      supa('staff','GET',null,'?order=last_name.asc'),
+      loadSchedule(),
+      loadCampDocs(),
+      settingsLoader(),
+      loadChat(),
+      loadPushSubs(),
+      loadMessageBoard(),
+      loadDirectMessages(),
+      loadChatRooms()
     ]);
-    campers=campers||[];evaluations=evaluations||[];clinicians=clinicians||[];staffList=staffList||[];
-    await loadCampDocs();
-    const sets=await supa('settings','GET',null,'');
-    settings={};(sets||[]).forEach(s=>settings[s.key]=s.value);
-    await loadChat();
-    await loadPushSubs();
-    await loadMessageBoard();
-    _mboardSig = _mboardSignature();
-    await loadDirectMessages();
-    await loadChatRooms();
+    campers=c||[];evaluations=e||[];clinicians=cl||[];staffList=st||[];
+    _mboardSig=_mboardSignature();
   }catch(e){console.error('loadAll error:',e);}
 }
 
