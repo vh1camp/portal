@@ -595,7 +595,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="lform" id="lfCamper">
 <label class="fl">Last Name</label><input class="fi" id="lcLast" placeholder="Smith" autocomplete="off">
-<label class="fl">PIN</label><input class="fi fi-pin" id="lcPin" type="password" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="off">
+<label class="fl">PIN</label><input class="fi fi-pin" id="lcPin" type="password" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();loginCamper();}">
 <button class="lbtn" type="button" onclick="loginCamper()">ENTER CAMP</button>
 <div class="lerr" id="lcErr"></div>
 <button type="button" onclick="toggleForgotPin()" style="background:none;border:none;color:var(--or);font-size:13px;text-decoration:underline;cursor:pointer;padding:8px 0;margin-top:4px;font-family:'Source Sans 3',sans-serif">Forgot your PIN?</button>
@@ -608,7 +608,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 <div class="lform" id="lfStaff" style="display:none">
 <label class="fl">Username</label><input class="fi" id="lsUser" placeholder="username" autocomplete="off">
-<label class="fl">Password</label><input class="fi" id="lsPass" type="password" placeholder="••••••" autocomplete="off">
+<label class="fl">Password</label><input class="fi" id="lsPass" type="password" placeholder="••••••" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();loginStaff();}">
 <button class="lbtn" type="button" onclick="loginStaff()">SIGN IN</button>
 <div class="lerr" id="lsErr"></div>
 <button type="button" onclick="toggleForgotClinician()" style="background:none;border:none;color:var(--or);font-size:13px;text-decoration:underline;cursor:pointer;padding:8px 0;margin-top:4px;font-family:'Source Sans 3',sans-serif">Forgot your password?</button>
@@ -620,8 +620,8 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 </div>
 </div>
 <div class="lform" id="lfAdmin" style="display:none">
-<label class="fl">Admin Password</label><input class="fi" id="laPass" type="password" placeholder="••••••" autocomplete="off">
-<button class="lbtn" type="button" onclick="loginAdmin()">ACCESS ADMIN</button>
+<label class="fl">Admin Password</label><input class="fi" id="laPass" type="password" placeholder="••••••" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();loginAdmin();}">
+<button class="lbtn" type="button" id="laBtn" onclick="loginAdmin()">ACCESS ADMIN</button>
 <div class="lerr" id="laErr"></div>
 </div>
 </div>
@@ -2165,10 +2165,17 @@ async function loginStaff(){
 async function loginAdmin(){
   const pass=document.getElementById('laPass').value;
   if(!pass){showLoginErr('laErr','Enter password.');return;}
-  await loadAll();
-  const adminPw=settings['admin_password'];
-  if(pass!==adminPw){showLoginErr('laErr','Incorrect password.');return;}
-  CU={first_name:'Admin',last_name:''};CR='admin';enterApp();
+  const btn=document.getElementById('laBtn');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in…';}
+  try{
+    await loadAll();
+    const adminPw=settings['admin_password'];
+    if(pass!==adminPw){showLoginErr('laErr','Incorrect password.');return;}
+    CU={first_name:'Admin',last_name:''};CR='admin';enterApp();
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=orig||'ACCESS ADMIN';}
+  }
 }
 function showLoginErr(id,msg){const e=document.getElementById(id);e.textContent=msg;e.style.display='block';}
 
