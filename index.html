@@ -596,7 +596,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="lform" id="lfCamper">
 <label class="fl">Last Name</label><input class="fi" id="lcLast" placeholder="Smith" autocomplete="off">
 <label class="fl">PIN</label><input class="fi fi-pin" id="lcPin" type="password" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();loginCamper();}">
-<button class="lbtn" type="button" onclick="loginCamper()">ENTER CAMP</button>
+<button class="lbtn" type="button" id="lcBtn" onclick="loginCamper()">ENTER CAMP</button>
 <div class="lerr" id="lcErr"></div>
 <button type="button" onclick="toggleForgotPin()" style="background:none;border:none;color:var(--or);font-size:13px;text-decoration:underline;cursor:pointer;padding:8px 0;margin-top:4px;font-family:'Source Sans 3',sans-serif">Forgot your PIN?</button>
 <div id="forgotPinPanel" style="display:none;background:rgba(255,255,255,.6);border:1px solid #e6dfd4;border-radius:10px;padding:12px;margin-top:8px">
@@ -609,7 +609,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="lform" id="lfStaff" style="display:none">
 <label class="fl">Username</label><input class="fi" id="lsUser" placeholder="username" autocomplete="off">
 <label class="fl">Password</label><input class="fi" id="lsPass" type="password" placeholder="••••••" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();loginStaff();}">
-<button class="lbtn" type="button" onclick="loginStaff()">SIGN IN</button>
+<button class="lbtn" type="button" id="lsBtn" onclick="loginStaff()">SIGN IN</button>
 <div class="lerr" id="lsErr"></div>
 <button type="button" onclick="toggleForgotClinician()" style="background:none;border:none;color:var(--or);font-size:13px;text-decoration:underline;cursor:pointer;padding:8px 0;margin-top:4px;font-family:'Source Sans 3',sans-serif">Forgot your password?</button>
 <div id="forgotClinicianPanel" style="display:none;background:rgba(255,255,255,.6);border:1px solid #e6dfd4;border-radius:10px;padding:12px;margin-top:8px">
@@ -2215,6 +2215,9 @@ async function loginCamper(){
   const last=document.getElementById('lcLast').value.trim();
   const pin=document.getElementById('lcPin').value.trim();
   if(!last||!pin){showLoginErr('lcErr','Enter last name and PIN.');return;}
+  const btn=document.getElementById('lcBtn');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in…';}
   try{
     const rows=await supa('campers','GET',null,
       `?select=${CAMPER_COLS}&last_name=ilike.${encodeURIComponent(last)}&pin=eq.${encodeURIComponent(pin)}&limit=1`);
@@ -2224,12 +2227,18 @@ async function loginCamper(){
     saveSession('camper', c.id);
     enterApp();
     loadAllInBackground();
-  }catch(e){showLoginErr('lcErr','Login failed — try again.');}
+  }catch(e){showLoginErr('lcErr','Login failed — try again.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=orig||'ENTER CAMP';}
+  }
 }
 async function loginStaff(){
   const user=document.getElementById('lsUser').value.trim();
   const pass=document.getElementById('lsPass').value;
   if(!user||!pass){showLoginErr('lsErr','Enter username and password.');return;}
+  const btn=document.getElementById('lsBtn');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in…';}
   try{
     const rows=await supa('staff','GET',null,
       `?select=${STAFF_COLS}&username=ilike.${encodeURIComponent(user)}&password=eq.${encodeURIComponent(pass)}&limit=1`);
@@ -2239,7 +2248,10 @@ async function loginStaff(){
     saveSession('staff', s.id);
     enterApp();
     loadAllInBackground();
-  }catch(e){showLoginErr('lsErr','Login failed — try again.');}
+  }catch(e){showLoginErr('lsErr','Login failed — try again.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=orig||'SIGN IN';}
+  }
 }
 async function loginAdmin(){
   const pass=document.getElementById('laPass').value;
