@@ -4829,9 +4829,11 @@ function formatLocation(c){
   return city + ', ' + state;
 }
 
-// Trigger a real download of a stored doc (data URL → Blob URL). iOS Safari
-// and the installed PWA refuse to download huge data: URLs from <a download>,
-// so convert to a Blob first.
+// Open a stored doc in a new tab. Android Chrome's <a download> path fires an
+// Intent with a null MIME on blob downloads ("Error opening file (null)"), so
+// we open the blob URL inline instead — the browser's built-in PDF viewer
+// renders it and offers its own download/share controls. Falls back to an
+// anchor if the popup is blocked.
 function downloadCampDoc(id){
   const doc=campDocs.find(d=>String(d.id)===String(id));
   if(!doc){toast('Document not found',true);return;}
@@ -4839,18 +4841,20 @@ function downloadCampDoc(id){
     const m=String(doc.data||'').match(/^data:([^;]+);base64,(.+)$/);
     if(!m){toast('Document is corrupted',true);return;}
     const mime=m[1]||'application/octet-stream';
-    const b64=m[2];
-    const bin=atob(b64);
-    const len=bin.length;
-    const bytes=new Uint8Array(len);
-    for(let i=0;i<len;i++)bytes[i]=bin.charCodeAt(i);
+    const bin=atob(m[2]);
+    const bytes=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
     const blob=new Blob([bytes],{type:mime});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=doc.name||'document';
-    document.body.appendChild(a);a.click();
-    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},500);
-  }catch(e){console.error('Doc download failed',e);toast('Download failed',true);}
+    const win=window.open(url,'_blank');
+    if(!win){
+      const a=document.createElement('a');
+      a.href=url;a.target='_blank';a.rel='noopener';a.download=doc.name||'document';
+      document.body.appendChild(a);a.click();
+      setTimeout(()=>document.body.removeChild(a),500);
+    }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){console.error('Doc open failed',e);toast('Open failed',true);}
 }
 
 // Pause chat polling when tab is hidden; resume + catch up when it becomes visible again
@@ -5226,7 +5230,7 @@ function renderCampInfoViewer(prefix){
         <span style="font-size:22px">📄</span>
         <div><div style="font-weight:600;color:var(--tx);font-size:13px">${escapeHtml(doc.name)}</div><div style="font-size:11px;color:var(--tx3)">Posted ${new Date(doc.uploaded_at).toLocaleDateString()}</div></div>
       </div>
-      <button class="btn bor bsm" onclick="downloadCampDoc('${doc.id}')" type="button">⬇ Download</button>
+      <button class="btn bor bsm" onclick="downloadCampDoc('${doc.id}')" type="button">View</button>
     </div>`).join('');
 }
 
