@@ -1402,15 +1402,20 @@ function readSession(){
 async function tryAutoLogin(){
   const s = readSession();
   if (!s) return false;
-  try { await loadAll(); } catch(e){ return false; }
-  let user = null;
-  if (s.role === 'camper') user = (campers||[]).find(c => String(c.id) === s.id);
-  else if (s.role === 'staff') user = (staffList||[]).find(x => String(x.id) === s.id);
-  if (!user) { clearSession(); return false; }
-  CU = user;
-  CR = s.role;
-  enterApp();
-  return true;
+  try {
+    // Targeted fetch of just the saved user's row — keeps returning-user
+    // boot snappy. The full loadAll runs in the background after enterApp.
+    const table = s.role === 'camper' ? 'campers' : 'staff';
+    const cols = s.role === 'camper' ? CAMPER_COLS : STAFF_COLS;
+    const rows = await supa(table,'GET',null,`?select=${cols}&id=eq.${encodeURIComponent(s.id)}&limit=1`);
+    const user = rows && rows[0];
+    if (!user) { clearSession(); return false; }
+    CU = user;
+    CR = s.role;
+    enterApp();
+    loadAllInBackground();
+    return true;
+  } catch(e){ return false; }
 }
 // Boot: try to restore a session. If no session or the user was deleted,
 // fall back to the standard login screen.
@@ -1441,6 +1446,15 @@ async function supa(table,method,body,query){
 }
 
 // ═══ DATA LOADING ═══
+// Camper / clinician / staff photos are stored inline as base64 data URLs in
+// the `photo` column. They dominate the payload on every login (multi-MB
+// when camp is full), so the initial fetch excludes them and a background
+// pass fills them in afterwards. Render code already falls back to initials
+// when photo is null, so the brief gap is graceful.
+const CAMPER_COLS='id,first_name,last_name,email,phone,city,state,pin,levels,rmac,is_returning,bio,conference,type,created_at';
+const CLINICIAN_COLS='id,name,email,phone,bio,title,created_at';
+const STAFF_COLS='id,first_name,last_name,username,password,title,role,email,created_at';
+
 async function loadAll(){
   // Everything in this block is independent; fan it out as one parallel
   // batch instead of the old sequential chain that dragged login out to
@@ -1451,10 +1465,10 @@ async function loadAll(){
       settings={};(sets||[]).forEach(s=>settings[s.key]=s.value);
     };
     const [c,e,cl,st]=await Promise.all([
-      supa('campers','GET',null,'?order=last_name.asc'),
+      supa('campers','GET',null,`?select=${CAMPER_COLS}&order=last_name.asc`),
       supa('evaluations','GET',null,'?order=created_at.desc'),
-      supa('clinicians','GET',null,'?order=name.asc'),
-      supa('staff','GET',null,'?order=last_name.asc'),
+      supa('clinicians','GET',null,`?select=${CLINICIAN_COLS}&order=name.asc`),
+      supa('staff','GET',null,`?select=${STAFF_COLS}&order=last_name.asc`),
       loadSchedule(),
       loadCampDocs(),
       settingsLoader(),
@@ -1466,7 +1480,53 @@ async function loadAll(){
     ]);
     campers=c||[];evaluations=e||[];clinicians=cl||[];staffList=st||[];
     _mboardSig=_mboardSignature();
+    loadProfilePhotosInBackground();
   }catch(e){console.error('loadAll error:',e);}
+}
+
+async function loadAllInBackground(){
+  await loadAll();
+  // Re-trigger the currently active view so it picks up freshly-loaded data
+  // (camp info messages, profiles, evaluations, etc.) without the user
+  // having to navigate away and back.
+  try{
+    if(CR==='camper'){
+      const a=document.querySelector('#pCamper .view.on');
+      if(a) cView(a.id.replace('cv-',''));
+    } else if(CR==='staff'){
+      const a=document.querySelector('#pStaff .view.on');
+      if(a) sView(a.id.replace('sv-',''));
+      if(typeof populateStaffEvalForm==='function') populateStaffEvalForm();
+    } else if(CR==='admin'){
+      if(typeof populateAdminForms==='function') populateAdminForms();
+      const cur=document.querySelector('.atab.on');
+      if(cur) aTab(cur.id.replace('atab-',''), cur);
+    }
+  }catch(e){console.warn('Post-loadAll refresh error',e);}
+}
+
+async function loadProfilePhotosInBackground(){
+  // Merge photos into already-loaded campers / clinicians / staff arrays.
+  // Errors are swallowed — missing photos are harmless (initials fallback).
+  const merge=(arr,rows)=>{
+    if(!arr||!rows)return;
+    const m=new Map(rows.map(r=>[String(r.id),r.photo]));
+    arr.forEach(x=>{ if(m.has(String(x.id))) x.photo=m.get(String(x.id))||null; });
+  };
+  try{
+    const [cp,clp,sp]=await Promise.all([
+      supa('campers','GET',null,'?select=id,photo'),
+      supa('clinicians','GET',null,'?select=id,photo'),
+      supa('staff','GET',null,'?select=id,photo')
+    ]);
+    merge(campers,cp); merge(clinicians,clp); merge(staffList,sp);
+    // Patch the logged-in user's own copy so their profile pic shows up
+    // without waiting for a navigation.
+    if(CU&&CU.id){
+      const src = CR==='camper'?campers : CR==='staff'?staffList : null;
+      if(src){ const me=src.find(x=>String(x.id)===String(CU.id)); if(me&&me.photo) CU.photo=me.photo; }
+    }
+  }catch(e){console.warn('Photo background load failed',e);}
 }
 
 // ═══ PUSH NOTIFICATIONS ═══
@@ -2146,27 +2206,40 @@ function switchLoginTab(tab){
 }
 document.querySelectorAll('#ltabs button').forEach(b=>b.addEventListener('click',function(){switchLoginTab(this.dataset.tab);}));
 
+// Login does a tiny targeted query just to verify credentials, calls
+// enterApp() immediately so the UI flips to the portal, then kicks off
+// the full loadAll() in the background. Once loadAll resolves, we
+// re-render the active tab so any data-dependent view fills in (camp
+// info messages, profiles, schedule, etc).
 async function loginCamper(){
-  const last=document.getElementById('lcLast').value.trim().toLowerCase();
+  const last=document.getElementById('lcLast').value.trim();
   const pin=document.getElementById('lcPin').value.trim();
   if(!last||!pin){showLoginErr('lcErr','Enter last name and PIN.');return;}
-  await loadAll();
-  const c=campers.find(x=>x.last_name.toLowerCase()===last&&x.pin===pin);
-  if(!c){showLoginErr('lcErr','Invalid credentials.');return;}
-  CU=c;CR='camper';
-  saveSession('camper', c.id);
-  enterApp();
+  try{
+    const rows=await supa('campers','GET',null,
+      `?select=${CAMPER_COLS}&last_name=ilike.${encodeURIComponent(last)}&pin=eq.${encodeURIComponent(pin)}&limit=1`);
+    const c=rows&&rows[0];
+    if(!c){showLoginErr('lcErr','Invalid credentials.');return;}
+    CU=c;CR='camper';
+    saveSession('camper', c.id);
+    enterApp();
+    loadAllInBackground();
+  }catch(e){showLoginErr('lcErr','Login failed — try again.');}
 }
 async function loginStaff(){
-  const user=document.getElementById('lsUser').value.trim().toLowerCase();
+  const user=document.getElementById('lsUser').value.trim();
   const pass=document.getElementById('lsPass').value;
   if(!user||!pass){showLoginErr('lsErr','Enter username and password.');return;}
-  await loadAll();
-  const s=staffList.find(x=>x.username.toLowerCase()===user&&x.password===pass);
-  if(!s){showLoginErr('lsErr','Invalid credentials.');return;}
-  CU=s;CR='staff';
-  saveSession('staff', s.id);
-  enterApp();
+  try{
+    const rows=await supa('staff','GET',null,
+      `?select=${STAFF_COLS}&username=ilike.${encodeURIComponent(user)}&password=eq.${encodeURIComponent(pass)}&limit=1`);
+    const s=rows&&rows[0];
+    if(!s){showLoginErr('lsErr','Invalid credentials.');return;}
+    CU=s;CR='staff';
+    saveSession('staff', s.id);
+    enterApp();
+    loadAllInBackground();
+  }catch(e){showLoginErr('lsErr','Login failed — try again.');}
 }
 async function loginAdmin(){
   const pass=document.getElementById('laPass').value;
@@ -2175,10 +2248,13 @@ async function loginAdmin(){
   const orig=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in…';}
   try{
-    await loadAll();
-    const adminPw=settings['admin_password'];
-    if(pass!==adminPw){showLoginErr('laErr','Incorrect password.');return;}
-    CU={first_name:'Admin',last_name:''};CR='admin';enterApp();
+    const rows=await supa('settings','GET',null,'?key=eq.admin_password&select=value&limit=1');
+    const adminPw=rows&&rows[0]&&rows[0].value;
+    if(!adminPw||pass!==adminPw){showLoginErr('laErr','Incorrect password.');return;}
+    CU={first_name:'Admin',last_name:''};CR='admin';
+    enterApp();
+    loadAllInBackground();
+  }catch(e){showLoginErr('laErr','Login failed — try again.');
   }finally{
     if(btn){btn.disabled=false;btn.textContent=orig||'ACCESS ADMIN';}
   }
