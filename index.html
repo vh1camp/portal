@@ -4834,11 +4834,14 @@ function formatLocation(c){
 // we open the blob URL inline instead — the browser's built-in PDF viewer
 // renders it and offers its own download/share controls. Falls back to an
 // anchor if the popup is blocked.
-function downloadCampDoc(id){
-  const doc=campDocs.find(d=>String(d.id)===String(id));
-  if(!doc){toast('Document not found',true);return;}
+async function downloadCampDoc(id){
+  const meta=campDocs.find(d=>String(d.id)===String(id));
+  if(!meta){toast('Document not found',true);return;}
+  toast('Loading…');
   try{
-    const m=String(doc.data||'').match(/^data:([^;]+);base64,(.+)$/);
+    const rows=await supa('camp_docs','GET',null,`?id=eq.${id}&select=data`);
+    const data=rows&&rows[0]&&rows[0].data;
+    const m=String(data||'').match(/^data:([^;]+);base64,(.+)$/);
     if(!m){toast('Document is corrupted',true);return;}
     const mime=m[1]||'application/octet-stream';
     const bin=atob(m[2]);
@@ -4849,7 +4852,7 @@ function downloadCampDoc(id){
     const win=window.open(url,'_blank');
     if(!win){
       const a=document.createElement('a');
-      a.href=url;a.target='_blank';a.rel='noopener';a.download=doc.name||'document';
+      a.href=url;a.target='_blank';a.rel='noopener';a.download=meta.name||'document';
       document.body.appendChild(a);a.click();
       setTimeout(()=>document.body.removeChild(a),500);
     }
@@ -5185,8 +5188,11 @@ async function saveMyProfile(role){
 let campDocs=[];
 
 async function loadCampDocs(){
+  // Metadata only — the base64 `data` column can be multi-MB per row and was
+  // making every login hang while it downloaded the full PDFs. `data` is
+  // fetched on demand by downloadCampDoc()/emailCampDocs() instead.
   try{
-    const docs=await supa('camp_docs','GET',null,'?order=uploaded_at.asc');
+    const docs=await supa('camp_docs','GET',null,'?select=id,name,uploaded_at&order=uploaded_at.asc');
     campDocs=docs||[];
   }catch(e){console.warn('Camp docs load error',e);}
 }
@@ -5410,8 +5416,20 @@ async function emailCampDocs(){
   const emails=campers.map(c=>c.email).filter(Boolean);
   if(!emails.length){toast('No camper emails found',true);return;}
   const statusEl=document.getElementById('campInfoEmailStatus');
+  statusEl.textContent='Loading documents…';
+  // campDocs only carries metadata now — pull each selected doc's `data`
+  // column on demand so we can inline it as a download link in the email.
+  const hydrated=[];
+  for(const d of selected){
+    try{
+      const rows=await supa('camp_docs','GET',null,`?id=eq.${d.id}&select=data`);
+      const data=rows&&rows[0]&&rows[0].data;
+      if(data) hydrated.push({name:d.name,data});
+    }catch(err){console.warn('Doc fetch failed for',d.name,err);}
+  }
+  if(!hydrated.length){statusEl.textContent='✕ Failed to load documents';toast('Failed to load documents',true);return;}
   statusEl.textContent='Sending...';
-  const docLinks=selected.map(d=>`<p>📄 <strong>${d.name}</strong><br><a href="${d.data}" download="${d.name}" style="color:#E8621A">Download ${d.name}</a></p>`).join('');
+  const docLinks=hydrated.map(d=>`<p>📄 <strong>${d.name}</strong><br><a href="${d.data}" download="${d.name}" style="color:#E8621A">Download ${d.name}</a></p>`).join('');
   let sent=0;
   for(const email of emails){
     try{
