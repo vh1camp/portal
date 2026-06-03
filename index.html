@@ -1406,8 +1406,7 @@ async function tryAutoLogin(){
     // Targeted fetch of just the saved user's row — keeps returning-user
     // boot snappy. The full loadAll runs in the background after enterApp.
     const table = s.role === 'camper' ? 'campers' : 'staff';
-    const cols = s.role === 'camper' ? CAMPER_COLS : STAFF_COLS;
-    const rows = await supa(table,'GET',null,`?select=${cols}&id=eq.${encodeURIComponent(s.id)}&limit=1`);
+    const rows = await supa(table,'GET',null,`?id=eq.${encodeURIComponent(s.id)}&limit=1`);
     const user = rows && rows[0];
     if (!user) { clearSession(); return false; }
     CU = user;
@@ -1446,15 +1445,6 @@ async function supa(table,method,body,query){
 }
 
 // ═══ DATA LOADING ═══
-// Camper / clinician / staff photos are stored inline as base64 data URLs in
-// the `photo` column. They dominate the payload on every login (multi-MB
-// when camp is full), so the initial fetch excludes them and a background
-// pass fills them in afterwards. Render code already falls back to initials
-// when photo is null, so the brief gap is graceful.
-const CAMPER_COLS='id,first_name,last_name,email,phone,city,state,pin,levels,rmac,is_returning,bio,conference,type,created_at';
-const CLINICIAN_COLS='id,name,email,phone,bio,title,created_at';
-const STAFF_COLS='id,first_name,last_name,username,password,title,role,email,created_at';
-
 async function loadAll(){
   // Everything in this block is independent; fan it out as one parallel
   // batch instead of the old sequential chain that dragged login out to
@@ -1465,10 +1455,10 @@ async function loadAll(){
       settings={};(sets||[]).forEach(s=>settings[s.key]=s.value);
     };
     const [c,e,cl,st]=await Promise.all([
-      supa('campers','GET',null,`?select=${CAMPER_COLS}&order=last_name.asc`),
+      supa('campers','GET',null,'?order=last_name.asc'),
       supa('evaluations','GET',null,'?order=created_at.desc'),
-      supa('clinicians','GET',null,`?select=${CLINICIAN_COLS}&order=name.asc`),
-      supa('staff','GET',null,`?select=${STAFF_COLS}&order=last_name.asc`),
+      supa('clinicians','GET',null,'?order=name.asc'),
+      supa('staff','GET',null,'?order=last_name.asc'),
       loadSchedule(),
       loadCampDocs(),
       settingsLoader(),
@@ -1480,7 +1470,6 @@ async function loadAll(){
     ]);
     campers=c||[];evaluations=e||[];clinicians=cl||[];staffList=st||[];
     _mboardSig=_mboardSignature();
-    loadProfilePhotosInBackground();
   }catch(e){console.error('loadAll error:',e);}
 }
 
@@ -1503,30 +1492,6 @@ async function loadAllInBackground(){
       if(cur) aTab(cur.id.replace('atab-',''), cur);
     }
   }catch(e){console.warn('Post-loadAll refresh error',e);}
-}
-
-async function loadProfilePhotosInBackground(){
-  // Merge photos into already-loaded campers / clinicians / staff arrays.
-  // Errors are swallowed — missing photos are harmless (initials fallback).
-  const merge=(arr,rows)=>{
-    if(!arr||!rows)return;
-    const m=new Map(rows.map(r=>[String(r.id),r.photo]));
-    arr.forEach(x=>{ if(m.has(String(x.id))) x.photo=m.get(String(x.id))||null; });
-  };
-  try{
-    const [cp,clp,sp]=await Promise.all([
-      supa('campers','GET',null,'?select=id,photo'),
-      supa('clinicians','GET',null,'?select=id,photo'),
-      supa('staff','GET',null,'?select=id,photo')
-    ]);
-    merge(campers,cp); merge(clinicians,clp); merge(staffList,sp);
-    // Patch the logged-in user's own copy so their profile pic shows up
-    // without waiting for a navigation.
-    if(CU&&CU.id){
-      const src = CR==='camper'?campers : CR==='staff'?staffList : null;
-      if(src){ const me=src.find(x=>String(x.id)===String(CU.id)); if(me&&me.photo) CU.photo=me.photo; }
-    }
-  }catch(e){console.warn('Photo background load failed',e);}
 }
 
 // ═══ PUSH NOTIFICATIONS ═══
@@ -2220,7 +2185,7 @@ async function loginCamper(){
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in…';}
   try{
     const rows=await supa('campers','GET',null,
-      `?select=${CAMPER_COLS}&last_name=ilike.${encodeURIComponent(last)}&pin=eq.${encodeURIComponent(pin)}&limit=1`);
+      `?last_name=ilike.${encodeURIComponent(last)}&pin=eq.${encodeURIComponent(pin)}&limit=1`);
     const c=rows&&rows[0];
     if(!c){showLoginErr('lcErr','Invalid credentials.');return;}
     CU=c;CR='camper';
@@ -2241,7 +2206,7 @@ async function loginStaff(){
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Signing in…';}
   try{
     const rows=await supa('staff','GET',null,
-      `?select=${STAFF_COLS}&username=ilike.${encodeURIComponent(user)}&password=eq.${encodeURIComponent(pass)}&limit=1`);
+      `?username=ilike.${encodeURIComponent(user)}&password=eq.${encodeURIComponent(pass)}&limit=1`);
     const s=rows&&rows[0];
     if(!s){showLoginErr('lsErr','Invalid credentials.');return;}
     CU=s;CR='staff';
