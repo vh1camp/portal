@@ -3254,7 +3254,15 @@ function openClinicianDetail(clinicianId){
         const tag = isAbsent ? '<span style="font-size:10px;color:var(--red2);font-weight:700;letter-spacing:.06em;margin-left:6px">DNP</span>'
                   : isInProgress ? '<span style="font-size:10px;color:var(--or);font-weight:700;letter-spacing:.06em;margin-left:6px">DRAFT</span>'
                   : '';
-        body += `<div style="border-top:1px solid var(--b2);padding-top:8px;margin-top:8px;font-size:11px;color:var(--tx3)">${slotMeta.map(escapeHtml).join(' · ')||'—'}${tag}</div>`;
+        const overallStr = ev.overall_score!=null ? Number(ev.overall_score).toFixed(1) : '—';
+        body += `<div style="border-top:1px solid var(--b2);margin-top:8px">`;
+        body += `<div style="padding:8px 0 0;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px" onclick="toggleCRev(this.parentElement)">`;
+        body += `<div style="font-size:11px;color:var(--tx3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${slotMeta.map(escapeHtml).join(' · ')||'—'}${tag}</div>`;
+        body += `<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">`;
+        body += `<div style="font-family:'Oswald',sans-serif;font-size:16px;color:var(--or);line-height:1">${overallStr}</div>`;
+        body += `<span data-car style="font-size:12px;color:var(--tx3);width:12px;text-align:center">▾</span>`;
+        body += `</div></div>`;
+        body += `<div data-det style="display:none;padding-top:8px">`;
         if (!isAbsent){
           CFG.CATS.forEach(cat => {
             const k = catKey(cat);
@@ -3263,9 +3271,6 @@ function openClinicianDetail(clinicianId){
             const pct = (v/5)*100;
             body += `<div class="pmod-bar-row"><span class="pmod-bar-lbl">${escapeHtml(cat)}</span><div class="pmod-bar-bg"><div class="pmod-bar-fill" style="width:${pct}%"></div></div><span class="pmod-bar-val">${v}</span></div>`;
           });
-          if (ev.overall_score != null){
-            body += `<div style="margin-top:6px;font-size:11px;color:var(--tx3)">Overall <strong style="color:var(--or)">${Number(ev.overall_score).toFixed(1)}</strong></div>`;
-          }
         }
         if (ev.comments && ev.comments.trim()){
           body += `<div style="margin-top:8px;background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>`;
@@ -3273,6 +3278,7 @@ function openClinicianDetail(clinicianId){
         if (ev.admin_notes && ev.admin_notes.trim()){
           body += `<div style="margin-top:8px;background:rgba(0,0,0,.04);border-left:3px solid #b91c1c;padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap"><div style="font-size:10px;font-weight:700;color:#b91c1c;letter-spacing:.08em;margin-bottom:4px">🔒 ADMIN ONLY</div>${escapeHtml(ev.admin_notes)}</div>`;
         }
+        body += `</div></div>`;
       });
       body += '</div>';
     });
@@ -5062,10 +5068,20 @@ function openCamperProfile(id,evalContext){
         const tag = isAbsent ? '<span style="font-size:10px;color:var(--red2);font-weight:700;letter-spacing:.06em;margin-left:6px">DNP</span>'
                   : isInProgress ? '<span style="font-size:10px;color:var(--or);font-weight:700;letter-spacing:.06em;margin-left:6px">DRAFT</span>'
                   : '';
-        body += `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:10px">`;
-        body += `<div style="font-family:'Oswald',sans-serif;font-size:15px;color:var(--tx);margin-bottom:4px">${escapeHtml(ev.clinician_name||'(unknown clinician)')}</div>`;
-        body += `<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">${slotMeta.map(escapeHtml).join(' · ')||'—'}${tag}</div>`;
+        const overallStr = ev.overall_score!=null ? Number(ev.overall_score).toFixed(1) : '—';
+        body += `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);margin-bottom:8px;overflow:hidden">`;
+        body += `<div style="padding:12px;cursor:pointer;user-select:none" onclick="toggleCRev(this.parentElement)">`;
+        body += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">`;
+        body += `<div style="font-family:'Oswald',sans-serif;font-size:15px;color:var(--tx);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(ev.clinician_name||'(unknown clinician)')}</div>`;
+        body += `<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">`;
+        body += `<div style="font-family:'Oswald',sans-serif;font-size:20px;color:var(--or);line-height:1">${overallStr}</div>`;
+        body += `<span data-car style="font-size:12px;color:var(--tx3);width:12px;text-align:center">▾</span>`;
+        body += `</div></div>`;
+        body += `<div style="font-size:11px;color:var(--tx3)">${slotMeta.map(escapeHtml).join(' · ')||'—'}${tag}</div>`;
+        body += `</div>`;
+        body += `<div data-det style="display:none;padding:0 12px 12px;border-top:1px solid var(--b2)">`;
         if(!isAbsent){
+          body += `<div style="padding-top:10px">`;
           CFG.CATS.forEach(cat => {
             const k = catKey(cat);
             const v = ev.scores?.[k];
@@ -5073,17 +5089,15 @@ function openCamperProfile(id,evalContext){
             const pct = (v/5)*100;
             body += `<div class="pmod-bar-row"><span class="pmod-bar-lbl">${escapeHtml(cat)}</span><div class="pmod-bar-bg"><div class="pmod-bar-fill" style="width:${pct}%"></div></div><span class="pmod-bar-val">${v}</span></div>`;
           });
-          if(ev.overall_score!=null){
-            body += `<div style="margin-top:6px;font-size:11px;color:var(--tx3)">Overall <strong style="color:var(--or)">${Number(ev.overall_score).toFixed(1)}</strong></div>`;
-          }
+          body += `</div>`;
         }
         if(ev.comments && ev.comments.trim()){
-          body += `<div style="margin-top:8px;background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>`;
+          body += `<div style="margin-top:10px;background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>`;
         }
         if(ev.admin_notes && ev.admin_notes.trim()){
           body += `<div style="margin-top:8px;background:rgba(0,0,0,.04);border-left:3px solid #b91c1c;padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap"><div style="font-size:10px;font-weight:700;color:#b91c1c;letter-spacing:.08em;margin-bottom:4px">🔒 ADMIN ONLY</div>${escapeHtml(ev.admin_notes)}</div>`;
         }
-        body += `</div>`;
+        body += `</div></div>`;
       });
     }
     body += `</div>`;
