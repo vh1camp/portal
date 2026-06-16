@@ -3307,7 +3307,7 @@ function renderAdminRankings(){
   else sorted.sort((a,b)=>(b.catAverages[rankSort]||0)-(a.catAverages[rankSort]||0));
   const con=document.getElementById('arankcon');
   if(!sorted.length){con.innerHTML='<div class="empty"><span class="ei">'+(rankSort==='top10'?'⭐':rankSort==='rmac'?'✅':'📊')+'</span><div class="et">'+(rankSort==='top10'?'No Top 10 campers yet':rankSort==='rmac'?'No RMAC Ready campers yet':'No evaluations yet')+'</div></div>';return;}
-  con.innerHTML=sorted.map((e,idx)=>{const rc=idx<3?'r'+(idx+1):'';const bars=CFG.CATS.map(cat=>{const v=e.catAverages[cat]||0;const p=(v/5)*100;return`<div class="rank-bar-row"><span class="rank-bar-lbl">${cat}</span><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${p}%"></div></div><span class="rank-bar-val">${v.toFixed(1)}</span></div>`;}).join('');let tags='';if(e.rmac)tags+='<span class="bdg bdgrn">RMAC</span>';if(e.conference)tags+='<span class="bdg bdo">Conference</span>';if(e.top10)tags+='<span class="bdg bdgold">Top 10</span>';return`<div class="rank-card ${rc}"><div class="rank-num">${idx+1}</div><div class="rank-info"><div class="rank-name">${e.camper.first_name} ${e.camper.last_name}</div><div class="rank-det">${e.evalCount} eval${e.evalCount!==1?'s':''} · ${e.clinicians.join(', ')}</div>${tags?`<div class="rank-tags">${tags}</div>`:''}<div class="rank-bars">${bars}</div></div><div class="rank-avg">${e.overall.toFixed(1)}</div></div>`;}).join('');
+  con.innerHTML=sorted.map((e,idx)=>{const rc=idx<3?'r'+(idx+1):'';const bars=CFG.CATS.map(cat=>{const v=e.catAverages[cat]||0;const p=(v/5)*100;return`<div class="rank-bar-row"><span class="rank-bar-lbl">${cat}</span><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${p}%"></div></div><span class="rank-bar-val">${v.toFixed(1)}</span></div>`;}).join('');let tags='';if(e.rmac)tags+='<span class="bdg bdgrn">RMAC</span>';if(e.conference)tags+='<span class="bdg bdo">Conference</span>';if(e.top10)tags+='<span class="bdg bdgold">Top 10</span>';return`<div class="rank-card ${rc}" onclick="openCamperProfile('${e.camper.id}')" style="cursor:pointer"><div class="rank-num">${idx+1}</div><div class="rank-info"><div class="rank-name">${e.camper.first_name} ${e.camper.last_name}</div><div class="rank-det">${e.evalCount} eval${e.evalCount!==1?'s':''} · ${e.clinicians.join(', ')}</div>${tags?`<div class="rank-tags">${tags}</div>`:''}<div class="rank-bars">${bars}</div></div><div class="rank-avg">${e.overall.toFixed(1)}</div></div>`;}).join('');
 }
 
 // ═══ SETTINGS ═══
@@ -5041,6 +5041,53 @@ function openCamperProfile(id,evalContext){
   if(cPhone) body+=`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs);margin-bottom:8px"><span style="font-size:14px">📞</span><a href="${cTel}" style="font-size:13px;color:var(--or);text-decoration:none">${cPhone}</a></div>`;
   else body+=`<div style="font-size:12px;color:var(--tx3);padding:10px 12px;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs);margin-bottom:8px">No phone on file</div>`;
   body+=`</div>`;
+  // ADMIN ONLY: list every evaluation this camper has received, with
+  // clinician comments AND admin-only notes inline. Lets the admin
+  // review all feedback for a camper in one place without clicking
+  // through individual eval rows.
+  if(CR==='admin'){
+    const myE = evaluations.filter(e => e.camper_id === c.id);
+    body += `<div style="padding:0 16px 16px"><div class="pmod-sec" style="font-family:'Oswald',sans-serif;font-size:13px;color:var(--or);letter-spacing:.08em;margin-bottom:8px">EVALUATIONS · ${myE.length}</div>`;
+    if(!myE.length){
+      body += '<div style="font-size:13px;color:var(--tx3);padding:8px 0">No evaluations submitted yet.</div>';
+    } else {
+      const sortedE = myE.slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+      sortedE.forEach(ev => {
+        const slotMeta=[];
+        if(ev.eval_date)slotMeta.push(ev.eval_date);
+        if(ev.court)slotMeta.push('Court '+ev.court);
+        if(ev.eval_time)slotMeta.push(ev.eval_time);
+        const isAbsent=ev.status==='absent';
+        const isInProgress=ev.status==='in_progress';
+        const tag = isAbsent ? '<span style="font-size:10px;color:var(--red2);font-weight:700;letter-spacing:.06em;margin-left:6px">DNP</span>'
+                  : isInProgress ? '<span style="font-size:10px;color:var(--or);font-weight:700;letter-spacing:.06em;margin-left:6px">DRAFT</span>'
+                  : '';
+        body += `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;margin-bottom:10px">`;
+        body += `<div style="font-family:'Oswald',sans-serif;font-size:15px;color:var(--tx);margin-bottom:4px">${escapeHtml(ev.clinician_name||'(unknown clinician)')}</div>`;
+        body += `<div style="font-size:11px;color:var(--tx3);margin-bottom:8px">${slotMeta.map(escapeHtml).join(' · ')||'—'}${tag}</div>`;
+        if(!isAbsent){
+          CFG.CATS.forEach(cat => {
+            const k = catKey(cat);
+            const v = ev.scores?.[k];
+            if(v==null) return;
+            const pct = (v/5)*100;
+            body += `<div class="pmod-bar-row"><span class="pmod-bar-lbl">${escapeHtml(cat)}</span><div class="pmod-bar-bg"><div class="pmod-bar-fill" style="width:${pct}%"></div></div><span class="pmod-bar-val">${v}</span></div>`;
+          });
+          if(ev.overall_score!=null){
+            body += `<div style="margin-top:6px;font-size:11px;color:var(--tx3)">Overall <strong style="color:var(--or)">${Number(ev.overall_score).toFixed(1)}</strong></div>`;
+          }
+        }
+        if(ev.comments && ev.comments.trim()){
+          body += `<div style="margin-top:8px;background:var(--gray2);border-left:3px solid var(--or);padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap">${escapeHtml(ev.comments)}</div>`;
+        }
+        if(ev.admin_notes && ev.admin_notes.trim()){
+          body += `<div style="margin-top:8px;background:rgba(0,0,0,.04);border-left:3px solid #b91c1c;padding:8px 10px;font-size:13px;color:var(--tx2);line-height:1.5;white-space:pre-wrap"><div style="font-size:10px;font-weight:700;color:#b91c1c;letter-spacing:.08em;margin-bottom:4px">🔒 ADMIN ONLY</div>${escapeHtml(ev.admin_notes)}</div>`;
+        }
+        body += `</div>`;
+      });
+    }
+    body += `</div>`;
+  }
   // If opened from clinician schedule, show Evaluate button with pre-filled context
   if(evalContext){
     const [court,timeSlot,day]=evalContext.split('|');
