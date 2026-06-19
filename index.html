@@ -1148,10 +1148,11 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
   <div class="stitle" style="margin:0">EVAL <span>TRACKER</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
     <button class="btn bsec bsm" onclick="remindAllUnfinishedClinicians()" type="button">✉️ Remind All</button>
-    <button class="btn bor bsm" onclick="renderEvalTracker()" type="button">🔄 Refresh</button>
+    <button class="btn bor bsm" onclick="loadPushSubs().then(renderEvalTracker)" type="button">🔄 Refresh</button>
   </div>
 </div>
 <div id="etSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px"></div>
+<div id="etNotifPanel" style="margin-bottom:18px"></div>
 <div id="etClinicianPanel" style="margin-bottom:18px"></div>
 <div style="margin-bottom:10px">
   <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -5852,6 +5853,7 @@ function renderEvalTracker(){
       '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--or)">'+noEval+'</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Not Evaluated</div></div>'+
       '<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:12px;text-align:center"><div style="font-family:\'Oswald\',sans-serif;font-size:28px;color:var(--or)">'+(total?Math.round(evaluated/total*100):0)+'%</div><div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em">Complete</div></div>';
   }
+  renderEvalTrackerNotifAudit();
   renderEvalTrackerByClinician();
   let list = [...campers].sort((a,b)=>(a.last_name+a.first_name).localeCompare(b.last_name+b.first_name));
   if(_evalFilter==='none') list = list.filter(c=>!evaluations.some(e=>e.camper_id===c.id));
@@ -6305,6 +6307,123 @@ function renderEvalTrackerByClinician(){
   });
   html += '</div>';
   con.innerHTML = html;
+}
+
+// ── ADMIN: Push notification audit ──────────────────────
+// Push subscriptions are device-bound: admin can't enable them remotely.
+// This card surfaces who's not subscribed so admin can chase them.
+// Data comes from the cached pushSubNames Set (filled by loadPushSubs()
+// during loadAll and refreshed when admin taps Refresh on this tab).
+function renderEvalTrackerNotifAudit(){
+  const con = document.getElementById('etNotifPanel');
+  if (!con) return;
+  if (!clinicians.length){ con.innerHTML = ''; return; }
+  const all = clinicians.slice().sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  const subscribed = all.filter(cl => isNameSubscribed(cl.name));
+  const unsubscribed = all.filter(cl => !isNameSubscribed(cl.name));
+  const subPct = all.length ? Math.round(subscribed.length / all.length * 100) : 0;
+  const barColor = subPct === 100 ? 'var(--grn)' : subPct >= 75 ? 'var(--or)' : 'var(--red2)';
+  const emailable = unsubscribed.filter(cl => (cl.email||'').includes('@'));
+  const headerBtn = emailable.length
+    ? `<button class="btn bor bsm" onclick="emailAllUnsubscribedClinicians()" type="button">✉️ Email ${emailable.length} unsubscribed</button>`
+    : '';
+  let html = `<div style="background:var(--gray);border:1px solid var(--b2);border-radius:var(--r);padding:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:.08em;color:var(--or)">🔔 NOTIFICATIONS AUDIT</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${subscribed.length} of ${all.length} clinicians subscribed · ${subPct}%</div>
+      </div>
+      ${headerBtn}
+    </div>
+    <div style="height:6px;background:var(--gray3);border-radius:3px;overflow:hidden;margin-bottom:10px"><div style="height:100%;width:${subPct}%;background:${barColor};border-radius:3px"></div></div>`;
+  if (!unsubscribed.length){
+    html += '<div style="font-size:12px;color:var(--grn);font-weight:700">✓ Every clinician has push notifications enabled.</div>';
+  } else {
+    const openAttr = subPct < 100 ? 'open' : '';
+    html += `<details ${openAttr}>
+      <summary style="cursor:pointer;font-size:12px;color:var(--red2);font-weight:700;margin-bottom:8px;list-style:none">⚠️ ${unsubscribed.length} clinician${unsubscribed.length===1?'':'s'} not subscribed — tap to view</summary>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px">`;
+    unsubscribed.forEach(cl => {
+      const hasEmail = (cl.email||'').includes('@');
+      const emailNote = hasEmail
+        ? `<div style="font-size:11px;color:var(--tx3);margin-top:2px;word-break:break-all">${escapeHtml(cl.email)}</div>`
+        : `<div style="font-size:11px;color:var(--red2);font-style:italic;margin-top:2px">no email on file — chase in person</div>`;
+      const btn = hasEmail
+        ? `<button class="btn bsec bsm" onclick="emailClinicianEnableNotifications('${(cl.name||'').replace(/'/g, "\\'")}')" type="button" style="flex-shrink:0">✉️ Remind</button>`
+        : '';
+      html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--gray2);border:1px solid var(--b2);border-radius:var(--rs)">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:13px;color:var(--tx);font-weight:600">🔕 ${escapeHtml(cl.name||'—')}</div>
+          ${emailNote}
+        </div>
+        ${btn}
+      </div>`;
+    });
+    html += '</div></details>';
+  }
+  html += '</div>';
+  con.innerHTML = html;
+}
+
+// Sends the "enable push notifications" instruction email to one clinician.
+// Returns { ok, reason } so batch callers can summarize without per-row toasts.
+async function _sendNotifReminderEmail(cl){
+  const email = (cl && cl.email || '').trim();
+  if (!email.includes('@')) return { ok:false, reason:'no email' };
+  const first = (cl.name||'').split(' ')[0] || '';
+  const html = `<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;font-family:Arial,sans-serif;color:#1a1a1a;border:1px solid #e0ddd8">
+    <h2 style="color:#000;margin:0 0 12px;font-size:20px">${CFG.CAMP_NAME}</h2>
+    <p style="color:#333;margin:0 0 12px">Hi ${escapeHtml(first)},</p>
+    <p style="color:#333;margin:0 0 12px">We're not seeing your device set up for push notifications yet. Please enable them so you get pings when a new game lands, a message comes in, or an eval needs your attention.</p>
+    <p style="color:#333;margin:0 0 8px"><strong>How to enable:</strong></p>
+    <ol style="color:#333;margin:0 0 16px;padding-left:20px;line-height:1.6">
+      <li>Open the VH1 Camp app on your phone.</li>
+      <li>Tap the <strong>🔔 Notify</strong> button in the top-right.</li>
+      <li>Approve the notification prompt.</li>
+    </ol>
+    <p style="color:#555;font-size:13px;margin:0 0 8px"><strong>iPhone users:</strong> push notifications only work after the app is added to the Home Screen. In Safari, tap the Share button → <em>Add to Home Screen</em>, then open VH1 Camp from the home-screen icon and tap 🔔 Notify.</p>
+    <p style="color:#999;font-size:11px;margin-top:20px">${CFG.CAMP_NAME}</p>
+  </div>`;
+  try{
+    const r = await fetch(CFG.SENDGRID_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ to: email, from: CFG.FROM_EMAIL, subject: `${CFG.CAMP_NAME} — Please enable push notifications`, html })
+    });
+    const data = await r.json().catch(()=>({}));
+    const success = r.ok && data.success !== false && data.ok !== false;
+    return { ok: success, reason: success ? '' : 'send failed' };
+  } catch(e){
+    return { ok:false, reason: e.message || 'network' };
+  }
+}
+
+async function emailClinicianEnableNotifications(name){
+  const norm = s => (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const cl = clinicians.find(c => norm(c.name) === norm(name));
+  if (!cl){ toast('Clinician not found', true); return; }
+  const result = await _sendNotifReminderEmail(cl);
+  const first = (cl.name||'').split(' ')[0] || '';
+  if (result.ok) toast(`✓ Reminder emailed to ${first}`);
+  else if (result.reason === 'no email') toast('No email on file for this clinician', true);
+  else toast('Email failed: '+result.reason, true);
+}
+
+async function emailAllUnsubscribedClinicians(){
+  const unsubscribed = clinicians.filter(cl => !isNameSubscribed(cl.name));
+  const emailable = unsubscribed.filter(cl => (cl.email||'').includes('@'));
+  if (!emailable.length){ toast('No unsubscribed clinicians have an email on file', true); return; }
+  const skipped = unsubscribed.length - emailable.length;
+  const skipNote = skipped > 0 ? `\n\n(${skipped} skipped — no email on file. Chase those in person.)` : '';
+  const ok = await cf(`Email push-notification instructions to ${emailable.length} unsubscribed clinician${emailable.length===1?'':'s'}?${skipNote}`, 'Send', 'Cancel');
+  if (!ok) return;
+  let sent = 0, failed = 0;
+  for (const cl of emailable){
+    const r = await _sendNotifReminderEmail(cl);
+    if (r.ok) sent++; else failed++;
+    await new Promise(t => setTimeout(t, 150));
+  }
+  toast(failed ? `Sent ${sent}, ${failed} failed` : `✓ Reminder sent to ${sent} clinician${sent===1?'':'s'}`);
 }
 
 // ── ADMIN: Switch day ────────────────────────────────────
