@@ -259,6 +259,12 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 
 /* FILTER CHIPS */
 .fchips{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.rank-filter-select{display:none;width:100%;padding:10px 14px;font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:.06em;background:var(--gray);border:1px solid var(--b2);border-radius:var(--rs);color:var(--tx);cursor:pointer}
+.rank-filter-chips{display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:640px){
+  .rank-filter-chips{display:none}
+  .rank-filter-select{display:block}
+}
 .fchip{padding:7px 14px;border-radius:20px;border:1px solid var(--b3);background:transparent;color:var(--tx2);font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:.06em;cursor:pointer;transition:all .2s}
 .fchip:hover{border-color:var(--or);color:var(--or)}
 .fchip.on{background:var(--or);color:#000;border-color:var(--or)}
@@ -3475,8 +3481,21 @@ function renderAdminRankings(){
   const fr=document.getElementById('rankFilter');fr.innerHTML='';
   // Clinician filter indicator
   if(rankClinician){const clr=document.createElement('div');clr.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--tx2)';clr.innerHTML=`Showing: <strong style="color:var(--or)">${rankClinician}</strong>'s evaluations &nbsp;<button class="btn bsec bsm" onclick="rankClinician=null;renderAdminRankings()">✕ Clear</button>`;fr.appendChild(clr);}
-  const chipWrap=document.createElement('div');chipWrap.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
-  ['overall',...CFG.CATS,'top10','rmac'].forEach(cat=>{const c=document.createElement('button');c.className='fchip'+(cat===rankSort?' on':'');c.textContent=cat==='overall'?'Overall':cat==='top10'?'Top 10':cat==='rmac'?'RMAC Ready':cat;c.onclick=()=>{rankSort=cat;renderAdminRankings();};chipWrap.appendChild(c);});
+  const opts = [['overall','Overall'], ...CFG.CATS.map(c=>[c,c]), ['top10','Top 10'], ['rmac','RMAC Ready']];
+  // Mobile-only <select>: collapses the 9 filter chips to a dropdown on
+  // narrow viewports. Desktop keeps the chip strip via @media (max-width:640px).
+  const sel = document.createElement('select');
+  sel.className = 'rank-filter-select';
+  opts.forEach(([val,lbl]) => {
+    const o = document.createElement('option');
+    o.value = val; o.textContent = lbl;
+    if (val === rankSort) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => { rankSort = sel.value; renderAdminRankings(); };
+  fr.appendChild(sel);
+  const chipWrap=document.createElement('div');chipWrap.className='rank-filter-chips';
+  opts.forEach(([val,lbl])=>{const c=document.createElement('button');c.className='fchip'+(val===rankSort?' on':'');c.textContent=lbl;c.onclick=()=>{rankSort=val;renderAdminRankings();};chipWrap.appendChild(c);});
   fr.appendChild(chipWrap);
   const cs=buildCamperScores();
   let sorted=Object.values(cs);
