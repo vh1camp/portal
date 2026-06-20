@@ -472,6 +472,31 @@ td{padding:9px 12px;border-bottom:1px solid var(--b1);vertical-align:middle;colo
 .dir-bio ul{margin:0;padding-left:18px;color:#dcdcd6;font-size:13px;line-height:1.6}
 .dir-bio ul li{margin-bottom:7px}
 .dir-bio ul li:last-child{margin-bottom:0}
+/* Print view used by the camper "Download / Save as PDF" flow. The overlay
+   takes over the page when @media print fires; everything else is hidden so
+   the browser's Save-as-PDF captures only the eval summary.            */
+#printOverlay{position:fixed;inset:0;background:#fff;color:#000;z-index:9999;overflow:auto;padding:24px}
+#printOverlay .pv-content{max-width:780px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a}
+#printOverlay .pv-h1{font-family:'Oswald',Arial,sans-serif;font-size:26px;letter-spacing:.04em;margin:0 0 4px;color:#000}
+#printOverlay .pv-meta{font-size:13px;color:#555;margin-bottom:18px}
+#printOverlay .pv-section{font-family:'Oswald',Arial,sans-serif;font-size:13px;letter-spacing:.08em;color:#E8621A;margin:18px 0 6px;text-transform:uppercase}
+#printOverlay .pv-card{border:1px solid #d4d0c8;border-radius:6px;padding:12px 14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid}
+#printOverlay .pv-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px}
+#printOverlay .pv-row-lbl{width:110px;text-align:right;color:#555;flex-shrink:0}
+#printOverlay .pv-row-val{font-weight:600;color:#000}
+#printOverlay .pv-quote{border-left:3px solid #E8621A;background:#faf8f4;padding:8px 10px;margin-top:8px;font-size:13px;line-height:1.45;white-space:pre-wrap}
+#printOverlay .pv-quote.crew{border-left-color:#16a34a}
+#printOverlay .pv-quote-lbl{font-size:10px;letter-spacing:.08em;font-weight:700;color:#E8621A;margin-bottom:4px;text-transform:uppercase}
+#printOverlay .pv-quote.crew .pv-quote-lbl{color:#16a34a}
+#printOverlay .pv-toolbar{position:sticky;top:0;background:#fff;padding:0 0 12px;display:flex;gap:8px;justify-content:flex-end;border-bottom:1px solid #e0ddd8;margin-bottom:16px}
+#printOverlay .pv-btn{font-family:'Oswald',Arial,sans-serif;font-size:13px;letter-spacing:.08em;padding:8px 14px;border-radius:6px;border:1px solid #1a1a1a;background:#1a1a1a;color:#fff;cursor:pointer;text-transform:uppercase}
+#printOverlay .pv-btn.sec{background:#fff;color:#1a1a1a}
+@media print {
+  body > *:not(#printOverlay){display:none !important}
+  #printOverlay{position:static !important;padding:0 !important;overflow:visible !important}
+  #printOverlay .pv-toolbar{display:none !important}
+  #printOverlay .pv-card{break-inside:avoid;page-break-inside:avoid}
+}
 </style>
 
 <script>
@@ -1148,6 +1173,7 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
   <div class="stitle" style="margin:0">EVAL <span>TRACKER</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap">
     <button class="btn bsec bsm" onclick="remindAllUnfinishedClinicians()" type="button">✉️ Remind All</button>
+    <button class="btn bsec bsm" onclick="exportEvaluationsCSV()" type="button">📥 CSV</button>
     <button class="btn bor bsm" onclick="loadPushSubs().then(renderEvalTracker)" type="button">🔄 Refresh</button>
   </div>
 </div>
@@ -2552,7 +2578,8 @@ function renderCamperResults(){
   const crewNotes = _crewNotesCache || [];
   const cs=buildCamperScores();const me=cs[CU.id];
   if(!me){con.innerHTML='<div class="empty"><span class="ei">📋</span><div class="et">No Scores</div></div>';return;}
-  let h=`<div class="sg2"><div class="sc sor" style="text-align:center"><div class="sn">${me.overall.toFixed(1)}</div><div class="sl">Avg / 5</div></div><div class="sc sgrn" style="text-align:center"><div class="sn">${me.evalCount}</div><div class="sl">Evaluations</div></div></div>`;
+  let h=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn bsec bsm" onclick="downloadCamperResults()" type="button">📥 Download / Save as PDF</button></div>`;
+  h+=`<div class="sg2"><div class="sc sor" style="text-align:center"><div class="sn">${me.overall.toFixed(1)}</div><div class="sl">Avg / 5</div></div><div class="sc sgrn" style="text-align:center"><div class="sn">${me.evalCount}</div><div class="sl">Evaluations</div></div></div>`;
   h+='<div class="card" style="padding:14px;margin-bottom:12px">';
   CFG.CATS.forEach(cat=>{const v=me.catAverages[cat]||0;const col=v>=4?'var(--grn)':v>=2.5?'var(--or)':'var(--red2)';const pct=(v/5*100).toFixed(0);h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:11px;color:var(--tx2);width:90px;text-align:right;flex-shrink:0;line-height:1.2;word-break:break-word">${cat}</span><div style="flex:1;height:6px;background:var(--gray3);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--or);width:${pct}%;border-radius:3px"></div></div><span style="font-size:11px;color:${col};width:28px;flex-shrink:0">${v.toFixed(1)}</span></div>`;});
   h+='</div>';
@@ -2611,6 +2638,93 @@ function renderCamperResults(){
     </div>`;
   });
   con.innerHTML=h;
+}
+
+// Builds a print-friendly view of the camper's evaluations and pops up the
+// browser's print dialog. iOS Safari users can hit Share -> Print and pinch
+// the preview to save as PDF; desktop browsers expose Save as PDF directly.
+function downloadCamperResults(){
+  if (!CU){ toast('Not signed in', true); return; }
+  const myE = evaluations.filter(e => e.camper_id === CU.id);
+  if (!myE.length){ toast('No evaluations to download', true); return; }
+  const cs = buildCamperScores();
+  const me = cs[CU.id];
+  if (!me){ toast('No scores to download', true); return; }
+  const crewNotes = _crewNotesCache || [];
+  const sortedEvals = myE.slice().sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  const dateStr = new Date().toLocaleDateString();
+  const camperName = `${CU.first_name||''} ${CU.last_name||''}`.trim();
+  const camperLoc = formatLocation(CU);
+
+  const catSummaryHTML = CFG.CATS.map(cat => {
+    const v = me.catAverages[cat] || 0;
+    return `<div class="pv-row"><div class="pv-row-lbl">${escapeHtml(cat)}</div><div class="pv-row-val">${v.toFixed(1)} / 5</div></div>`;
+  }).join('');
+
+  const evalsHTML = sortedEvals.map(ev => {
+    const isDNP = ev.status === 'absent';
+    const slotMeta = [ev.eval_date, ev.court ? 'Court '+ev.court : '', ev.eval_time].filter(Boolean).map(escapeHtml).join(' · ');
+    const scoreRows = isDNP ? '' : CFG.CATS.map(cat => {
+      const v = ev.scores?.[catKey(cat)];
+      const txt = v != null ? Number(v).toFixed(1) : '—';
+      return `<div class="pv-row"><div class="pv-row-lbl">${escapeHtml(cat)}</div><div class="pv-row-val">${txt}</div></div>`;
+    }).join('');
+    const commentsBlock = ev.comments && ev.comments.trim()
+      ? `<div class="pv-quote"><div class="pv-quote-lbl">Feedback for you</div>${escapeHtml(ev.comments)}</div>`
+      : '';
+    const crewMatch = crewNotes.find(cn =>
+      cn.clinician_name === ev.clinician_name &&
+      cn.eval_date === ev.eval_date &&
+      cn.court === ev.court &&
+      cn.eval_time === ev.eval_time
+    );
+    const crewBlock = (crewMatch && (crewMatch.note||'').trim())
+      ? `<div class="pv-quote crew"><div class="pv-quote-lbl">Crew feedback</div>${escapeHtml(crewMatch.note)}</div>`
+      : '';
+    const overall = ev.overall_score != null ? Number(ev.overall_score).toFixed(1) : '—';
+    return `<div class="pv-card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:10px">
+        <div style="font-weight:700;font-size:15px">${escapeHtml(ev.clinician_name||'—')}</div>
+        <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;color:#E8621A">${overall} / 5</div>
+      </div>
+      <div style="font-size:12px;color:#555;margin-bottom:8px">${slotMeta}</div>
+      ${isDNP ? '<div style="font-size:12px;color:#b91c1c;font-weight:700;letter-spacing:.06em;text-transform:uppercase">Did Not Play</div>' : scoreRows}
+      ${commentsBlock}
+      ${crewBlock}
+    </div>`;
+  }).join('');
+
+  const html = `<div class="pv-toolbar">
+      <button class="pv-btn sec" type="button" onclick="closePrintOverlay()">Close</button>
+      <button class="pv-btn" type="button" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+    <div class="pv-content">
+      <div class="pv-h1">${escapeHtml(CFG.CAMP_NAME)}</div>
+      <div class="pv-meta">Evaluation summary for <strong>${escapeHtml(camperName)}</strong>${camperLoc?` · ${escapeHtml(camperLoc)}`:''} · Generated ${escapeHtml(dateStr)}</div>
+      <div style="display:flex;gap:14px;margin-bottom:16px">
+        <div style="border:1px solid #d4d0c8;border-radius:6px;padding:10px 14px;text-align:center;min-width:110px"><div style="font-family:'Oswald',Arial,sans-serif;font-size:26px;color:#E8621A">${me.overall.toFixed(1)}</div><div style="font-size:10px;letter-spacing:.06em;color:#555;text-transform:uppercase">Overall / 5</div></div>
+        <div style="border:1px solid #d4d0c8;border-radius:6px;padding:10px 14px;text-align:center;min-width:110px"><div style="font-family:'Oswald',Arial,sans-serif;font-size:26px;color:#16a34a">${me.evalCount}</div><div style="font-size:10px;letter-spacing:.06em;color:#555;text-transform:uppercase">Evaluations</div></div>
+      </div>
+      <div class="pv-section">Category averages</div>
+      <div class="pv-card">${catSummaryHTML}</div>
+      <div class="pv-section">Your evaluations</div>
+      ${evalsHTML}
+    </div>`;
+
+  let ov = document.getElementById('printOverlay');
+  if (ov) ov.remove();
+  ov = document.createElement('div');
+  ov.id = 'printOverlay';
+  ov.innerHTML = html;
+  document.body.appendChild(ov);
+  // Auto-fire the print dialog on desktop; mobile users tap the Print button
+  // in the toolbar (iOS Safari throttles auto-print).
+  setTimeout(() => { try { window.print(); } catch(e){} }, 350);
+}
+
+function closePrintOverlay(){
+  const ov = document.getElementById('printOverlay');
+  if (ov) ov.remove();
 }
 
 // Helper: defensively re-show the role's bottom nav on every nav switch.
@@ -6424,6 +6538,71 @@ async function emailAllUnsubscribedClinicians(){
     await new Promise(t => setTimeout(t, 150));
   }
   toast(failed ? `Sent ${sent}, ${failed} failed` : `✓ Reminder sent to ${sent} clinician${sent===1?'':'s'}`);
+}
+
+// ── ADMIN: CSV export of every evaluation ───────────────
+// Fetches the crew_notes table fresh (small) and joins it to evaluations by
+// (clinician_name, eval_date, court, eval_time), then triggers a Blob
+// download. One row per evaluation. Includes admin_notes — admin-only.
+function _csvEscape(v){
+  if (v == null) return '';
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+async function exportEvaluationsCSV(){
+  if (!evaluations.length){ toast('No evaluations to export', true); return; }
+  let crew = [];
+  try { crew = (await supa('crew_notes','GET',null,'')) || []; }
+  catch(e){ console.warn('crew_notes fetch for CSV failed', e); }
+  const camperById = {};
+  campers.forEach(c => { camperById[String(c.id)] = c; });
+  const header = ['Camper Last','Camper First','Camper Email','Camper City','Camper State',
+    'Clinician','Date','Court','Time','Status','Overall',
+    ...CFG.CATS.map(c => c+' (score)'),
+    'Top 10','RMAC Ready','Conference Ready',
+    'Camper Comments','Admin Notes','Crew Note'];
+  const rows = [header.map(_csvEscape).join(',')];
+  const sorted = evaluations.slice().sort((a,b) => {
+    const A = (a.eval_date||'')+(a.eval_time||'')+(a.court||'');
+    const B = (b.eval_date||'')+(b.eval_time||'')+(b.court||'');
+    return A.localeCompare(B);
+  });
+  sorted.forEach(ev => {
+    const c = camperById[String(ev.camper_id)] || {};
+    const crewMatch = crew.find(cn =>
+      cn.clinician_name === ev.clinician_name &&
+      cn.eval_date === ev.eval_date &&
+      cn.court === ev.court &&
+      cn.eval_time === ev.eval_time
+    );
+    const catScores = CFG.CATS.map(cat => {
+      const v = ev.scores?.[catKey(cat)];
+      return v != null ? v : '';
+    });
+    const ynLabel = v => v === true ? 'Yes' : v === false ? 'No' : '';
+    const top10 = ynLabel(ev.scores?.top10);
+    const rmac = ynLabel(ev.scores?.rmac_ready);
+    const conf = ynLabel(ev.scores?.conference_ready);
+    const row = [
+      c.last_name||'', c.first_name||'', c.email||'', c.city||'', c.state||'',
+      ev.clinician_name||'', ev.eval_date||'', ev.court||'', ev.eval_time||'',
+      ev.status||'', ev.overall_score != null ? Number(ev.overall_score).toFixed(2) : '',
+      ...catScores,
+      top10, rmac, conf,
+      ev.comments||'', ev.admin_notes||'', (crewMatch && crewMatch.note) || ''
+    ];
+    rows.push(row.map(_csvEscape).join(','));
+  });
+  const csv = '﻿' + rows.join('\r\n');
+  const stamp = new Date().toISOString().slice(0,10);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `vh1-camp-evaluations-${stamp}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  toast(`✓ Exported ${sorted.length} evaluation${sorted.length===1?'':'s'}`);
 }
 
 // ── ADMIN: Switch day ────────────────────────────────────

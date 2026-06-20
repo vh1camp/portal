@@ -3,7 +3,7 @@
  * Tapping the notification focuses (or opens) the portal.
  */
 
-const CACHE='vh1-camp-v17';
+const CACHE='vh1-camp-v18';
 const ASSETS=['./','./index.html'];
 
 self.addEventListener('install',e=>{
