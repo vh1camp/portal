@@ -6103,39 +6103,158 @@ function generateCamperReport(camperId, mode){
   if(!c){toast('Camper not found',true);return;}
   buildAndDownloadReport(c);
 }
-function generateAllReports(){
-  if(!confirm('Generate reports for all '+campers.length+' campers?')) return;
-  let i=0;
-  function next(){ if(i>=campers.length)return; buildAndDownloadReport(campers[i]); i++; setTimeout(next,600); }
-  next();
+
+// Bundles a report for every camper into one ZIP. Lazy-loads JSZip from
+// cdnjs the first time it runs. Replaces the old loop that triggered
+// individual downloads (which Chrome/Safari throttled to ~one per second
+// AND prompted the user for each file — 7+ minutes for a full roster).
+async function _loadJSZip(){
+  if (window.JSZip) return;
+  await new Promise((res,rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
 }
+async function generateAllReports(){
+  if (!campers.length){ toast('No campers to export', true); return; }
+  const ok = await cf(`Bundle reports for all ${campers.length} campers into one ZIP?`, 'Generate ZIP', 'Cancel');
+  if (!ok) return;
+  toast('Building reports…');
+  try {
+    await _loadJSZip();
+    const zip = new JSZip();
+    const used = new Set();
+    campers.forEach(c => {
+      const html = _buildReportHTML(c);
+      const safe = s => String(s||'').replace(/[^A-Za-z0-9_-]+/g, '_');
+      let name = `VH1-Report-${safe(c.last_name)}-${safe(c.first_name)}.html`;
+      let n = 2;
+      while (used.has(name)) { name = `VH1-Report-${safe(c.last_name)}-${safe(c.first_name)}-${n++}.html`; }
+      used.add(name);
+      zip.file(name, html);
+    });
+    const blob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = `vh1-camp-reports-${stamp}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast(`✓ Exported ${campers.length} report${campers.length===1?'':'s'} as ZIP`);
+  } catch(e){
+    console.error('zip export failed', e);
+    toast('ZIP export failed — '+(e.message||'unknown'), true);
+  }
+}
+
 function buildAndDownloadReport(c){
-  const evs = evaluations.filter(e=>e.camper_id===c.id);
+  const html = _buildReportHTML(c);
+  const blob = new Blob([html], { type:'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `VH1-Report-${c.last_name}-${c.first_name}.html`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📄 Report: ' + c.first_name + ' ' + c.last_name);
+}
+
+// Builds the standalone report HTML for one camper. Style matches the
+// camper "Save as PDF" print view (light bg, #E8621A accent) — no auto
+// window.print() so opening from the zip doesn't spam the print dialog.
+function _buildReportHTML(c){
+  const evs = evaluations.filter(e => e.camper_id === c.id);
   const n = evs.length;
-  const avg = n ? (evs.map(e=>e.overall_score||0).reduce((a,b)=>a+b,0)/n).toFixed(1) : 'N/A';
-  const rmac = evs.filter(e=>e.scores&&e.scores.rmac_ready===true).length >= Math.max(1,n/2);
-  const conf = evs.filter(e=>e.scores&&e.scores.conference_ready===true).length >= Math.max(1,n/2);
-  const top10 = evs.filter(e=>e.scores&&e.scores.top10===true).length >= Math.max(1,n/2);
-  const catRows = CFG.CATS.map(cat=>{
-    const key=cat.toLowerCase().replace(/\s+/g,'_');
-    const vals=evs.map(e=>e.scores&&e.scores[key]).filter(v=>v!=null);
-    const ca=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'N/A';
-    const color=parseFloat(ca)>=4?'#2ecc71':parseFloat(ca)>=2.5?'#F47B20':'#e74c3c';
-    const pct=vals.length?Math.round(parseFloat(ca)/5*100):0;
-    return '<tr><td style="padding:8px 12px;font-size:13px;color:#e8e8e0">'+cat+'</td><td style="padding:8px 12px"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:#2a2a2a;border-radius:3px"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px"></div></div><span style="font-size:14px;font-weight:700;color:'+color+';width:30px;text-align:right">'+ca+'</span></div></td></tr>';
+  const avg = n ? (evs.map(e => e.overall_score || 0).reduce((a,b)=>a+b,0)/n).toFixed(1) : 'N/A';
+  const half = Math.max(1, n/2);
+  const rmac  = evs.filter(e => e.scores && e.scores.rmac_ready === true).length >= half;
+  const conf  = evs.filter(e => e.scores && e.scores.conference_ready === true).length >= half;
+  const top10 = evs.filter(e => e.scores && e.scores.top10 === true).length >= half;
+  const catRows = CFG.CATS.map(cat => {
+    const k = catKey(cat);
+    const vals = evs.map(e => e.scores && e.scores[k]).filter(v => v != null);
+    const ca = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : 'N/A';
+    const pct = vals.length ? Math.round(parseFloat(ca)/5*100) : 0;
+    return `<div class="cat-row"><div class="lbl">${escapeHtml(cat)}</div><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div><div class="val">${escapeHtml(ca)}</div></div>`;
   }).join('');
-  const evalRows = evs.map(e=>{
-    const dt=e.eval_date||(e.created_at?new Date(e.created_at).toLocaleDateString():'—');
-    return '<tr><td style="padding:7px 12px;font-size:12px;color:#888880">'+(e.clinician_name||'—')+'</td><td style="padding:7px 12px;font-size:12px;color:#888880">'+dt+'</td><td style="padding:7px 12px;font-size:12px;color:#888880">Court '+(e.court||'—')+'</td><td style="padding:7px 12px;font-size:14px;font-weight:700;color:#F47B20">'+(e.overall_score||0).toFixed(1)+'</td></tr>';
+  const evalRows = evs.map(e => {
+    const dt = e.eval_date || (e.created_at ? new Date(e.created_at).toLocaleDateString() : '—');
+    const when = dt + (e.eval_time ? ' · ' + e.eval_time : '');
+    const court = e.court ? ('Court '+e.court) : '—';
+    const score = (e.overall_score != null ? Number(e.overall_score) : 0).toFixed(1);
+    return `<div class="eval-row"><div class="clin">${escapeHtml(e.clinician_name||'—')}</div><div class="when">${escapeHtml(when)}</div><div class="court">${escapeHtml(court)}</div><div class="scorev">${score}</div></div>`;
   }).join('');
-  const badges=[rmac?'<span style="background:rgba(46,204,113,.15);border:1px solid #2ecc71;color:#2ecc71;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">RMAC READY</span>':'',conf?'<span style="background:rgba(52,152,219,.15);border:1px solid #3498db;color:#3498db;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">CONFERENCE READY</span>':'',top10?'<span style="background:rgba(244,123,32,.15);border:1px solid #F47B20;color:#F47B20;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.1em">TOP 10</span>':''].filter(Boolean).join(' ');
-  const rHTML='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>VH1 Report — '+c.first_name+' '+c.last_name+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#0a0a0a;color:#e8e8e0;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div style="max-width:680px;margin:0 auto"><div style="background:#F47B20;padding:20px 24px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:11px;font-weight:700;letter-spacing:.14em;color:rgba(0,0,0,.6);text-transform:uppercase">VH1 Basketball Officials Camp</div><div style="font-size:22px;font-weight:900;color:#000;letter-spacing:.06em;margin-top:2px">PERFORMANCE REPORT</div><div style="font-size:11px;color:rgba(0,0,0,.5);margin-top:2px">Denver, CO · June 18–20, 2026</div></div><div style="text-align:right"><div style="font-size:11px;color:rgba(0,0,0,.6)">Generated</div><div style="font-size:12px;font-weight:700;color:#000">'+new Date().toLocaleDateString()+'</div></div></div><div style="background:#111;padding:20px 24px;border-bottom:1px solid #222"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px"><div><div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:.04em">'+c.first_name+' '+c.last_name+'</div><div style="font-size:13px;color:#888;margin-top:3px">'+formatLocation(c)+' · '+(c.type||'Non-Staff')+'</div></div><div style="text-align:center;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 20px"><div style="font-size:48px;font-weight:900;color:#F47B20;line-height:1">'+avg+'</div><div style="font-size:11px;color:#888;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Overall Avg · '+n+' eval'+(n!==1?'s':'')+'</div></div></div>'+(badges?'<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">'+badges+'</div>':'')+'</div>'+(n>0?'<div style="background:#0d0d0d;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Category Breakdown</div><table style="width:100%;border-collapse:collapse">'+catRows+'</table></div><div style="background:#111;padding:16px 24px"><div style="font-size:10px;font-weight:700;letter-spacing:.14em;color:#F47B20;text-transform:uppercase;margin-bottom:10px">Evaluation History</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Clinician</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Date</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Court</th><th style="text-align:left;padding:6px 12px;font-size:10px;color:#555;text-transform:uppercase">Score</th></tr></thead><tbody>'+evalRows+'</tbody></table></div>':'<div style="padding:24px;text-align:center;color:#555">No evaluations recorded</div>')+'<div style="background:#080808;padding:14px 24px;border-top:1px solid #1a1a1a;font-size:10px;color:#444;text-align:center">VH1 Basketball Officials Camp · Denver, CO · June 18–20, 2026</div></div><scr'+'ipt>window.onload=function(){window.print();}</'+'script></body></html>';
-  const blob=new Blob([rHTML],{type:'text/html'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='VH1-Report-'+c.last_name+'-'+c.first_name+'.html';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  toast('📄 Report: '+c.first_name+' '+c.last_name);
+  const badges = [
+    rmac  ? '<span class="badge rmac">RMAC Ready</span>' : '',
+    conf  ? '<span class="badge conf">Conference Ready</span>' : '',
+    top10 ? '<span class="badge top10">Top 10</span>'        : ''
+  ].filter(Boolean).join('');
+  const name = escapeHtml(`${c.first_name||''} ${c.last_name||''}`.trim());
+  const loc = escapeHtml(formatLocation(c) || '');
+  const type = escapeHtml(c.type || 'Non-Staff');
+  const dateStr = escapeHtml(new Date().toLocaleDateString());
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>VH1 Report — ${name}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#1a1a1a;padding:24px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.container{max-width:780px;margin:0 auto}
+.toolbar{position:sticky;top:0;background:#fff;padding:0 0 12px;display:flex;gap:8px;justify-content:flex-end;border-bottom:1px solid #e0ddd8;margin-bottom:16px}
+.tb-btn{font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:.08em;padding:8px 14px;border-radius:6px;border:1px solid #1a1a1a;background:#1a1a1a;color:#fff;cursor:pointer;text-transform:uppercase;font-weight:700}
+.h1{font-family:Arial,Helvetica,sans-serif;font-size:22px;letter-spacing:.04em;margin:0 0 4px;color:#000;font-weight:900}
+.meta{font-size:12px;color:#555;margin-bottom:20px}
+.name-block{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e0ddd8}
+.nm{font-size:26px;letter-spacing:.02em;color:#000;line-height:1.1;font-weight:900}
+.loc{font-size:13px;color:#555;margin-top:4px}
+.score-box{display:flex;gap:10px}
+.score-box .box{border:1px solid #d4d0c8;border-radius:6px;padding:10px 14px;text-align:center;min-width:100px}
+.score-box .num{font-size:26px;color:#E8621A;line-height:1;font-weight:900}
+.score-box .num.grn{color:#16a34a}
+.score-box .lbl{font-size:10px;letter-spacing:.06em;color:#555;text-transform:uppercase;margin-top:4px;font-weight:700}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.badge{padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.badge.rmac{background:#dcf5e3;border:1px solid #16a34a;color:#16a34a}
+.badge.conf{background:#fbe5d6;border:1px solid #E8621A;color:#E8621A}
+.badge.top10{background:#fff5d6;border:1px solid #d4a800;color:#a07f00}
+.section{font-size:12px;letter-spacing:.10em;color:#E8621A;margin:18px 0 8px;text-transform:uppercase;font-weight:800}
+.card{border:1px solid #d4d0c8;border-radius:6px;padding:14px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid}
+.cat-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.cat-row .lbl{width:130px;text-align:right;color:#555;flex-shrink:0;font-size:13px}
+.cat-row .bar-bg{flex:1;height:6px;background:#eee;border-radius:3px;overflow:hidden}
+.cat-row .bar-fill{height:100%;background:#E8621A;border-radius:3px}
+.cat-row .val{font-weight:700;width:32px;text-align:right;font-size:13px;color:#000}
+.eval-hd{display:grid;grid-template-columns:1.5fr 1fr .8fr .6fr;gap:10px;padding-bottom:6px;border-bottom:1px solid #d4d0c8;margin-bottom:4px;font-size:10px;color:#888;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.eval-row{display:grid;grid-template-columns:1.5fr 1fr .8fr .6fr;gap:10px;padding:8px 0;border-bottom:1px solid #ececec;font-size:12px;align-items:center}
+.eval-row:last-child{border-bottom:none}
+.eval-row .clin{font-weight:600;color:#000}
+.eval-row .when{color:#555}
+.eval-row .court{color:#555}
+.eval-row .scorev{font-size:16px;color:#E8621A;font-weight:800;text-align:right}
+.footer{margin-top:24px;padding-top:12px;border-top:1px solid #e0ddd8;font-size:11px;color:#888;text-align:center}
+@media print{body{padding:0}.toolbar{display:none}.card{break-inside:avoid;page-break-inside:avoid}}
+</style></head>
+<body>
+<div class="container">
+<div class="toolbar"><button class="tb-btn" onclick="window.print()">🖨️ Print / Save as PDF</button></div>
+<div class="h1">${escapeHtml(CFG.CAMP_NAME)}</div>
+<div class="meta">Performance Report · Denver, CO · June 18–20, 2026 · Generated ${dateStr}</div>
+<div class="name-block">
+  <div><div class="nm">${name}</div><div class="loc">${loc||'—'} · ${type}</div></div>
+  <div class="score-box">
+    <div class="box"><div class="num">${escapeHtml(avg)}</div><div class="lbl">Overall / 5</div></div>
+    <div class="box"><div class="num grn">${n}</div><div class="lbl">Evaluations</div></div>
+  </div>
+</div>
+${badges ? `<div class="badges">${badges}</div>` : ''}
+${n > 0 ? `<div class="section">Category Breakdown</div>
+<div class="card">${catRows}</div>
+<div class="section">Evaluation History</div>
+<div class="card"><div class="eval-hd"><div>Clinician</div><div>Date / Time</div><div>Court</div><div style="text-align:right">Score</div></div>${evalRows}</div>` : '<div style="text-align:center;color:#888;padding:24px">No evaluations recorded</div>'}
+<div class="footer">${escapeHtml(CFG.CAMP_NAME)} · Denver, CO · June 18–20, 2026</div>
+</div>
+</body>
+</html>`;
 }
 
 // SCHEDULE SYSTEM
