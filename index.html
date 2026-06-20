@@ -133,6 +133,15 @@ body::before{content:'';display:none}
 .admin-more-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .amd-overlay{position:fixed;inset:0;z-index:499;display:none}
 .amd-overlay.open{display:block}
+/* Tiny inline ⋯ menu (used in the rankings header to tuck Refresh +
+   Single Report behind one button on narrow viewports). */
+.action-more-wrap{position:relative;display:inline-block}
+.action-more-btn{padding:6px 12px;background:transparent;border:1px solid var(--b3);border-radius:6px;color:var(--tx2);font-family:'Oswald',sans-serif;font-size:14px;letter-spacing:.06em;cursor:pointer;font-weight:700;line-height:1.4}
+.action-more-btn:hover{border-color:var(--or);color:var(--or)}
+.action-more-menu{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid var(--b2);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.13);z-index:500;min-width:190px;padding:6px;display:none}
+.action-more-menu.open{display:block}
+.action-more-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:7px;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:.06em;color:var(--tx2)}
+.action-more-item:hover{background:var(--gray2);color:var(--or)}
 @media(max-width:480px){
   .atab{font-size:11px;padding:11px 6px;letter-spacing:.04em}
   .atab-more{font-size:11px;padding:11px 10px;letter-spacing:.04em}
@@ -1073,9 +1082,16 @@ if(typeof window!=='undefined'&&'serviceWorker' in navigator){
 <div class="tc" id="at-rankings">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:7px">
 <div class="stitle" style="margin:0">OFFICIAL <span>RANKINGS</span></div>
-<button class="btn bor bsm" onclick="renderAdminRankings()" type="button">🔄 Refresh</button>
-<button class="btn bor bsm" onclick="generateAllReports()" type="button" style="background:var(--or);color:#000;border-color:var(--or)">📄 Export All Reports</button>
-<button class="btn bor bsm" onclick="generateCamperReport(null,'prompt')" type="button">📄 Single Report</button>
+<div style="display:flex;align-items:center;gap:6px">
+  <button class="btn bor bsm" onclick="generateAllReports()" type="button" style="background:var(--or);color:#000;border-color:var(--or)">📄 Export All Reports</button>
+  <div class="action-more-wrap">
+    <button class="action-more-btn" id="rankMoreBtn" onclick="toggleRankActions(event)" type="button" aria-label="More actions">⋯</button>
+    <div class="action-more-menu" id="rankActionsMenu">
+      <button class="action-more-item" onclick="closeRankActions();renderAdminRankings()" type="button">🔄 Refresh</button>
+      <button class="action-more-item" onclick="closeRankActions();generateCamperReport(null,'prompt')" type="button">📄 Single Report</button>
+    </div>
+  </div>
+</div>
 </div>
 <div class="fchips" id="rankFilter"></div>
 <div id="arankcon"></div>
@@ -2998,6 +3014,26 @@ function closeAdminMoreMenu(){
   document.getElementById('adminMoreDropdown').classList.remove('open');
   document.getElementById('amdOverlay').classList.remove('open');
 }
+
+// Tiny inline ⋯ menu on the rankings header. Click outside closes it via
+// the global listener below (one-shot per open to avoid bubbling races).
+function toggleRankActions(e){
+  if (e) e.stopPropagation();
+  const m = document.getElementById('rankActionsMenu');
+  if (!m) return;
+  m.classList.toggle('open');
+}
+function closeRankActions(){
+  const m = document.getElementById('rankActionsMenu');
+  if (m) m.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('rankActionsMenu');
+  if (!m || !m.classList.contains('open')) return;
+  const b = document.getElementById('rankMoreBtn');
+  if (m.contains(e.target) || (b && b.contains(e.target))) return;
+  m.classList.remove('open');
+});
 function aTabMore(name){
   closeAdminMoreMenu();
   // Mark more btn as "on" if a drawer item is active
