@@ -2221,11 +2221,17 @@ function openModal(id){
     const scroller=document.getElementById(scrollerId);
     if(scroller)scroller.scrollTop=0;
     document.querySelectorAll('.bnav').forEach(n=>n.style.display='none');
-  }else{el.classList.add('on');}
+  }else{
+    // Defensive: clear any leftover inline display:none from an older,
+    // asymmetric close path. Without this, a stale style="display:none"
+    // beats the .on class and the modal silently fails to open.
+    if(el.style.display)el.style.display='';
+    el.classList.add('on');
+  }
 }
 function closeModal(id){
   const el=document.getElementById(id);
-  if(id==='mProfile'||id==='mClinician'||id==='mClinicianProfile'){
+  if(id==='mProfile'||id==='mClinicianProfile'){
     el.style.display='none';
     if(id==='mProfile')startChatBackgroundPoll();
   }else{el.classList.remove('on');}
